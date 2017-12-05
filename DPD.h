@@ -24,7 +24,7 @@ class DPD {
 		double kin_en;				// system kinetic energy
 		double tot_en;				// system total energy
 
-		unsigned int saveCount = 100;	     	//number of timestep between saves
+		unsigned int saveCount = 500;	     	//number of timestep between saves
 		std::vector<Particle> particles;     	//vector of particles
 
 		/******************************************************************************************************/
@@ -53,11 +53,12 @@ class DPD {
 					// for_loop_inner_counter = 0;
 					for (auto q = p+1;  q!=particles.end(); ++q) {
 
-						Vec2D Rij = p->r - q->r;	
-						Vec2D temp;
-						temp.X = Vec2D::roundOff_x(Rij, box);
-						temp.Y = Vec2D::roundOff_y(Rij, box);
-						Vec2D minRij = Rij - temp*box;
+						Vec3D Rij = p->r - q->r;	
+						Vec3D temp;
+						temp.X = Vec3D::roundOff_x(Rij, box);
+						temp.Y = Vec3D::roundOff_y(Rij, box);
+						temp.Z = Vec3D::roundOff_z(Rij, box);
+						Vec3D minRij = Rij - temp*box;
 						double r2 = minRij.getLengthSquared();
 
 						if ( r2 < rc2 ) {
@@ -81,7 +82,7 @@ class DPD {
 				// integrateEOS();
 				for (Particle& p : particles) {
 					// store velocity (mid-step)
-					Vec2D w_old = p.w;
+					Vec3D w_old = p.w;
 
 					// update velocities (mid-step)
 					p.w += p.f*(dt/p.m);
@@ -105,9 +106,10 @@ class DPD {
 				// pbc();
 				for (Particle& p : particles) {
 
-					Vec2D temp;
-					temp.X = Vec2D::roundOff_x(p.r, box);
-					temp.Y = Vec2D::roundOff_y(p.r, box);
+					Vec3D temp;
+					temp.X = Vec3D::roundOff_x(p.r, box);
+					temp.Y = Vec3D::roundOff_y(p.r, box);
+					temp.Z = Vec3D::roundOff_z(p.r, box);
 					p.r  = p.r - temp*box;				
 
 				}					
@@ -116,6 +118,10 @@ class DPD {
 				if (++counter>=saveCount) {
 					//reset the counter, write time to terminal
 					counter = 0;
+
+					if ( step % 10000 == 0){
+						std::cout<< step << " steps out of " << stepMax << " completed " << std::endl;
+					}
 
 					// particle positions in vtk file format
 					vtkFileWrite();
@@ -155,11 +161,11 @@ class DPD {
 				// for_loop_inner_counter = 0;
 				for (auto q = p+1;  q!=particles.end(); ++q) {
 
-					Vec2D Rij = p->r - q->r;	
-					Vec2D temp;
-					temp.X = Vec2D::roundOff_x(Rij, box);
-					temp.Y = Vec2D::roundOff_y(Rij, box);
-					Vec2D minRij = Rij - temp*box;
+					Vec3D Rij = p->r - q->r;	
+					Vec3D temp;
+					temp.X = Vec3D::roundOff_x(Rij, box);
+					temp.Y = Vec3D::roundOff_y(Rij, box);
+					Vec3D minRij = Rij - temp*box;
 					double r2 = minRij.getLengthSquared();
 
 					if ( r2 < rc2 ) {
@@ -185,7 +191,7 @@ class DPD {
 		void integrateEOS(){
 			for (Particle& p : particles) {
 				// store velocity (mid-step)
-				Vec2D w_old = p.w;
+				Vec3D w_old = p.w;
 
 				// update velocities (mid-step)
 				p.w += p.f*(dt/p.m);
@@ -207,9 +213,9 @@ class DPD {
 		void pbc(){
 			for (Particle& p : particles) {
 
-				Vec2D temp;
-				temp.X = Vec2D::roundOff_x(p.r, box);
-				temp.Y = Vec2D::roundOff_y(p.r, box);
+				Vec3D temp;
+				temp.X = Vec3D::roundOff_x(p.r, box);
+				temp.Y = Vec3D::roundOff_y(p.r, box);
 				p.r  = p.r - temp*box;				
 
 			}					
@@ -239,13 +245,13 @@ class DPD {
 			file << "<?xml version=\"1.0\"?>" << std::endl;
 			file << "<VTKFile type=\"UnstructuredGrid\" version=\"0.1\" byte_order=\"LittleEndian\">" << std::endl;
 			file << "<UnstructuredGrid>";
-			file << "<Piece NumberOfPoints=\"100\" NumberOfCells=\"0\">" << std::endl;
+			file << "<Piece NumberOfPoints=\""<< particles.size() <<"\" NumberOfCells=\"0\">" << std::endl;
 			file << "<Points>" << std::endl;
 			// position data
 			file << "<DataArray type=\"Float32\" Name=\"Position\" NumberOfComponents=\"3\" format=\"ascii\">"<< std::endl;
 			for (Particle& p: particles)
 			{
-				file << p.r <<" 0"<<std::endl;
+				file << p.r << std::endl;
 
 			}
 			file << "</DataArray>"<<std::endl;
@@ -256,7 +262,7 @@ class DPD {
 			file << "<DataArray type=\"Float32\" Name=\"Velocity\" NumberOfComponents=\"3\" format=\"ascii\">" << std::endl;
 			for (Particle& p: particles)
 			{
-				file <<  p.v <<" 0"<< std::endl;
+				file <<  p.v << std::endl;
 
 			}
 			file << "</DataArray>"<< std::endl;
