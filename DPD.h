@@ -26,7 +26,45 @@ class DPD {
 
 		unsigned int saveCount = 500;	     	//number of timestep between saves
 		std::vector<Particle> particles;     	//vector of particles
+		
+		/******************************************************************************************************/
+		/**************************************** INITIALIZATION ROUTINE **************************************/
+		/******************************************************************************************************/
+		void init(){
+			// Set max and min dimensions of boxy
+			double xind_min = -1.0*(box/2.0) + 1.0;
+			double yind_min = -1.0*(box/2.0) + 1.0;
+			double zind_min = -1.0*(box/2.0) + 1.0;
+			double xind_max =  1.0*(box/2.0);
+			double yind_max =  1.0*(box/2.0);
+			double zind_max =  1.0*(box/2.0);
 
+			double xind = xind_min;
+			
+			// Particle position intialization in a crystal structure 
+			while ( xind < xind_max){
+				double yind = yind_min;
+				while( yind < yind_max){
+					double zind = zind_min;
+					while( zind < zind_max){
+						// generate random velocities
+						double rand_gen_velx = ((double) rand() / (RAND_MAX));
+						double rand_gen_vely = ((double) rand() / (RAND_MAX));
+						double rand_gen_velz = ((double) rand() / (RAND_MAX));
+
+						// initializing particle mass, radius, position and mid-step-velocity
+						particles.push_back({0.2,1.0,{xind, yind, zind},{rand_gen_velx, rand_gen_vely, rand_gen_velz}});
+
+						// update zind
+						zind += 1.0;
+
+					}// end of zind
+					yind += 1.0;
+				}// end of yind			
+				xind += 1.0;
+			}// end of xind
+
+		}
 		/******************************************************************************************************/
 		/**************************************** SOLVE ROUTINE ***********************************************/
 		/******************************************************************************************************/
@@ -156,142 +194,142 @@ class DPD {
 		/*
 		// Force Calculation
 		void forceCalc(){
-			//loop over all contacts p=1..N-1, q=p+1..N to evaluate forces
-			for (auto p = particles.begin();  p!=particles.end()-1; ++p){
-				// for_loop_inner_counter = 0;
-				for (auto q = p+1;  q!=particles.end(); ++q) {
+		//loop over all contacts p=1..N-1, q=p+1..N to evaluate forces
+		for (auto p = particles.begin();  p!=particles.end()-1; ++p){
+		// for_loop_inner_counter = 0;
+		for (auto q = p+1;  q!=particles.end(); ++q) {
 
-					Vec3D Rij = p->r - q->r;	
-					Vec3D temp;
-					temp.X = Vec3D::roundOff_x(Rij, box);
-					temp.Y = Vec3D::roundOff_y(Rij, box);
-					Vec3D minRij = Rij - temp*box;
-					double r2 = minRij.getLengthSquared();
+		Vec3D Rij = p->r - q->r;	
+		Vec3D temp;
+		temp.X = Vec3D::roundOff_x(Rij, box);
+		temp.Y = Vec3D::roundOff_y(Rij, box);
+		Vec3D minRij = Rij - temp*box;
+		double r2 = minRij.getLengthSquared();
 
-					if ( r2 < rc2 ) {
-						double r2i = 1/r2;
-						double r6i = pow(r2i,3);
-						double ff = 48.0*epsilon*sig6*r2i*r6i*(r6i - 0.5);
-						p->f += ff*minRij;
-						q->f += -1.0*ff*minRij; 
+		if ( r2 < rc2 ) {
+		double r2i = 1/r2;
+		double r6i = pow(r2i,3);
+		double ff = 48.0*epsilon*sig6*r2i*r6i*(r6i - 0.5);
+		p->f += ff*minRij;
+		q->f += -1.0*ff*minRij; 
 
-						// calculate the potential energy
-						double pair_pot_en = 4.0*epsilon*sig6*r6i*(sig6*r6i - 1.0);
-						pot_en += pair_pot_en - ecut;
-					}		
+		// calculate the potential energy
+		double pair_pot_en = 4.0*epsilon*sig6*r6i*(sig6*r6i - 1.0);
+		pot_en += pair_pot_en - ecut;
+		}		
 
 
-				}
+		}
 
-			}
+		}
 
 		}
 
 		// Integrating equations of motion -- Verlet Leap Frog scheme
 		void integrateEOS(){
-			for (Particle& p : particles) {
-				// store velocity (mid-step)
-				Vec3D w_old = p.w;
+		for (Particle& p : particles) {
+		// store velocity (mid-step)
+		Vec3D w_old = p.w;
 
-				// update velocities (mid-step)
-				p.w += p.f*(dt/p.m);
+		// update velocities (mid-step)
+		p.w += p.f*(dt/p.m);
 
-				// update position (integral time step) using the velocities (mid-step)
-				p.r += p.w*dt;				
+		// update position (integral time step) using the velocities (mid-step)
+		p.r += p.w*dt;				
 
-				// calculate velocity (integral time step)
-				p.v = 0.5*(w_old + p.w);
+		// calculate velocity (integral time step)
+		p.v = 0.5*(w_old + p.w);
 
-				// calculate the kinetic energy
-				kin_en += 0.5*p.m*(p.v.getLengthSquared());
+		// calculate the kinetic energy
+		kin_en += 0.5*p.m*(p.v.getLengthSquared());
 
-			}
+		}
 
 		}
 
 		// Periodic boundary conditions
 		void pbc(){
-			for (Particle& p : particles) {
+		for (Particle& p : particles) {
 
-				Vec3D temp;
-				temp.X = Vec3D::roundOff_x(p.r, box);
-				temp.Y = Vec3D::roundOff_y(p.r, box);
-				p.r  = p.r - temp*box;				
+		Vec3D temp;
+		temp.X = Vec3D::roundOff_x(p.r, box);
+		temp.Y = Vec3D::roundOff_y(p.r, box);
+		p.r  = p.r - temp*box;				
 
-			}					
+		}					
 
 		}
 
 		// Reset variables
 		void resetVar(){
-			// energy reset to zero
-			pot_en = 0.0;
-			kin_en = 0.0;
-			tot_en = 0.0;
+		// energy reset to zero
+		pot_en = 0.0;
+		kin_en = 0.0;
+		tot_en = 0.0;
 
-			// set all forces to zero
-			for (Particle& p : particles) {
-				p.f.setZero();
-			}
-		}*/
-
-		// Filewriting for the VTK format
-		void vtkFileWrite(){
-
-			char filename[40];
-
-			sprintf( filename, "./data/data_%d.vtu", step);  
-			std::ofstream file(filename);
-			file << "<?xml version=\"1.0\"?>" << std::endl;
-			file << "<VTKFile type=\"UnstructuredGrid\" version=\"0.1\" byte_order=\"LittleEndian\">" << std::endl;
-			file << "<UnstructuredGrid>";
-			file << "<Piece NumberOfPoints=\""<< particles.size() <<"\" NumberOfCells=\"0\">" << std::endl;
-			file << "<Points>" << std::endl;
-			// position data
-			file << "<DataArray type=\"Float32\" Name=\"Position\" NumberOfComponents=\"3\" format=\"ascii\">"<< std::endl;
-			for (Particle& p: particles)
-			{
-				file << p.r << std::endl;
-
-			}
-			file << "</DataArray>"<<std::endl;
-			file << "</Points>" << std::endl;	
-
-			// velocity data
-			file << "<PointData Vectors=\"vector\">"<< std::endl;	
-			file << "<DataArray type=\"Float32\" Name=\"Velocity\" NumberOfComponents=\"3\" format=\"ascii\">" << std::endl;
-			for (Particle& p: particles)
-			{
-				file <<  p.v << std::endl;
-
-			}
-			file << "</DataArray>"<< std::endl;
-
-			// radius data
-			file << "<DataArray type=\"Float32\" Name=\"Radius\" format=\"ascii\">" << std::endl;
-			for (Particle& p: particles)
-			{
-				file <<  p.a << std::endl;
-
-			}
-			file << "</DataArray>"<< std::endl;
-			file << "</PointData>" << std::endl;	
-
-			// Cells data
-			file << "<Cells>"<< std::endl;	
-			file << "<DataArray type=\"Int32\" Name=\"connectivity\" format=\"ascii\"></DataArray>" << std::endl;
-			file << "<DataArray type=\"Int32\" Name=\"offsets\" format=\"ascii\"></DataArray>" << std::endl;
-			file << "<DataArray type=\"UInt8\" Name=\"types\" format=\"ascii\"></DataArray>" << std::endl;
-			file << "</Cells>" << std::endl;
-
-			// Piece
-			file << "</Piece>" << std::endl;
-			file << "</UnstructuredGrid>" << std::endl;
-			file << "</VTKFile>" << std::endl;
-
-			file.close();
-
+		// set all forces to zero
+		for (Particle& p : particles) {
+			p.f.setZero();
 		}
+}*/
+
+// Filewriting for the VTK format
+void vtkFileWrite(){
+
+	char filename[40];
+
+	sprintf( filename, "./data/data_%d.vtu", step);  
+	std::ofstream file(filename);
+	file << "<?xml version=\"1.0\"?>" << std::endl;
+	file << "<VTKFile type=\"UnstructuredGrid\" version=\"0.1\" byte_order=\"LittleEndian\">" << std::endl;
+	file << "<UnstructuredGrid>";
+	file << "<Piece NumberOfPoints=\""<< particles.size() <<"\" NumberOfCells=\"0\">" << std::endl;
+	file << "<Points>" << std::endl;
+	// position data
+	file << "<DataArray type=\"Float32\" Name=\"Position\" NumberOfComponents=\"3\" format=\"ascii\">"<< std::endl;
+	for (Particle& p: particles)
+	{
+		file << p.r << std::endl;
+
+	}
+	file << "</DataArray>"<<std::endl;
+	file << "</Points>" << std::endl;	
+
+	// velocity data
+	file << "<PointData Vectors=\"vector\">"<< std::endl;	
+	file << "<DataArray type=\"Float32\" Name=\"Velocity\" NumberOfComponents=\"3\" format=\"ascii\">" << std::endl;
+	for (Particle& p: particles)
+	{
+		file <<  p.v << std::endl;
+
+	}
+	file << "</DataArray>"<< std::endl;
+
+	// radius data
+	file << "<DataArray type=\"Float32\" Name=\"Radius\" format=\"ascii\">" << std::endl;
+	for (Particle& p: particles)
+	{
+		file <<  p.a << std::endl;
+
+	}
+	file << "</DataArray>"<< std::endl;
+	file << "</PointData>" << std::endl;	
+
+	// Cells data
+	file << "<Cells>"<< std::endl;	
+	file << "<DataArray type=\"Int32\" Name=\"connectivity\" format=\"ascii\"></DataArray>" << std::endl;
+	file << "<DataArray type=\"Int32\" Name=\"offsets\" format=\"ascii\"></DataArray>" << std::endl;
+	file << "<DataArray type=\"UInt8\" Name=\"types\" format=\"ascii\"></DataArray>" << std::endl;
+	file << "</Cells>" << std::endl;
+
+	// Piece
+	file << "</Piece>" << std::endl;
+	file << "</UnstructuredGrid>" << std::endl;
+	file << "</VTKFile>" << std::endl;
+
+	file.close();
+
+}
 
 };
 
