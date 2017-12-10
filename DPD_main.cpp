@@ -7,21 +7,17 @@ int main () {
 	DPD coll2p;	
 
 	// set global parameters
-	coll2p.box = 10.0;			// dimension of box
+	coll2p.box = 8.0;			// dimension of box
 	coll2p.epsilon = 1.0;			// energy well depth
 	coll2p.sigma = 1.0;			// zero-potential distance
 	coll2p.rcutoff = 3.0;			// cut-off distance
 	coll2p.rc2 = pow(coll2p.rcutoff,2);	// square of cut-off distance
+	coll2p.dim = 3;				// 3D system
 
 	coll2p.dt = 1e-5;
 	coll2p.step = 1;
-	coll2p.stepMax = 2e5;
-
-	// cut-off correction to potential
-	coll2p.sig6 = pow(coll2p.sigma,6);
-	coll2p.rc2i = 1/coll2p.rc2;
-	coll2p.rc6i = pow(coll2p.rc2i,3);
-	coll2p.ecut = 4*coll2p.epsilon*coll2p.sig6*coll2p.rc6i*(coll2p.sig6*coll2p.rc6i - 1.0);
+	coll2p.stepMax = 5e5;
+	coll2p.kB = 1.0;			// Boltzmann constant
 	
 	// post-processing
 	coll2p.gR_radMin = 0.5;			// minimum radius for g(r) 
