@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <iostream>
+#include <iomanip>
 #include <fstream>
 #include <cstdlib>
 #include "Particle.h"
@@ -18,20 +19,29 @@ class DPD {
 		double rcutoff;				// cut-off distance
 		double rc2;				// square of the cutoff distance
 		double dt;				// time step
+		double dim;				// dimension of system
+		double dof;				// degrees of freedom
 
 		int step;				// counter for number of steps 
 		double stepMax;				// total number of steps
 		double pot_en;				// system potential energy
 		double kin_en;				// system kinetic energy
 		double tot_en;				// system total energy
+		double pressure;			// pressure
+		double kB;				// Boltzmann constant
+		double temp;				// temperature
+
+		double volume;				// system volume
+		double npart;				// number of particles
+		double rho;				// density of system 
 
 		// cut-off correction to potential
 		double sig6;
 		double rc2i;
 		double rc6i;
 		double ecut;
-		unsigned int saveCount = 1000;	     	// number of timestep between saves
-		
+		unsigned int saveCount = 100;	     	// number of timestep between saves
+
 		// parameters for post-processing
 		double gR_radMin;			// minimum radius for g(r)
 		double gR_radDelta;			// thickness of shell 
@@ -41,7 +51,7 @@ class DPD {
 		int gR_tDelta;				// time between measurements g(r)
 		int gR_tEnd;				// end time for the measurement g(r)
 		int gR_tSamples;		 	// number of samples for g(r)	
-		
+
 		std::vector<Particle> particles;     		// vector of particles
 		std::vector<double> gR_nCount;
 
@@ -96,45 +106,52 @@ class DPD {
 		//solve contains the time stepping algorithm and the output routines 
 		void solve () {
 
+			// parameters declaration
+			volume = pow(box, 3.0);			// system volume
+			npart = 1.0*particles.size();		// number of particles
+			rho = npart/volume;			// density of system 
+			dof = dim*(npart - 1) - 2;		// total degrees of freedom
+
+			// cut-off correction to potential
+			sig6 = pow(sigma,6);
+			rc2i = 1/rc2;
+			rc6i = pow(rc2i,3);
+			ecut = 4*epsilon*sig6*rc6i*(sig6*rc6i - 1.0);
+
 			counter = 0;					// initialize time, counter for file writing
-			std::ofstream file1("./data/en_data.dat");	// initialize file stream for energy
+			std::ofstream enStats("./data/en_data.dat");	// initialize file stream for energy
+			std::ofstream eosStats("./data/eos_data.dat");	// pressure and temperature data
 
-			/*
-			std::cout << "printing gR_nCount with " << gR_nElem << " elements" << std::endl;
-			for (int loop = 0; loop < gR_nElem; ++loop){
-				std::cout << gR_nCount[loop] << std::endl;
-			}*/
+				while (step<stepMax) {
 
-	
-			while (step<stepMax) {
+					// force calculation
+					forceCalc();
 
-				// force calculation
-				forceCalc();
+					// Integrate equations of motion using Verlet leap_frog method
+					integrateEOS();
 
-				// Integrate equations of motion using Verlet leap_frog method
-				integrateEOS();
+					// total energy
+					tot_en = kin_en + pot_en;
 
-				// total energy
-				tot_en = kin_en + pot_en;
+					// Apply periodic boundary conditions
+					pbc();
 
-				// Apply periodic boundary conditions
-				pbc();
-			
-				// filewriting 
-				fileWrite(file1);
+					// filewriting 
+					fileWrite(enStats, eosStats);
 
-				// reset variables to zero
-				resetVar();
+					// reset variables to zero
+					resetVar();
 
-				// increment time step
-				step += 1;
+					// increment time step
+					step += 1;
 
-			} //end time loop
+				} //end time loop
 
 			// post-processing
-			grCalc();
+			grCalc();	 
+			enStats.close();
+			eosStats.close();
 
-			file1.close();
 		} //void solve()
 
 		/******************************************************************************************************/
@@ -160,21 +177,26 @@ class DPD {
 						double r2i = 1/r2;
 						double r6i = pow(r2i,3);
 						double ff = 48.0*epsilon*sig6*r2i*r6i*(r6i - 0.5);
-						p->f += ff*minRij;
-						q->f += -1.0*ff*minRij; 
+						Vec3D Fij = ff*minRij;
+						p->f += Fij;
+						q->f += Fij*(-1.0); 
 
-						// calculate the potential energy
+						// potential energy
 						double pair_pot_en = 4.0*epsilon*sig6*r6i*(sig6*r6i - 1.0);
 						pot_en += pair_pot_en - ecut;
+
+						// non-ideal comp pressure
+						double nonIdealcomp = Vec3D::dot(minRij, Fij)*(1.0/(dim*volume));
+						pressure += nonIdealcomp;
 					}		
-			
+
 					// radial distribution function
 					if ( (step > gR_tStart) && (step % gR_tDelta == 0) ) {
 
 						double dist = sqrt(r2);
 						if ( dist < box/2.0 ) { 
 							int ig = round(dist/gR_radDelta) - 2;
-						 	
+
 							gR_nCount[ig] += 2;	
 						}
 					} 
@@ -200,7 +222,10 @@ class DPD {
 				kin_en += 0.5*p.m*(p.v.getLengthSquared());
 
 			}
-
+			// ideal component of pressure
+			temp = 2*kin_en/dof;
+			double idealComp = rho*kB*temp; 
+			pressure += idealComp;
 		}
 
 		// Periodic boundary conditions
@@ -218,10 +243,7 @@ class DPD {
 		// Structure function g(r) calculation
 		void grCalc(){
 
-			double volume = pow(box, 3.0);					// system volume
-			double npart = 1.0*particles.size();				// number of particles
-			double rho = npart/volume;					// density of system 
-			
+
 			// write the g(r) data to a file
 			std::ofstream grWrite("./data/gr_data.dat");
 			grWrite << "Radius\t g(r)" << std::endl;
@@ -242,7 +264,7 @@ class DPD {
 			std::cout << " the total number of samples is: " << gR_tSamples	<< std::endl;
 			std::cout << " the homogeneous density is: " << rho << std::endl;
 			std::cout << " the number of particles is: " << npart << std::endl;
-			
+
 			// file close	
 			grWrite.close();
 		}
@@ -253,6 +275,7 @@ class DPD {
 			pot_en = 0.0;
 			kin_en = 0.0;
 			tot_en = 0.0;
+			pressure = 0.0;
 
 			// set all forces to zero
 			for (Particle& p : particles) {
@@ -261,7 +284,9 @@ class DPD {
 		}
 
 		// File writing
-		void fileWrite(std::ofstream& file1){
+		void fileWrite(std::ofstream& enStats, std::ofstream& eosStats){
+
+
 			//write output file in the .data format every 10th time step
 			if (++counter>=saveCount) {
 				//reset the counter, write time to terminal
@@ -274,8 +299,12 @@ class DPD {
 				// particle positions in vtk file format
 				vtkFileWritePosVel();
 
+				// file format for writing
+				std::cout << std::scientific << std::setprecision(15);
+				
 				//writing the energy balance
-				file1 << pot_en << " " << kin_en << " " << tot_en << std::endl;
+				enStats << pot_en << "\t" << kin_en << "\t" << tot_en << std::endl;
+				eosStats << rho << "\t" << temp << "\t" << pressure << std::endl;
 			}
 
 		}
