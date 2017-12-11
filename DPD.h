@@ -35,6 +35,10 @@ class DPD {
 		double npart;				// number of particles
 		double rho;				// density of system 
 
+		// Cell list variables
+		double rn;				// size of a cell in x, y, z directions
+		int Ncelx;				// number of cells
+
 		// cut-off correction to potential
 		double sig6;
 		double rc2i;
@@ -57,15 +61,19 @@ class DPD {
 
 		//initialise time, and counter/ofstream for data output
 		unsigned int counter;
+		unsigned int n; //mesh size
+		//define Cell as vector of Particle pointers
+		typedef std::vector<Particle*> Cell; 
+		std::vector<Cell> ll; //linked list
 
 		/******************************************************************************************************/
 		/**************************************** INITIALIZATION ROUTINE **************************************/
 		/******************************************************************************************************/
 		void init(){
 			// Set max and min dimensions of boxy
-			double xind_min = -1.0*(box/2.0) + 1.0;
-			double yind_min = -1.0*(box/2.0) + 1.0;
-			double zind_min = -1.0*(box/2.0) + 1.0;
+			double xind_min = -1.0*(box/2.0) + 0.5;
+			double yind_min = -1.0*(box/2.0) + 0.5;
+			double zind_min = -1.0*(box/2.0) + 0.5;
 			double xind_max =  1.0*(box/2.0);
 			double yind_max =  1.0*(box/2.0);
 			double zind_max =  1.0*(box/2.0);
@@ -99,12 +107,18 @@ class DPD {
 			for (int i=0; i < gR_nElem ; ++i){
 				gR_nCount.push_back(0.0);
 			}	
+
 		}
+
 		/******************************************************************************************************/
 		/**************************************** SOLVE ROUTINE ***********************************************/
 		/******************************************************************************************************/
 		//solve contains the time stepping algorithm and the output routines 
 		void solve () {
+
+			// initialize position, velocity, hoc, ll
+			init();
+			ll.resize(rn*rn*rn); 
 
 			// parameters declaration
 			volume = pow(box, 3.0);			// system volume
@@ -122,30 +136,33 @@ class DPD {
 			std::ofstream enStats("./data/en_data.dat");	// initialize file stream for energy
 			std::ofstream eosStats("./data/eos_data.dat");	// pressure and temperature data
 
-				while (step<stepMax) {
+			while (step<stepMax) {
 
-					// force calculation
-					forceCalc();
+				// force calculation
+				// forceCalc();
+				forceCalc_cellList();
 
-					// Integrate equations of motion using Verlet leap_frog method
-					integrateEOS();
+				exit(0);
 
-					// total energy
-					tot_en = kin_en + pot_en;
+				// Integrate equations of motion using Verlet leap_frog method
+				integrateEOS();
 
-					// Apply periodic boundary conditions
-					pbc();
+				// total energy
+				tot_en = kin_en + pot_en;
 
-					// filewriting 
-					fileWrite(enStats, eosStats);
+				// Apply periodic boundary conditions
+				pbc();
 
-					// reset variables to zero
-					resetVar();
+				// filewriting 
+				fileWrite(enStats, eosStats);
 
-					// increment time step
-					step += 1;
+				// reset variables to zero
+				resetVar();
 
-				} //end time loop
+				// increment time step
+				step += 1;
+
+			} //end time loop
 
 			// post-processing
 			grCalc();	 
@@ -157,7 +174,7 @@ class DPD {
 		/******************************************************************************************************/
 		/**************************************** FUNCTIONS ***************************************************/
 		/******************************************************************************************************/
-		// Force Calculation
+		// Brute force implementation of the Force Calculation 
 		void forceCalc(){
 
 			//loop over all contacts p=1..N-1, q=p+1..N to evaluate forces
@@ -203,6 +220,56 @@ class DPD {
 				}
 			}
 		}
+
+		// Cell list implementation of the force calculation
+		void forceCalc_cellList(){
+
+			//LL: remove old linked list
+			for (Cell& cell : ll) cell.resize(0); // ll.resize(0); does the same function ? \
+			//LL: re-initialise linked list
+			for (Particle& p : particles) {
+
+				int indx = ceil(p.r.getComponent(0)/rn) +1;
+				int indy = ceil(p.r.getComponent(1)/rn) +1;
+				int indz = ceil(p.r.getComponent(2)/rn) +1;
+
+				int ix = Ncelx*(Ncelx*indz + indy) + indx + 1;;
+				std::cout << "position: " << std::setw(10) << p.r << ", indices: "<< indx << ", " << indy << ", " <<indz << " and cell number: " << ix <<std::endl;
+				// ll[ix].push_back(&p);
+			}
+
+			//for(int i = 1; i < ll.size(); ++i)
+			//	std::cout << ll[i].size() << std::endl;
+		}
+
+		/******************************************************************************************************/
+		/**************************************** CELL-LIST FORCE CALCULATION  ********************************/
+		/******************************************************************************************************/
+		/*
+		   void computeForce(Particle* p, Particle* q) {
+		   double distance = (p->r-q->r).getLength();
+		   double overlap = p->a+q->a-distance;
+		   if (overlap>=0) {
+		   Vec3D normal = (p->r-q->r)/distance;
+		   double vreln = Vec3D::dot(p->v-q->v,normal);
+		   double normalForce = k*overlap+gam*vreln; 
+		   p->f += normal*normalForce;
+		   q->f += normal*(-normalForce);
+		   }		
+		   }
+
+		   void computeForces(Cell& cell1, Cell& cell2) {
+		   for (Particle* p : cell1)
+		   for (Particle* q : cell2)
+		   computeForce(p,q);
+		   }	
+
+		   void computeForces(Cell& cell) {
+		   for (auto p = cell.begin();  p!=cell.end(); ++p)
+		   for (auto q = p+1;  q!=cell.end(); ++q)
+		   computeForce(*p,*q);
+		   }*/	
+
 		// Integrating equations of motion -- Verlet Leap Frog scheme
 		void integrateEOS(){
 			for (Particle& p : particles) {
@@ -301,7 +368,7 @@ class DPD {
 
 				// file format for writing
 				std::cout << std::scientific << std::setprecision(15);
-				
+
 				//writing the energy balance
 				enStats << pot_en << "\t" << kin_en << "\t" << tot_en << std::endl;
 				eosStats << rho << "\t" << temp << "\t" << pressure << std::endl;
