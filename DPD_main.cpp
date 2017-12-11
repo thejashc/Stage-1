@@ -7,10 +7,10 @@ int main () {
 	DPD coll2p;	
 
 	// set global parameters
-	coll2p.box = 8.0;			// dimension of box
+	coll2p.box = 10.0;			// dimension of box
 	coll2p.epsilon = 1.0;			// energy well depth
 	coll2p.sigma = 1.0;			// zero-potential distance
-	coll2p.rcutoff = 3.0;			// cut-off distance
+	coll2p.rcutoff = 2.5;			// cut-off distance
 	coll2p.rc2 = pow(coll2p.rcutoff,2);	// square of cut-off distance
 	coll2p.dim = 3;				// 3D system
 
@@ -18,6 +18,10 @@ int main () {
 	coll2p.step = 1;
 	coll2p.stepMax = 5e5;
 	coll2p.kB = 1.0;			// Boltzmann constant
+
+	// Cell list parameters
+	coll2p.rn = coll2p.box/(round(coll2p.box/coll2p.rcutoff)); // size of cell
+	coll2p.Ncelx = round(coll2p.box/coll2p.rn);		   // no of cells in a dirn
 	
 	// post-processing
 	coll2p.gR_radMin = 0.5;			// minimum radius for g(r) 
@@ -31,7 +35,7 @@ int main () {
 	coll2p.gR_tSamples = round((coll2p.gR_tEnd - coll2p.gR_tStart)/(coll2p.gR_tDelta)) - 1;
 
 	// Initialization
-	coll2p.init();						// initialize particle positions and velocity
+	// coll2p.init();						// initialize particle positions and velocity
 
 	// monitor total run time
 	tstart = time(0);
