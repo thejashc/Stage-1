@@ -22,6 +22,8 @@ int main () {
 	// Cell list parameters
 	coll2p.rn = coll2p.box/(round(coll2p.box/coll2p.rcutoff)); // size of cell
 	coll2p.Ncelx = round(coll2p.box/coll2p.rn);		   // no of cells in a dirn
+	coll2p.Ncely = round(coll2p.box/coll2p.rn);		   // no of cells in a dirn
+	coll2p.Ncelz = round(coll2p.box/coll2p.rn);		   // no of cells in a dirn
 	
 	// post-processing
 	coll2p.gR_radMin = 0.5;			// minimum radius for g(r) 
