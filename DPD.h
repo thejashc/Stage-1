@@ -46,7 +46,7 @@ class DPD {
 		double rc2i;
 		double rc6i;
 		double ecut;
-		unsigned int saveCount = 100;	     	// number of timestep between saves
+		unsigned int saveCount = 1000;	     	// number of timestep between saves
 
 		// parameters for post-processing
 		double gR_radMin;			// minimum radius for g(r)
@@ -138,13 +138,18 @@ class DPD {
 			std::ofstream enStats("./data/en_data.dat");	// initialize file stream for energy
 			std::ofstream eosStats("./data/eos_data.dat");	// pressure and temperature data
 
+			energyMinimization();
+
 			while (step<stepMax) {
 
 				// force calculation
 				// forceCalc();
 				forceCalc_cellList();
+		
+				//for (Particle& p: particles)
+				//	std::cout << "the force on particle is: "<< p.f << std::endl;
 
-				exit(0);
+				// std::cout << step << std::endl;
 
 				// Integrate equations of motion using Verlet leap_frog method
 				integrateEOS();
@@ -223,12 +228,16 @@ class DPD {
 			}
 		}
 
+		/******************************************************************************************************/
+		/**************************************** CELL-LIST FORCE CALCULATION  ********************************/
+		/******************************************************************************************************/
 		// Cell list implementation of the force calculation
 		void forceCalc_cellList(){
 
 			//LL: remove old linked list
-			// for (Cell& cell : ll) cell.resize(0); // ll.resize(0); does the same function ? 
-			ll.resize(0);
+			for (Cell& cell : ll) cell.resize(0); 
+			// ll.resize(0); // this strangely gave me a segmentation fault
+
 			//LL: re-initialise linked list
 			for (Particle& p : particles) {
 
@@ -248,151 +257,212 @@ class DPD {
 				Cell& cell = ll[i];
 				}*/
 			}
-		
+
 			// identifying neighbors
 			// LL: loop over all contacts p=1..N, q=p+1..N to evaluate forces
-			std::array<int,3> i={0,0,0};
 			for (unsigned int indx=0; indx<Ncelx; ++indx)
-			for (unsigned int indy=0; indy<Ncely; ++indy)
-			for (unsigned int indz=0; indz<Ncelz; ++indz) {
-				unsigned int ix = Ncelx*(Ncelx*indz + indy) + indx + 1 - 1;
-				
-				unsigned int Nbor_indx; 
-				unsigned int Nbor_indy; 
-				unsigned int Nbor_indz; 
-				unsigned int Nbor_ix;  
-			
-				Cell& cell = ll[ix];
-				std::cout << "The cell number is: " << ix << ", with neighbours: ";
-			
-				if (cell.size()==0) continue;
-				// computeForces(cell);		//compute forces between the particle pairs within a cell
-			
-				// compute forces between neighbours
-				// neighbour 1
-				Nbor_indx = (indx + 1)% Ncelx; 
-				Nbor_indy = indy; 
-				Nbor_indz = indz; 
-				Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
-				std::cout << Nbor_ix << ", ";				
-	
-				// neighbour 2
-				Nbor_indx = (indx + 1)% Ncelx; 
-				Nbor_indy = (indy + 1)% Ncely; 
-				Nbor_indz = indz; 
-				Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
-				std::cout << Nbor_ix << ", ";				
+				for (unsigned int indy=0; indy<Ncely; ++indy)
+					for (unsigned int indz=0; indz<Ncelz; ++indz) {
+						unsigned int ix = Ncelx*(Ncelx*indz + indy) + indx + 1 - 1;
 
-				// neighbour 3
-				Nbor_indx = indx; 
-				Nbor_indy = (indy + 1)% Ncely; 
-				Nbor_indz = indz; 
-				Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
-				std::cout << Nbor_ix << ", ";				
+						unsigned int Nbor_indx; 
+						unsigned int Nbor_indy; 
+						unsigned int Nbor_indz; 
+						unsigned int Nbor_ix;  
 
-				// neighbour 4
-				Nbor_indx = (indx - 1)% Ncelx; 
-				Nbor_indy = (indy + 1)% Ncely; 
-				Nbor_indz = indz; 
-				Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
-				std::cout << Nbor_ix << ", ";				
+						Cell& cell = ll[ix];
+						// std::cout << "The cell number is: " << ix << ", with neighbours: ";
 
-				// neighbour 5	
-				Nbor_indx = (indx + 1)% Ncelx; 
-				Nbor_indy = indy; 
-				Nbor_indz = (indz - 1)% Ncelz; 
-				Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
-				std::cout << Nbor_ix << ", ";				
+						if (cell.size()==0) continue;
+						computeForces(cell);		//compute forces between the particle pairs within a cell
 
-				// neighbour 6
-				Nbor_indx = (indx + 1)% Ncelx; 
-				Nbor_indy = (indy + 1)% Ncely; 
-				Nbor_indz = (indz - 1)% Ncelz; 
-				Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
-				std::cout << Nbor_ix << ", ";				
+						// compute forces between neighbours
+						// neighbour 1
+						Nbor_indx = (indx + 1)% Ncelx; 
+						Nbor_indy = indy; 
+						Nbor_indz = indz; 
+						Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
+						// std::cout << Nbor_ix << ", ";				
 
-				// neighbour 7
-				Nbor_indx = indx; 
-				Nbor_indy = (indy + 1)% Ncely; 
-				Nbor_indz = (indz - 1)% Ncelz; 
-				Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
-				std::cout << Nbor_ix << ", ";				
-				
-				// neighbour 8
-				Nbor_indx = (indx - 1)% Ncelx; 
-				Nbor_indy = (indy + 1)% Ncely; 
-				Nbor_indz = (indz - 1)% Ncelz; 
-				Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
-				std::cout << Nbor_ix << ", ";				
-	
-				// neihgbour 9
-				Nbor_indx = (indx + 1)% Ncelx; 
-				Nbor_indy = indy; 
-				Nbor_indz = (indz + 1)% Ncelz; 
-				Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
-				std::cout << Nbor_ix << ", ";				
+						// compute forces between cell and neighbour 1
+						computeForces(cell, ll[Nbor_ix]);
 
-				// neighbour 10
-				Nbor_indx = (indx + 1)% Ncelx; 
-				Nbor_indy = (indy + 1)% Ncely; 
-				Nbor_indz = (indz + 1)% Ncelz; 
-				Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
-				std::cout << Nbor_ix << ", ";				
-			
-				// neighbour 11
-				Nbor_indx = indx; 
-				Nbor_indy = (indy + 1)% Ncely; 
-				Nbor_indz = (indz + 1)% Ncelz; 
-				Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
-				std::cout << Nbor_ix << ", ";				
+						// neighbour 2
+						Nbor_indx = (indx + 1)% Ncelx; 
+						Nbor_indy = (indy + 1)% Ncely; 
+						Nbor_indz = indz; 
+						Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
+						// std::cout << Nbor_ix << ", ";				
 
-				// neighbour 12
-				Nbor_indx = (indx - 1)% Ncelx; 
-				Nbor_indy = (indy + 1)% Ncely; 
-				Nbor_indz = (indz + 1)% Ncelz; 
-				Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
-				std::cout << Nbor_ix << ", ";				
+						// compute forces between cell and neighbour 2
+						computeForces(cell, ll[Nbor_ix]);
 
-				// neighbour 13
-				Nbor_indx = indx; 
-				Nbor_indy = indy; 
-				Nbor_indz = (indz + 1)% Ncelz; 
-				Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
-				std::cout << Nbor_ix << ", ";				
+						// neighbour 3
+						Nbor_indx = indx; 
+						Nbor_indy = (indy + 1)% Ncely; 
+						Nbor_indz = indz; 
+						Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
+						// std::cout << Nbor_ix << ", ";				
 
-				std::cout << std::endl;	
-			}
+						// compute forces between cell and neighbour 3
+						computeForces(cell,ll[Nbor_ix]);
 
+						// neighbour 4
+						Nbor_indx = (indx - 1)% Ncelx; 
+						Nbor_indy = (indy + 1)% Ncely; 
+						Nbor_indz = indz; 
+						Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
+						// std::cout << Nbor_ix << ", ";				
+
+						// compute forces between cell and neighbour 4
+						computeForces(cell, ll[Nbor_ix]);
+
+						// neighbour 5	
+						Nbor_indx = (indx + 1)% Ncelx; 
+						Nbor_indy = indy; 
+						Nbor_indz = (indz - 1)% Ncelz; 
+						Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
+						// std::cout << Nbor_ix << ", ";				
+
+						// compute forces between cell and neighbour 5
+						computeForces(cell, ll[Nbor_ix]);
+
+						// neighbour 6
+						Nbor_indx = (indx + 1)% Ncelx; 
+						Nbor_indy = (indy + 1)% Ncely; 
+						Nbor_indz = (indz - 1)% Ncelz; 
+						Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
+						// std::cout << Nbor_ix << ", ";				
+
+						// compute forces between cell and neighbour 6
+						computeForces(cell, ll[Nbor_ix]);
+
+						// neighbour 7
+						Nbor_indx = indx; 
+						Nbor_indy = (indy + 1)% Ncely; 
+						Nbor_indz = (indz - 1)% Ncelz; 
+						Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
+						// std::cout << Nbor_ix << ", ";				
+
+						// compute forces between cell and neighbour 7
+						computeForces(cell, ll[Nbor_ix]);
+
+						// neighbour 8
+						Nbor_indx = (indx - 1)% Ncelx; 
+						Nbor_indy = (indy + 1)% Ncely; 
+						Nbor_indz = (indz - 1)% Ncelz; 
+						Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
+						// std::cout << Nbor_ix << ", ";				
+
+						// compute forces between cell and neighbour 8
+						computeForces(cell, ll[Nbor_ix]);
+
+						// neihgbour 9
+						Nbor_indx = (indx + 1)% Ncelx; 
+						Nbor_indy = indy; 
+						Nbor_indz = (indz + 1)% Ncelz; 
+						Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
+						// std::cout << Nbor_ix << ", ";				
+
+						// compute forces between cell and neighbour 9
+						computeForces(cell, ll[Nbor_ix]);
+
+						// neighbour 10
+						Nbor_indx = (indx + 1)% Ncelx; 
+						Nbor_indy = (indy + 1)% Ncely; 
+						Nbor_indz = (indz + 1)% Ncelz; 
+						Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
+						// std::cout << Nbor_ix << ", ";				
+
+						// compute forces between cell and neighbour 10
+						computeForces(cell, ll[Nbor_ix]);
+
+						// neighbour 11
+						Nbor_indx = indx; 
+						Nbor_indy = (indy + 1)% Ncely; 
+						Nbor_indz = (indz + 1)% Ncelz; 
+						Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
+						// std::cout << Nbor_ix << ", ";				
+
+						// compute forces between cell and neighbour 11
+						computeForces(cell, ll[Nbor_ix]);
+
+						// neighbour 12
+						Nbor_indx = (indx - 1)% Ncelx; 
+						Nbor_indy = (indy + 1)% Ncely; 
+						Nbor_indz = (indz + 1)% Ncelz; 
+						Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
+						// std::cout << Nbor_ix << ", ";				
+
+						// compute forces between cell and neighbour 12
+						computeForces(cell, ll[Nbor_ix]);
+
+						// neighbour 13
+						Nbor_indx = indx; 
+						Nbor_indy = indy; 
+						Nbor_indz = (indz + 1)% Ncelz; 
+						Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
+						// std::cout << Nbor_ix << ", ";				
+
+						// compute forces between cell and neighbour 13
+						computeForces(cell, ll[Nbor_ix]);
+
+						// std::cout << std::endl;	
+					}
 		}
 
-		/******************************************************************************************************/
-		/**************************************** CELL-LIST FORCE CALCULATION  ********************************/
-		/******************************************************************************************************/
-		/*
-		   void computeForce(Particle* p, Particle* q) {
-		   double distance = (p->r-q->r).getLength();
-		   double overlap = p->a+q->a-distance;
-		   if (overlap>=0) {
-		   Vec3D normal = (p->r-q->r)/distance;
-		   double vreln = Vec3D::dot(p->v-q->v,normal);
-		   double normalForce = k*overlap+gam*vreln; 
-		   p->f += normal*normalForce;
-		   q->f += normal*(-normalForce);
-		   }		
-		   }
+		void computeForce(Particle* p, Particle* q) {
 
-		   void computeForces(Cell& cell1, Cell& cell2) {
-		   for (Particle* p : cell1)
-		   for (Particle* q : cell2)
-		   computeForce(p,q);
-		   }	
+			Vec3D Rij = p->r - q->r;	
+			Vec3D temp;
+			temp.X = Vec3D::roundOff_x(Rij, box);
+			temp.Y = Vec3D::roundOff_y(Rij, box);
+			temp.Z = Vec3D::roundOff_z(Rij, box);
+			Vec3D minRij = Rij - temp*box;
+			double r2 = minRij.getLengthSquared();
 
-		   void computeForces(Cell& cell) {
-		   for (auto p = cell.begin();  p!=cell.end(); ++p)
-		   for (auto q = p+1;  q!=cell.end(); ++q)
-		   computeForce(*p,*q);
-		   }*/	
+			if ( r2 < rc2 ) {
 
+				double r2i = 1/r2;
+				double r6i = pow(r2i,3);
+				double ff = 48.0*epsilon*sig6*r2i*r6i*(r6i - 0.5);
+				Vec3D Fij = ff*minRij;
+				p->f += Fij;
+				q->f += Fij*(-1.0); 
+
+				// potential energy
+				double pair_pot_en = 4.0*epsilon*sig6*r6i*(sig6*r6i - 1.0);
+				pot_en += pair_pot_en - ecut;
+
+				// non-ideal comp pressure
+				double nonIdealcomp = Vec3D::dot(minRij, Fij)*(1.0/(dim*volume));
+				pressure += nonIdealcomp;
+			}		
+
+			// radial distribution function
+			if ( (step > gR_tStart) && (step % gR_tDelta == 0) ) {
+
+				double dist = sqrt(r2);
+				if ( dist < box/2.0 ) { 
+					int ig = round(dist/gR_radDelta) - 2;
+
+					gR_nCount[ig] += 2;	
+				}
+			} 
+		}// computeForce() -- between 2 particles
+
+		void computeForces(Cell& cell1, Cell& cell2) {
+			for (Particle* p : cell1)
+				for (Particle* q : cell2)
+					computeForce(p,q);
+		}// computeForces() -- between 2 cells	
+
+		void computeForces(Cell& cell) {
+			for (auto p = cell.begin();  p!=cell.end(); ++p)
+				for (auto q = p+1;  q!=cell.end(); ++q)
+					computeForce(*p,*q);
+		}// computeForces() -- entire cell	
+		
 		// Integrating equations of motion -- Verlet Leap Frog scheme
 		void integrateEOS(){
 			for (Particle& p : particles) {
@@ -428,7 +498,40 @@ class DPD {
 				temp.Z = Vec3D::roundOff_z(p.r, box);
 				p.r  = p.r - temp*box;				
 			}
+		}// pbc()
+
+		void energyMinimization(){
+				
+			//loop over all contacts p=1..N-1, q=p+1..N to evaluate forces
+			for (auto p = particles.begin();  p!=particles.end()-1; ++p){
+				//for_loop_inner_counter = 0;
+				for (auto q = p+1;  q!=particles.end(); ++q) {
+
+					Vec3D Rij = p->r - q->r;	
+					Vec3D temp;
+					temp.X = Vec3D::roundOff_x(Rij, box);
+					temp.Y = Vec3D::roundOff_y(Rij, box);
+					temp.Z = Vec3D::roundOff_z(Rij, box);
+					Vec3D minRij = Rij - temp*box;
+					double r2 = minRij.getLengthSquared();
+
+					if ( r2 < rc2 ) {
+						double r2i = 1/r2;
+						double r6i = pow(r2i,3);
+						double ff = 48.0*epsilon*sig6*r2i*r6i*(r6i - 0.5);
+						Vec3D Fij = ff*minRij;
+						p->f += Fij;
+						q->f += Fij*(-1.0); 
+
+					}		
+
+				}
+			}
+
+
+
 		}
+
 
 		// Structure function g(r) calculation
 		void grCalc(){
@@ -457,7 +560,7 @@ class DPD {
 
 			// file close	
 			grWrite.close();
-		}
+		}//grCalc()
 
 		// Reset variables
 		void resetVar(){
@@ -476,15 +579,16 @@ class DPD {
 		// File writing
 		void fileWrite(std::ofstream& enStats, std::ofstream& eosStats){
 
+			if ( step % 10000 == 0){
+				std::cout<< step << " steps out of " << stepMax << " completed " << std::endl;
+			}
+
 
 			//write output file in the .data format every 10th time step
 			if (++counter>=saveCount) {
 				//reset the counter, write time to terminal
 				counter = 0;
 
-				if ( step % 10000 == 0){
-					std::cout<< step << " steps out of " << stepMax << " completed " << std::endl;
-				}
 
 				// particle positions in vtk file format
 				vtkFileWritePosVel();
