@@ -37,7 +37,9 @@ class DPD {
 
 		// Cell list variables
 		double rn;				// size of a cell in x, y, z directions
-		int Ncelx;				// number of cells
+		int Ncelx;				// number of cells in x
+		int Ncely;				// number of cells in y
+		int Ncelz;				// number of cells in z
 
 		// cut-off correction to potential
 		double sig6;
@@ -56,7 +58,7 @@ class DPD {
 		int gR_tEnd;				// end time for the measurement g(r)
 		int gR_tSamples;		 	// number of samples for g(r)	
 
-		std::vector<Particle> particles;     		// vector of particles
+		std::vector<Particle> particles;     	// vector of particles
 		std::vector<double> gR_nCount;
 
 		//initialise time, and counter/ofstream for data output
@@ -64,7 +66,7 @@ class DPD {
 		unsigned int n; //mesh size
 		//define Cell as vector of Particle pointers
 		typedef std::vector<Particle*> Cell; 
-		std::vector<Cell> ll; //linked list
+		std::vector<Cell> ll; //linked list is a 2D vector
 
 		/******************************************************************************************************/
 		/**************************************** INITIALIZATION ROUTINE **************************************/
@@ -118,7 +120,7 @@ class DPD {
 
 			// initialize position, velocity, hoc, ll
 			init();
-			ll.resize(rn*rn*rn); 
+			ll.resize(Ncelx*Ncelx*Ncelx); 
 
 			// parameters declaration
 			volume = pow(box, 3.0);			// system volume
@@ -225,7 +227,8 @@ class DPD {
 		void forceCalc_cellList(){
 
 			//LL: remove old linked list
-			for (Cell& cell : ll) cell.resize(0); // ll.resize(0); does the same function ? \
+			// for (Cell& cell : ll) cell.resize(0); // ll.resize(0); does the same function ? 
+			ll.resize(0);
 			//LL: re-initialise linked list
 			for (Particle& p : particles) {
 
@@ -233,13 +236,133 @@ class DPD {
 				int indy = ceil(p.r.getComponent(1)/rn) +1;
 				int indz = ceil(p.r.getComponent(2)/rn) +1;
 
-				int ix = Ncelx*(Ncelx*indz + indy) + indx + 1;;
-				std::cout << "position: " << std::setw(10) << p.r << ", indices: "<< indx << ", " << indy << ", " <<indz << " and cell number: " << ix <<std::endl;
-				// ll[ix].push_back(&p);
+				int ix = Ncelx*(Ncelx*indz + indy) + indx + 1 - 1;
+				// std::cout << "position: " << std::setw(10) << p.r << ", indices: "<< indx << ", " << indy << ", " <<indz << " and cell number: " << ix <<std::endl;
+				// std::cout << "started for cell number: " << ix << std::endl; 
+				ll[ix].push_back(&p);
+				// std::cout << "successfully done for cell number: " << ix << std::endl; 
+
+				/*
+				// accessing ll			
+				for (int i=0; i < ll.size(); ++i){
+				Cell& cell = ll[i];
+				}*/
+			}
+		
+			// identifying neighbors
+			// LL: loop over all contacts p=1..N, q=p+1..N to evaluate forces
+			std::array<int,3> i={0,0,0};
+			for (unsigned int indx=0; indx<Ncelx; ++indx)
+			for (unsigned int indy=0; indy<Ncely; ++indy)
+			for (unsigned int indz=0; indz<Ncelz; ++indz) {
+				unsigned int ix = Ncelx*(Ncelx*indz + indy) + indx + 1 - 1;
+				
+				unsigned int Nbor_indx; 
+				unsigned int Nbor_indy; 
+				unsigned int Nbor_indz; 
+				unsigned int Nbor_ix;  
+			
+				Cell& cell = ll[ix];
+				std::cout << "The cell number is: " << ix << ", with neighbours: ";
+			
+				if (cell.size()==0) continue;
+				// computeForces(cell);		//compute forces between the particle pairs within a cell
+			
+				// compute forces between neighbours
+				// neighbour 1
+				Nbor_indx = (indx + 1)% Ncelx; 
+				Nbor_indy = indy; 
+				Nbor_indz = indz; 
+				Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
+				std::cout << Nbor_ix << ", ";				
+	
+				// neighbour 2
+				Nbor_indx = (indx + 1)% Ncelx; 
+				Nbor_indy = (indy + 1)% Ncely; 
+				Nbor_indz = indz; 
+				Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
+				std::cout << Nbor_ix << ", ";				
+
+				// neighbour 3
+				Nbor_indx = indx; 
+				Nbor_indy = (indy + 1)% Ncely; 
+				Nbor_indz = indz; 
+				Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
+				std::cout << Nbor_ix << ", ";				
+
+				// neighbour 4
+				Nbor_indx = (indx - 1)% Ncelx; 
+				Nbor_indy = (indy + 1)% Ncely; 
+				Nbor_indz = indz; 
+				Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
+				std::cout << Nbor_ix << ", ";				
+
+				// neighbour 5	
+				Nbor_indx = (indx + 1)% Ncelx; 
+				Nbor_indy = indy; 
+				Nbor_indz = (indz - 1)% Ncelz; 
+				Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
+				std::cout << Nbor_ix << ", ";				
+
+				// neighbour 6
+				Nbor_indx = (indx + 1)% Ncelx; 
+				Nbor_indy = (indy + 1)% Ncely; 
+				Nbor_indz = (indz - 1)% Ncelz; 
+				Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
+				std::cout << Nbor_ix << ", ";				
+
+				// neighbour 7
+				Nbor_indx = indx; 
+				Nbor_indy = (indy + 1)% Ncely; 
+				Nbor_indz = (indz - 1)% Ncelz; 
+				Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
+				std::cout << Nbor_ix << ", ";				
+				
+				// neighbour 8
+				Nbor_indx = (indx - 1)% Ncelx; 
+				Nbor_indy = (indy + 1)% Ncely; 
+				Nbor_indz = (indz - 1)% Ncelz; 
+				Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
+				std::cout << Nbor_ix << ", ";				
+	
+				// neihgbour 9
+				Nbor_indx = (indx + 1)% Ncelx; 
+				Nbor_indy = indy; 
+				Nbor_indz = (indz + 1)% Ncelz; 
+				Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
+				std::cout << Nbor_ix << ", ";				
+
+				// neighbour 10
+				Nbor_indx = (indx + 1)% Ncelx; 
+				Nbor_indy = (indy + 1)% Ncely; 
+				Nbor_indz = (indz + 1)% Ncelz; 
+				Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
+				std::cout << Nbor_ix << ", ";				
+			
+				// neighbour 11
+				Nbor_indx = indx; 
+				Nbor_indy = (indy + 1)% Ncely; 
+				Nbor_indz = (indz + 1)% Ncelz; 
+				Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
+				std::cout << Nbor_ix << ", ";				
+
+				// neighbour 12
+				Nbor_indx = (indx - 1)% Ncelx; 
+				Nbor_indy = (indy + 1)% Ncely; 
+				Nbor_indz = (indz + 1)% Ncelz; 
+				Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
+				std::cout << Nbor_ix << ", ";				
+
+				// neighbour 13
+				Nbor_indx = indx; 
+				Nbor_indy = indy; 
+				Nbor_indz = (indz + 1)% Ncelz; 
+				Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
+				std::cout << Nbor_ix << ", ";				
+
+				std::cout << std::endl;	
 			}
 
-			//for(int i = 1; i < ll.size(); ++i)
-			//	std::cout << ll[i].size() << std::endl;
 		}
 
 		/******************************************************************************************************/
