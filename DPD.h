@@ -46,7 +46,7 @@ class DPD {
 		double rc2i;
 		double rc6i;
 		double ecut;
-		unsigned int saveCount = 1000;	     	// number of timestep between saves
+		unsigned int saveCount = 100000;	// number of timestep between saves
 
 		// parameters for post-processing
 		double gR_radMin;			// minimum radius for g(r)
@@ -138,7 +138,7 @@ class DPD {
 			std::ofstream enStats("./data/en_data.dat");	// initialize file stream for energy
 			std::ofstream eosStats("./data/eos_data.dat");	// pressure and temperature data
 
-			energyMinimization();
+		//	energyMinimization();
 
 			while (step<stepMax) {
 
@@ -500,6 +500,7 @@ class DPD {
 			}
 		}// pbc()
 
+		/*
 		void energyMinimization(){
 				
 			//loop over all contacts p=1..N-1, q=p+1..N to evaluate forces
@@ -530,7 +531,7 @@ class DPD {
 
 
 
-		}
+		}*/
 
 
 		// Structure function g(r) calculation
