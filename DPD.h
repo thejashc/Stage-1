@@ -30,6 +30,9 @@ class DPD {
 		double pressure;			// pressure
 		double kB;				// Boltzmann constant
 		double temp;				// temperature
+		double tempSum;				// temperature sum
+		double tempAv;				// temperature average
+		int tempCount;				// counting number of samples
 
 		double volume;				// system volume
 		double npart;				// number of particles
@@ -46,9 +49,10 @@ class DPD {
 		double rc2i;
 		double rc6i;
 		double ecut;
-		unsigned int saveCount = 100000;	// number of timestep between saves
+		unsigned int saveCount = 10000;	// number of timestep between saves
 
 		// parameters for post-processing
+		// g(r) -- structure function
 		double gR_radMin;			// minimum radius for g(r)
 		double gR_radDelta;			// thickness of shell 
 		double gR_radMax;			// maximum radius for g(r)
@@ -58,8 +62,22 @@ class DPD {
 		int gR_tEnd;				// end time for the measurement g(r)
 		int gR_tSamples;		 	// number of samples for g(r)	
 
+		std::vector<double> gR_nCount;		// g(r) function
+
+		// velHist -- velocity distribution
+		double velHist_velMin;			// minimum radius for g(r)
+		double velHist_velDelta;		// thickness of shell 
+		double velHist_velMax;			// maximum radius for g(r)
+		int velHist_tStart;			// start time for measuring velHist
+		int velHist_tDelta;			// time between measurements velHist
+		int velHist_tEnd;			// end time for measurements velHist
+		int velHist_bins;			// number of bins for velHist
+
+		std::vector<int> velHistX;		// velHist vector for X component
+		std::vector<int> velHistY;		// velHist vector for Y component
+		std::vector<int> velHistZ;		// velHist vector for Z component
+
 		std::vector<Particle> particles;     	// vector of particles
-		std::vector<double> gR_nCount;
 
 		//initialise time, and counter/ofstream for data output
 		unsigned int counter;
@@ -110,6 +128,22 @@ class DPD {
 				gR_nCount.push_back(0.0);
 			}	
 
+			// Initialize the velHistX array
+			for (int i=0; i < velHist_bins ; ++i){
+				velHistX.push_back(0);
+				velHistY.push_back(0);
+				velHistZ.push_back(0);
+			}	
+
+			Vec3D velAvg={0.0, 0.0, 0.0};
+			// Remove excess velocity
+			for (Particle& p: particles){
+				velAvg += p.w/particles.size();
+			}
+
+			for (Particle& p: particles){
+				p.w -= velAvg;
+			}	
 		}
 
 		/******************************************************************************************************/
@@ -123,6 +157,10 @@ class DPD {
 			ll.resize(Ncelx*Ncelx*Ncelx); 
 
 			// parameters declaration
+			temp = 0.0;
+			tempSum = 0.0;
+			tempAv = 0.0;
+			tempCount = 0;
 			volume = pow(box, 3.0);			// system volume
 			npart = 1.0*particles.size();		// number of particles
 			rho = npart/volume;			// density of system 
@@ -138,14 +176,14 @@ class DPD {
 			std::ofstream enStats("./data/en_data.dat");	// initialize file stream for energy
 			std::ofstream eosStats("./data/eos_data.dat");	// pressure and temperature data
 
-		//	energyMinimization();
+			//	energyMinimization();
 
 			while (step<stepMax) {
 
 				// force calculation
 				// forceCalc();
 				forceCalc_cellList();
-		
+
 				//for (Particle& p: particles)
 				//	std::cout << "the force on particle is: "<< p.f << std::endl;
 
@@ -173,6 +211,7 @@ class DPD {
 
 			// post-processing
 			grCalc();	 
+			velHistCalc();
 			enStats.close();
 			eosStats.close();
 
@@ -462,7 +501,7 @@ class DPD {
 				for (auto q = p+1;  q!=cell.end(); ++q)
 					computeForce(*p,*q);
 		}// computeForces() -- entire cell	
-		
+
 		// Integrating equations of motion -- Verlet Leap Frog scheme
 		void integrateEOS(){
 			for (Particle& p : particles) {
@@ -478,9 +517,22 @@ class DPD {
 				// calculate velocity (integral time step)
 				p.v = 0.5*(w_old + p.w);
 
+				// distribute velocities into velocity bins
+				if ( (step > velHist_tStart) && (step % velHist_tDelta == 0) ) {
+					int ivelX = ceil((velHist_velMax - p.v.X)/velHist_velDelta); 
+					int ivelY = ceil((velHist_velMax - p.v.Y)/velHist_velDelta); 
+					int ivelZ = ceil((velHist_velMax - p.v.Z)/velHist_velDelta); 
+
+					velHistX[ivelX] += 1;
+					velHistY[ivelY] += 1;
+					velHistZ[ivelZ] += 1;
+
+					tempSum += temp;
+					tempCount += 1;
+				}
+
 				// calculate the kinetic energy
 				kin_en += 0.5*p.m*(p.v.getLengthSquared());
-
 			}
 			// ideal component of pressure
 			temp = 2*kin_en/dof;
@@ -501,166 +553,200 @@ class DPD {
 		}// pbc()
 
 		/*
-		void energyMinimization(){
-				
-			//loop over all contacts p=1..N-1, q=p+1..N to evaluate forces
-			for (auto p = particles.begin();  p!=particles.end()-1; ++p){
-				//for_loop_inner_counter = 0;
-				for (auto q = p+1;  q!=particles.end(); ++q) {
+		   void energyMinimization(){
 
-					Vec3D Rij = p->r - q->r;	
-					Vec3D temp;
-					temp.X = Vec3D::roundOff_x(Rij, box);
-					temp.Y = Vec3D::roundOff_y(Rij, box);
-					temp.Z = Vec3D::roundOff_z(Rij, box);
-					Vec3D minRij = Rij - temp*box;
-					double r2 = minRij.getLengthSquared();
+//loop over all contacts p=1..N-1, q=p+1..N to evaluate forces
+for (auto p = particles.begin();  p!=particles.end()-1; ++p){
+//for_loop_inner_counter = 0;
+for (auto q = p+1;  q!=particles.end(); ++q) {
 
-					if ( r2 < rc2 ) {
-						double r2i = 1/r2;
-						double r6i = pow(r2i,3);
-						double ff = 48.0*epsilon*sig6*r2i*r6i*(r6i - 0.5);
-						Vec3D Fij = ff*minRij;
-						p->f += Fij;
-						q->f += Fij*(-1.0); 
+Vec3D Rij = p->r - q->r;	
+Vec3D temp;
+temp.X = Vec3D::roundOff_x(Rij, box);
+temp.Y = Vec3D::roundOff_y(Rij, box);
+temp.Z = Vec3D::roundOff_z(Rij, box);
+Vec3D minRij = Rij - temp*box;
+double r2 = minRij.getLengthSquared();
 
-					}		
+if ( r2 < rc2 ) {
+double r2i = 1/r2;
+double r6i = pow(r2i,3);
+double ff = 48.0*epsilon*sig6*r2i*r6i*(r6i - 0.5);
+Vec3D Fij = ff*minRij;
+p->f += Fij;
+q->f += Fij*(-1.0); 
 
-				}
-			}
+}		
 
-
-
-		}*/
+}
+}
 
 
-		// Structure function g(r) calculation
-		void grCalc(){
+
+}*/
 
 
-			// write the g(r) data to a file
-			std::ofstream grWrite("./data/gr_data.dat");
-			grWrite << "Radius\t g(r)" << std::endl;
-
-			for (int i=0; i < gR_nElem; ++i){
-
-				double rad = gR_radDelta*( i + 0.5) + gR_radMin;		// radius in question	
-				double ri = i*gR_radDelta + 0.5;				// radius at i^th bin
-				double ri_1 = (i+1)*gR_radDelta + 0.5;				// radius at (i+1)^th bin
-				double shellVol = (4/3)*M_PI*( pow(ri_1, 3.0) - pow(ri, 3.0) );	// volume of shell
-				double nHomo = shellVol*rho;					// number of particles if homogeneous
-
-				gR_nCount[i] /= (npart*gR_tSamples*nHomo);				// normalizing g(r)
-
-				grWrite << rad << "\t" << gR_nCount[i] << std::endl;
-			}
-
-			std::cout << " the total number of samples is: " << gR_tSamples	<< std::endl;
-			std::cout << " the homogeneous density is: " << rho << std::endl;
-			std::cout << " the number of particles is: " << npart << std::endl;
-
-			// file close	
-			grWrite.close();
-		}//grCalc()
-
-		// Reset variables
-		void resetVar(){
-			// energy reset to zero
-			pot_en = 0.0;
-			kin_en = 0.0;
-			tot_en = 0.0;
-			pressure = 0.0;
-
-			// set all forces to zero
-			for (Particle& p : particles) {
-				p.f.setZero();
-			}
-		}
-
-		// File writing
-		void fileWrite(std::ofstream& enStats, std::ofstream& eosStats){
-
-			if ( step % 10000 == 0){
-				std::cout<< step << " steps out of " << stepMax << " completed " << std::endl;
-			}
+// Structure function g(r) calculation
+void grCalc(){
 
 
-			//write output file in the .data format every 10th time step
-			if (++counter>=saveCount) {
-				//reset the counter, write time to terminal
-				counter = 0;
+	// write the g(r) data to a file
+	std::ofstream grWrite("./data/gr_data.dat");
+	grWrite << "Radius\t g(r)" << std::endl;
 
+	for (int i=0; i < gR_nElem; ++i){
 
-				// particle positions in vtk file format
-				vtkFileWritePosVel();
+		double rad = gR_radDelta*( i + 0.5) + gR_radMin;		// radius in question	
+		double ri = i*gR_radDelta + 0.5;				// radius at i^th bin
+		double ri_1 = (i+1)*gR_radDelta + 0.5;				// radius at (i+1)^th bin
+		double shellVol = (4/3)*M_PI*( pow(ri_1, 3.0) - pow(ri, 3.0) );	// volume of shell
+		double nHomo = shellVol*rho;					// number of particles if homogeneous
 
-				// file format for writing
-				std::cout << std::scientific << std::setprecision(15);
+		gR_nCount[i] /= (npart*gR_tSamples*nHomo);				// normalizing g(r)
 
-				//writing the energy balance
-				enStats << pot_en << "\t" << kin_en << "\t" << tot_en << std::endl;
-				eosStats << rho << "\t" << temp << "\t" << pressure << std::endl;
-			}
+		grWrite << rad << "\t" << gR_nCount[i] << std::endl;
+	}
 
-		}
+	std::cout << " the total number of samples is: " << gR_tSamples	<< std::endl;
+	std::cout << " the homogeneous density is: " << rho << std::endl;
+	std::cout << " the number of particles is: " << npart << std::endl;
 
-		// Filewriting for the VTK format
-		void vtkFileWritePosVel(){
+	// file close	
+	grWrite.close();
+}//grCalc()
 
-			char filename[40];
+// Velocity distribution calculation -- convert histogram to PDF
+void velHistCalc(){
 
-			sprintf( filename, "./data/data1_%d.vtu", step);  
-			std::ofstream file(filename);
-			file << "<?xml version=\"1.0\"?>" << std::endl;
-			file << "<VTKFile type=\"UnstructuredGrid\" version=\"0.1\" byte_order=\"LittleEndian\">" << std::endl;
-			file << "<UnstructuredGrid>";
-			file << "<Piece NumberOfPoints=\""<< particles.size() <<"\" NumberOfCells=\"0\">" << std::endl;
-			file << "<Points>" << std::endl;
-			// position data
-			file << "<DataArray type=\"Float32\" Name=\"Position\" NumberOfComponents=\"3\" format=\"ascii\">"<< std::endl;
-			for (Particle& p: particles)
-			{
-				file << p.r << std::endl;
+	std::ofstream velDistdata("./data/velDist_data.dat"); 
 
-			}
-			file << "</DataArray>"<<std::endl;
-			file << "</Points>" << std::endl;	
+	double trapzAreaX = 0.0;
+	double trapzAreaY = 0.0;
+	double trapzAreaZ = 0.0;
 
-			// velocity data
-			file << "<PointData Vectors=\"vector\">"<< std::endl;	
-			file << "<DataArray type=\"Float32\" Name=\"Velocity\" NumberOfComponents=\"3\" format=\"ascii\">" << std::endl;
-			for (Particle& p: particles)
-			{
-				file <<  p.v << std::endl;
+	for (int i=1; i <= velHist_bins-1; ++i){
 
-			}
-			file << "</DataArray>"<< std::endl;
+		trapzAreaX += 2.0*velHistX[i];	
+		trapzAreaY += 2.0*velHistY[i]; 	
+		trapzAreaZ += 2.0*velHistZ[i];	
+	}	
 
-			// radius data
-			file << "<DataArray type=\"Float32\" Name=\"Radius\" format=\"ascii\">" << std::endl;
-			for (Particle& p: particles)
-			{
-				file <<  p.a << std::endl;
+	// adding the contributions from the first and last element
+	trapzAreaX += velHistX[0] + velHistX[velHist_bins];
+	trapzAreaY += velHistY[0] + velHistY[velHist_bins];
+	trapzAreaZ += velHistZ[0] + velHistZ[velHist_bins];
 
-			}
-			file << "</DataArray>"<< std::endl;
-			file << "</PointData>" << std::endl;	
+	// multiplying the distance between the bins to get the final area
+	trapzAreaX *= velHist_velDelta/2.0;
+	trapzAreaY *= velHist_velDelta/2.0;
+	trapzAreaZ *= velHist_velDelta/2.0;
 
-			// Cells data
-			file << "<Cells>"<< std::endl;	
-			file << "<DataArray type=\"Int32\" Name=\"connectivity\" format=\"ascii\"></DataArray>" << std::endl;
-			file << "<DataArray type=\"Int32\" Name=\"offsets\" format=\"ascii\"></DataArray>" << std::endl;
-			file << "<DataArray type=\"UInt8\" Name=\"types\" format=\"ascii\"></DataArray>" << std::endl;
-			file << "</Cells>" << std::endl;
+	// converting histogram to PDF
+	for (int i=0; i< velHistX.size(); ++i){
+		double bin_lower = velHist_velMin + (i-1)*velHist_velDelta;
+		double bin_upper = velHist_velMin + (i+1-1)*velHist_velDelta;
+		double vel = (bin_lower + bin_upper)*0.5;
+		tempAv = tempSum/tempCount;
 
-			// Piece
-			file << "</Piece>" << std::endl;
-			file << "</UnstructuredGrid>" << std::endl;
-			file << "</VTKFile>" << std::endl;
+		velDistdata << vel << "\t" << tempAv << "\t" << velHistX[i] << "\t" << trapzAreaX << "\t" << velHistY[i] << "\t" << trapzAreaY << "\t" << velHistZ[i] << "\t" << trapzAreaZ << std::endl;	
+	}
 
-			file.close();
+	velDistdata.close();
+}
 
-		}
+// Reset variables
+void resetVar(){
+	// energy reset to zero
+	pot_en = 0.0;
+	kin_en = 0.0;
+	tot_en = 0.0;
+	pressure = 0.0;
+
+	// set all forces to zero
+	for (Particle& p : particles) {
+		p.f.setZero();
+	}
+}
+
+// File writing
+void fileWrite(std::ofstream& enStats, std::ofstream& eosStats){
+
+	if ( step % 10000 == 0){
+		std::cout<< step << " steps out of " << stepMax << " completed " << std::endl;
+	}
+
+	//write output file in the .data format every 10th time step
+	if (++counter>=saveCount) {
+		//reset the counter, write time to terminal
+		counter = 0;
+
+		// particle positions in vtk file format
+		vtkFileWritePosVel();
+
+		//writing the energy balance
+		enStats << pot_en << "\t" << kin_en << "\t" << tot_en << std::endl;
+		eosStats << rho << "\t" << temp << "\t" << pressure << std::endl;
+	}
+
+}
+
+// Filewriting for the VTK format
+void vtkFileWritePosVel(){
+
+	char filename[40];
+
+	sprintf( filename, "./data/data1_%d.vtu", step);  
+	std::ofstream file(filename);
+	file << "<?xml version=\"1.0\"?>" << std::endl;
+	file << "<VTKFile type=\"UnstructuredGrid\" version=\"0.1\" byte_order=\"LittleEndian\">" << std::endl;
+	file << "<UnstructuredGrid>";
+	file << "<Piece NumberOfPoints=\""<< particles.size() <<"\" NumberOfCells=\"0\">" << std::endl;
+	file << "<Points>" << std::endl;
+	// position data
+	file << "<DataArray type=\"Float32\" Name=\"Position\" NumberOfComponents=\"3\" format=\"ascii\">"<< std::endl;
+	for (Particle& p: particles)
+	{
+		file << p.r << std::endl;
+
+	}
+	file << "</DataArray>"<<std::endl;
+	file << "</Points>" << std::endl;	
+
+	// velocity data
+	file << "<PointData Vectors=\"vector\">"<< std::endl;	
+	file << "<DataArray type=\"Float32\" Name=\"Velocity\" NumberOfComponents=\"3\" format=\"ascii\">" << std::endl;
+	for (Particle& p: particles)
+	{
+		file <<  p.v << std::endl;
+
+	}
+	file << "</DataArray>"<< std::endl;
+
+	// radius data
+	file << "<DataArray type=\"Float32\" Name=\"Radius\" format=\"ascii\">" << std::endl;
+	for (Particle& p: particles)
+	{
+		file <<  p.a << std::endl;
+
+	}
+	file << "</DataArray>"<< std::endl;
+	file << "</PointData>" << std::endl;	
+
+	// Cells data
+	file << "<Cells>"<< std::endl;	
+	file << "<DataArray type=\"Int32\" Name=\"connectivity\" format=\"ascii\"></DataArray>" << std::endl;
+	file << "<DataArray type=\"Int32\" Name=\"offsets\" format=\"ascii\"></DataArray>" << std::endl;
+	file << "<DataArray type=\"UInt8\" Name=\"types\" format=\"ascii\"></DataArray>" << std::endl;
+	file << "</Cells>" << std::endl;
+
+	// Piece
+	file << "</Piece>" << std::endl;
+	file << "</UnstructuredGrid>" << std::endl;
+	file << "</VTKFile>" << std::endl;
+
+	file.close();
+
+}
 
 };
 
