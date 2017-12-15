@@ -14,9 +14,9 @@ int main () {
 	coll2p.rc2 = pow(coll2p.rcutoff,2);	// square of cut-off distance
 	coll2p.dim = 3;				// 3D system
 
-	coll2p.dt = 1e-5;
+	coll2p.dt = 1e-4;
 	coll2p.step = 1;
-	coll2p.stepMax = 5e5;
+	coll2p.stepMax = 6e5;
 	coll2p.kB = 1.0;			// Boltzmann constant
 
 	// Cell list parameters
@@ -26,15 +26,26 @@ int main () {
 	coll2p.Ncelz = round(coll2p.box/coll2p.rn);		   // no of cells in a dirn
 	
 	// post-processing
+	// g(r) calculation
 	coll2p.gR_radMin = 0.5;			// minimum radius for g(r) 
-	coll2p.gR_radDelta = 0.25;		// thickness of a shell
-	coll2p.gR_radMax = coll2p.box/2.0;		// maximum radius for g(r)
+	coll2p.gR_radDelta = 0.05;		// thickness of a shell
+	coll2p.gR_radMax = coll2p.box/2.0;	// maximum radius for g(r)
 	coll2p.gR_nElem  = round((coll2p.gR_radMax - coll2p.gR_radMin)/coll2p.gR_radDelta); // number of elements
 
 	coll2p.gR_tStart = 4e4;
 	coll2p.gR_tDelta = 100;
 	coll2p.gR_tEnd = coll2p.stepMax;
 	coll2p.gR_tSamples = round((coll2p.gR_tEnd - coll2p.gR_tStart)/(coll2p.gR_tDelta)) - 1;
+
+	// velocity distribution
+	coll2p.velHist_velMin = -10.0;			// minimum velocity 
+	coll2p.velHist_velDelta = 0.005;		// resolution of DeltaVel
+	coll2p.velHist_velMax = 10.0;			// maximum velocity
+	coll2p.velHist_bins  = round((coll2p.velHist_velMax - coll2p.velHist_velMin)/coll2p.velHist_velDelta); // number of elements
+
+	coll2p.velHist_tStart = 4e4;
+	coll2p.velHist_tDelta = 100;
+	coll2p.velHist_tEnd = coll2p.stepMax;
 
 	// Initialization
 	// coll2p.init();						// initialize particle positions and velocity
