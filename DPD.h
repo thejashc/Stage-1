@@ -49,7 +49,7 @@ class DPD {
 		double rc2i;
 		double rc6i;
 		double ecut;
-		unsigned int saveCount = 10000;	// number of timestep between saves
+		unsigned int saveCount = 10000;		// number of timestep between saves
 
 		// parameters for post-processing
 		// g(r) -- structure function
