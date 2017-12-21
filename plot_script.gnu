@@ -16,9 +16,13 @@ reset
 set terminal postscript eps enhanced color font 'Helvetica,10'
 set output './plots/g_r.eps' 
 
+# variables
+shellVol(ri, ro) = (4.0/3.0)*pi*(ro**3.0 - ri**3.0)
+nHomo(ri, ro, rho) = shellVol(ri, ro)*rho
+
 set key top left
 
-plot './data/gr_data.dat' u 1:2 w lp ps 0.45 t'radial distribution function',\
+plot './data/gr_data.dat' u ($3):($4/($5*$6*nHomo($1, $2, $7))) w lp ps 0.45 t'radial distribution function',\
 
 reset
 
