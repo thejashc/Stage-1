@@ -58,3 +58,15 @@ plot './data/velDist_data.dat' u ($1):($3/$4) w lp ps 0.45 t'x',\
      './data/velDist_data.dat' u ($1):($5/$6) w lp ps 0.45 t'y',\
      './data/velDist_data.dat' u ($1):($7/$8) w lp ps 0.45 t'z',\
      './data/velDist_data.dat' u 1:(MB($1, $2)) w l t'MB dist'
+
+# plotting the pressure and temperature
+set terminal postscript eps enhanced color font 'Helvetica,10'
+set output './plots/momentum.eps' 
+
+set key top left
+
+plot './data/mom_data.dat' u 1 w lp ps 0.45 t'p_{x}',\
+     './data/mom_data.dat' u 2 w lp ps 0.45 t'p_{y}',\
+     './data/mom_data.dat' u 3 w lp ps 0.45 t'p_{z}',\
+
+reset
