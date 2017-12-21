@@ -17,6 +17,7 @@ class DPD {
 		double box;				// size of domain
 		double epsilon;				// well-depth in Lennard-Jones po
 		double sigma;				// distance at which potential is
+		double aii;				// DPD conservative force parameter
 		double rcutoff;				// cut-off distance
 		double rc2;				// square of the cutoff distance
 		double dt;				// time step
@@ -65,6 +66,11 @@ class DPD {
 
 		std::vector<double> gR_nCount;		// g(r) function
 
+		// momentum calculation
+		long double momX;
+		long double momY;
+		long double momZ;
+
 		// velHist -- velocity distribution
 		double velHist_velMin;			// minimum radius for g(r)
 		double velHist_velDelta;		// thickness of shell 
@@ -93,7 +99,7 @@ class DPD {
 		// Mersenne twister PRNG, initialized with seed from previous random device instance
 		// usage d{mean, variance}
 		// std::normal_distribution<> d{0,2};
-				
+
 
 		/******************************************************************************************************/
 		/**************************************** INITIALIZATION ROUTINE **************************************/
@@ -125,9 +131,9 @@ class DPD {
 						double rand_gen_velz = ((double) rand() / (RAND_MAX));
 
 						/*
-						double rand_gen_velx = d(gen);
-						double rand_gen_vely = d(gen);
-						double rand_gen_velz = d(gen);*/
+						   double rand_gen_velx = d(gen);
+						   double rand_gen_vely = d(gen);
+						   double rand_gen_velz = d(gen);*/
 						// initializing particle mass, radius, position and mid-step-velocity
 						particles.push_back({0.2,1.0,{xind, yind, zind},{rand_gen_velx, rand_gen_vely, rand_gen_velz}});
 
@@ -182,7 +188,7 @@ class DPD {
 			volume = pow(box, 3.0);			// system volume
 			npart = 1.0*particles.size();		// number of particles
 			rho = npart/volume;			// density of system 
-			dof = dim*(npart - 1) - 2;		// total degrees of freedom
+			dof = dim*(npart - 1)-2;		// total degrees of freedom
 
 			// cut-off correction to potential
 			sig6 = pow(sigma,6);
@@ -193,6 +199,7 @@ class DPD {
 			counter = 0;					// initialize time, counter for file writing
 			std::ofstream enStats("./data/en_data.dat");	// initialize file stream for energy
 			std::ofstream eosStats("./data/eos_data.dat");	// pressure and temperature data
+			std::ofstream momStats("./data/mom_data.dat");	// pressure and temperature data
 
 			//	energyMinimization();
 
@@ -222,7 +229,7 @@ class DPD {
 				pbc();
 
 				// filewriting 
-				fileWrite(enStats, eosStats);
+				fileWrite(enStats, eosStats, momStats);
 
 				// reset variables to zero
 				resetVar();
@@ -261,16 +268,22 @@ class DPD {
 					double dist = sqrt(r2);
 
 					if ( r2 < rc2 ) {
-						
+
 						Vec3D Fij;
-						Fij.X = 2.0*epsilon*( sigma - dist )*( minRij.X / dist );
-						Fij.Y = 2.0*epsilon*( sigma - dist )*( minRij.Y / dist );
-						Fij.Z = 2.0*epsilon*( sigma - dist )*( minRij.Z / dist );
+						/*
+						   Fij.X = 2.0*epsilon*( sigma - dist )*( minRij.X / dist );
+						   Fij.Y = 2.0*epsilon*( sigma - dist )*( minRij.Y / dist );
+						   Fij.Z = 2.0*epsilon*( sigma - dist )*( minRij.Z / dist );*/
+
+						Fij.X = aii*( 1.0 - (dist/rcutoff) )*( minRij.X / dist);
+						Fij.Y = aii*( 1.0 - (dist/rcutoff) )*( minRij.Y / dist);
+						Fij.Z = aii*( 1.0 - (dist/rcutoff) )*( minRij.Z / dist);
 						p->f += Fij;
 						q->f += Fij*(-1.0); 
 
 						// potential energy
-						double pair_pot_en = epsilon*(sigma - dist)*(sigma - dist);
+						// double pair_pot_en = epsilon*(sigma - dist)*(sigma - dist);
+						double pair_pot_en = aii*( 1.0  - (dist/rcutoff) )*( 1.0  - (dist/rcutoff) );
 						pot_en += pair_pot_en - ecut;
 
 						// non-ideal comp pressure
@@ -490,21 +503,29 @@ class DPD {
 			double dist = sqrt(r2);
 
 			if ( r2 < rc2 ) {
-
 				Vec3D Fij;
-				Fij.X = 2.0*epsilon*( sigma - dist )*( minRij.X / dist );
-				Fij.Y = 2.0*epsilon*( sigma - dist )*( minRij.Y / dist );
-				Fij.Z = 2.0*epsilon*( sigma - dist )*( minRij.Z / dist );
+				/*
+				   Fij.X = 2.0*epsilon*( sigma - dist )*( minRij.X / dist );
+				   Fij.Y = 2.0*epsilon*( sigma - dist )*( minRij.Y / dist );
+				   Fij.Z = 2.0*epsilon*( sigma - dist )*( minRij.Z / dist );*/
+
+				Fij.X = aii*( 1.0 - (dist/rcutoff) )*( minRij.X / dist);
+				Fij.Y = aii*( 1.0 - (dist/rcutoff) )*( minRij.Y / dist);
+				Fij.Z = aii*( 1.0 - (dist/rcutoff) )*( minRij.Z / dist);
+				
 				p->f += Fij;
 				q->f += Fij*(-1.0); 
 
 				// potential energy
-				double pair_pot_en = epsilon*(sigma - dist)*(sigma - dist);
+				// double pair_pot_en = epsilon*(sigma - dist)*(sigma - dist);
+				// double pair_pot_en = aii*( 1.0  - (dist/rcutoff) )*( 1.0  - (dist/rcutoff) );
+				double pair_pot_en = (aii/2.0)*(1.0 - (dist/rcutoff))*( 1.0 - (dist/rcutoff) ) ;
 				pot_en += pair_pot_en - ecut;
 
 				// non-ideal comp pressure
 				double nonIdealcomp = Vec3D::dot(minRij, Fij)*(1.0/(dim*volume));
 				pressure += nonIdealcomp;
+
 			}		
 
 			// radial distribution function
@@ -561,6 +582,11 @@ class DPD {
 
 				// calculate the kinetic energy
 				kin_en += 0.5*p.m*(p.v.getLengthSquared());
+
+				// calculate the total momentum
+				momX += p.v.X;
+				momY += p.v.Y;
+				momZ += p.v.Z;
 			}
 			// ideal component of pressure
 			temp = 2*kin_en/dof;
@@ -689,6 +715,9 @@ void resetVar(){
 	kin_en = 0.0;
 	tot_en = 0.0;
 	pressure = 0.0;
+	momX = 0.0;
+	momY = 0.0;
+	momZ = 0.0;
 
 	// set all forces to zero
 	for (Particle& p : particles) {
@@ -697,7 +726,7 @@ void resetVar(){
 }
 
 // File writing
-void fileWrite(std::ofstream& enStats, std::ofstream& eosStats){
+void fileWrite(std::ofstream& enStats, std::ofstream& eosStats, std::ofstream& momStats){
 
 	if ( step % 10000 == 0){
 		std::cout<< step << " steps out of " << stepMax << " completed " << std::endl;
@@ -714,6 +743,7 @@ void fileWrite(std::ofstream& enStats, std::ofstream& eosStats){
 		//writing the energy balance
 		enStats << pot_en << "\t" << kin_en << "\t" << tot_en << std::endl;
 		eosStats << rho << "\t" << temp << "\t" << pressure << std::endl;
+		momStats << momX << "\t" << momY << "\t" << momZ << std::endl;
 	}
 
 }
