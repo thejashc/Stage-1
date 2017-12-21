@@ -8,6 +8,7 @@
 #include <cstdlib>
 #include "Particle.h"
 #include <ctime>
+#include <random>
 
 //declare DPD solver
 class DPD {
@@ -49,7 +50,7 @@ class DPD {
 		double rc2i;
 		double rc6i;
 		double ecut;
-		unsigned int saveCount = 10000;		// number of timestep between saves
+		unsigned int saveCount = 5000;		// number of timestep between saves
 
 		// parameters for post-processing
 		// g(r) -- structure function
@@ -86,14 +87,26 @@ class DPD {
 		typedef std::vector<Particle*> Cell; 
 		std::vector<Cell> ll; //linked list is a 2D vector
 
+		// Gaussian random numbers
+		// random device class instance, source of 'true' randomness for initializing random seed
+		// std::random_device rd;
+		// Mersenne twister PRNG, initialized with seed from previous random device instance
+		// usage d{mean, variance}
+		// std::normal_distribution<> d{0,2};
+				
+
 		/******************************************************************************************************/
 		/**************************************** INITIALIZATION ROUTINE **************************************/
 		/******************************************************************************************************/
 		void init(){
+
+			// defining instance of random number class
+			// std::mt19937 gen(rd());
+
 			// Set max and min dimensions of boxy
-			double xind_min = -1.0*(box/2.0) + 0.5;
-			double yind_min = -1.0*(box/2.0) + 0.5;
-			double zind_min = -1.0*(box/2.0) + 0.5;
+			double xind_min = -1.0*(box/2.0) + 0.25;
+			double yind_min = -1.0*(box/2.0) + 0.25;
+			double zind_min = -1.0*(box/2.0) + 0.25;
 			double xind_max =  1.0*(box/2.0);
 			double yind_max =  1.0*(box/2.0);
 			double zind_max =  1.0*(box/2.0);
@@ -111,6 +124,10 @@ class DPD {
 						double rand_gen_vely = ((double) rand() / (RAND_MAX));
 						double rand_gen_velz = ((double) rand() / (RAND_MAX));
 
+						/*
+						double rand_gen_velx = d(gen);
+						double rand_gen_vely = d(gen);
+						double rand_gen_velz = d(gen);*/
 						// initializing particle mass, radius, position and mid-step-velocity
 						particles.push_back({0.2,1.0,{xind, yind, zind},{rand_gen_velx, rand_gen_vely, rand_gen_velz}});
 
@@ -143,7 +160,8 @@ class DPD {
 
 			for (Particle& p: particles){
 				p.w -= velAvg;
-			}	
+			}
+
 		}
 
 		/******************************************************************************************************/
@@ -180,9 +198,14 @@ class DPD {
 
 			while (step<stepMax) {
 
+				// std::cout << rn << "\t" << Ncelx << "\t" << Ncely << "\t" << Ncelz << std::endl;
 				// force calculation
 				// forceCalc();
 				forceCalc_cellList();
+
+				// for (Particle&p : particles){
+				//	std::cout << "position: " << p.r << " and force: " << p.f << std::endl;
+				//}
 
 				//for (Particle& p: particles)
 				//	std::cout << "the force on particle is: "<< p.f << std::endl;
@@ -235,17 +258,19 @@ class DPD {
 					temp.Z = Vec3D::roundOff_z(Rij, box);
 					Vec3D minRij = Rij - temp*box;
 					double r2 = minRij.getLengthSquared();
+					double dist = sqrt(r2);
 
 					if ( r2 < rc2 ) {
-						double r2i = 1/r2;
-						double r6i = pow(r2i,3);
-						double ff = 48.0*epsilon*sig6*r2i*r6i*(r6i - 0.5);
-						Vec3D Fij = ff*minRij;
+						
+						Vec3D Fij;
+						Fij.X = 2.0*epsilon*( sigma - dist )*( minRij.X / dist );
+						Fij.Y = 2.0*epsilon*( sigma - dist )*( minRij.Y / dist );
+						Fij.Z = 2.0*epsilon*( sigma - dist )*( minRij.Z / dist );
 						p->f += Fij;
 						q->f += Fij*(-1.0); 
 
 						// potential energy
-						double pair_pot_en = 4.0*epsilon*sig6*r6i*(sig6*r6i - 1.0);
+						double pair_pot_en = epsilon*(sigma - dist)*(sigma - dist);
 						pot_en += pair_pot_en - ecut;
 
 						// non-ideal comp pressure
@@ -256,7 +281,6 @@ class DPD {
 					// radial distribution function
 					if ( (step > gR_tStart) && (step % gR_tDelta == 0) ) {
 
-						double dist = sqrt(r2);
 						if ( dist < box/2.0 ) { 
 							int ig = round(dist/gR_radDelta) - 2;
 
@@ -280,13 +304,16 @@ class DPD {
 			//LL: re-initialise linked list
 			for (Particle& p : particles) {
 
-				int indx = ceil(p.r.getComponent(0)/rn) +1;
-				int indy = ceil(p.r.getComponent(1)/rn) +1;
-				int indz = ceil(p.r.getComponent(2)/rn) +1;
+				double Lx = -1.0*(box/2.0) - p.r.getComponent(0);
+				double Ly = -1.0*(box/2.0) - p.r.getComponent(1);
+				double Lz = -1.0*(box/2.0) - p.r.getComponent(2);
 
-				int ix = Ncelx*(Ncelx*indz + indy) + indx + 1 - 1;
+				unsigned int indx = -1.0*ceil(Lx/rn);
+				unsigned int indy = -1.0*ceil(Ly/rn);
+				unsigned int indz = -1.0*ceil(Lz/rn);
+
+				unsigned int ix = Ncelx*(Ncelx*indz + indy) + indx + 1 - 1;
 				// std::cout << "position: " << std::setw(10) << p.r << ", indices: "<< indx << ", " << indy << ", " <<indz << " and cell number: " << ix <<std::endl;
-				// std::cout << "started for cell number: " << ix << std::endl; 
 				ll[ix].push_back(&p);
 				// std::cout << "successfully done for cell number: " << ix << std::endl; 
 
@@ -317,7 +344,7 @@ class DPD {
 
 						// compute forces between neighbours
 						// neighbour 1
-						Nbor_indx = (indx + 1)% Ncelx; 
+						Nbor_indx = MOD(indx + 1, Ncelx); 
 						Nbor_indy = indy; 
 						Nbor_indz = indz; 
 						Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
@@ -347,7 +374,8 @@ class DPD {
 						computeForces(cell,ll[Nbor_ix]);
 
 						// neighbour 4
-						Nbor_indx = (indx - 1)% Ncelx; 
+						// Nbor_indx = (indx - 1)% Ncelx; 
+						Nbor_indx = MOD(indx-1, Ncelx);
 						Nbor_indy = (indy + 1)% Ncely; 
 						Nbor_indz = indz; 
 						Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
@@ -359,7 +387,7 @@ class DPD {
 						// neighbour 5	
 						Nbor_indx = (indx + 1)% Ncelx; 
 						Nbor_indy = indy; 
-						Nbor_indz = (indz - 1)% Ncelz; 
+						Nbor_indz = MOD(indz - 1, Ncelz); 
 						Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
 						// std::cout << Nbor_ix << ", ";				
 
@@ -369,7 +397,7 @@ class DPD {
 						// neighbour 6
 						Nbor_indx = (indx + 1)% Ncelx; 
 						Nbor_indy = (indy + 1)% Ncely; 
-						Nbor_indz = (indz - 1)% Ncelz; 
+						Nbor_indz = MOD(indz - 1, Ncelz); 
 						Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
 						// std::cout << Nbor_ix << ", ";				
 
@@ -379,7 +407,7 @@ class DPD {
 						// neighbour 7
 						Nbor_indx = indx; 
 						Nbor_indy = (indy + 1)% Ncely; 
-						Nbor_indz = (indz - 1)% Ncelz; 
+						Nbor_indz = MOD(indz - 1, Ncelz); 
 						Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
 						// std::cout << Nbor_ix << ", ";				
 
@@ -387,9 +415,9 @@ class DPD {
 						computeForces(cell, ll[Nbor_ix]);
 
 						// neighbour 8
-						Nbor_indx = (indx - 1)% Ncelx; 
+						Nbor_indx = MOD(indx - 1, Ncelx); 
 						Nbor_indy = (indy + 1)% Ncely; 
-						Nbor_indz = (indz - 1)% Ncelz; 
+						Nbor_indz = MOD(indz - 1, Ncelz); 
 						Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
 						// std::cout << Nbor_ix << ", ";				
 
@@ -427,7 +455,7 @@ class DPD {
 						computeForces(cell, ll[Nbor_ix]);
 
 						// neighbour 12
-						Nbor_indx = (indx - 1)% Ncelx; 
+						Nbor_indx = MOD(indx - 1, Ncelx); 
 						Nbor_indy = (indy + 1)% Ncely; 
 						Nbor_indz = (indz + 1)% Ncelz; 
 						Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
@@ -459,18 +487,19 @@ class DPD {
 			temp.Z = Vec3D::roundOff_z(Rij, box);
 			Vec3D minRij = Rij - temp*box;
 			double r2 = minRij.getLengthSquared();
+			double dist = sqrt(r2);
 
 			if ( r2 < rc2 ) {
 
-				double r2i = 1/r2;
-				double r6i = pow(r2i,3);
-				double ff = 48.0*epsilon*sig6*r2i*r6i*(r6i - 0.5);
-				Vec3D Fij = ff*minRij;
+				Vec3D Fij;
+				Fij.X = 2.0*epsilon*( sigma - dist )*( minRij.X / dist );
+				Fij.Y = 2.0*epsilon*( sigma - dist )*( minRij.Y / dist );
+				Fij.Z = 2.0*epsilon*( sigma - dist )*( minRij.Z / dist );
 				p->f += Fij;
 				q->f += Fij*(-1.0); 
 
 				// potential energy
-				double pair_pot_en = 4.0*epsilon*sig6*r6i*(sig6*r6i - 1.0);
+				double pair_pot_en = epsilon*(sigma - dist)*(sigma - dist);
 				pot_en += pair_pot_en - ecut;
 
 				// non-ideal comp pressure
@@ -481,7 +510,6 @@ class DPD {
 			// radial distribution function
 			if ( (step > gR_tStart) && (step % gR_tDelta == 0) ) {
 
-				double dist = sqrt(r2);
 				if ( dist < box/2.0 ) { 
 					int ig = round(dist/gR_radDelta) - 2;
 
@@ -592,19 +620,19 @@ void grCalc(){
 
 	// write the g(r) data to a file
 	std::ofstream grWrite("./data/gr_data.dat");
-	grWrite << "Radius\t g(r)" << std::endl;
+	grWrite << "ri \t ro \t rad \t gr_count \t tot_part \t samples \t nHomo \t rho" << std::endl;
 
 	for (int i=0; i < gR_nElem; ++i){
 
 		double rad = gR_radDelta*( i + 0.5) + gR_radMin;		// radius in question	
 		double ri = i*gR_radDelta + 0.5;				// radius at i^th bin
-		double ri_1 = (i+1)*gR_radDelta + 0.5;				// radius at (i+1)^th bin
-		double shellVol = (4/3)*M_PI*( pow(ri_1, 3.0) - pow(ri, 3.0) );	// volume of shell
-		double nHomo = shellVol*rho;					// number of particles if homogeneous
+		double ro = (i+1)*gR_radDelta + 0.5;				// radius at (i+1)^th bin
+		// double shellVol = (4/3)*M_PI*( pow(ro, 3.0) - pow(ri, 3.0) );	// volume of shell
+		// double nHomo = shellVol*rho;					// number of particles if homogeneous
 
-		gR_nCount[i] /= (npart*gR_tSamples*nHomo);				// normalizing g(r)
+		// gR_nCount[i] /= (npart*gR_tSamples*nHomo);				// normalizing g(r)
 
-		grWrite << rad << "\t" << gR_nCount[i] << std::endl;
+		grWrite << ri << "\t" << ro << "\t" << rad << "\t" << gR_nCount[i] << "\t" << npart << "\t" << gR_tSamples << "\t" << rho << std::endl;
 	}
 
 	std::cout << " the total number of samples is: " << gR_tSamples	<< std::endl;
@@ -688,6 +716,14 @@ void fileWrite(std::ofstream& enStats, std::ofstream& eosStats){
 		eosStats << rho << "\t" << temp << "\t" << pressure << std::endl;
 	}
 
+}
+
+int MOD(int a, int b){
+
+	if (a >= 0)
+		return(a%b);
+	else
+		return( (a%b) + b);
 }
 
 // Filewriting for the VTK format
