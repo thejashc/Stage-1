@@ -30,7 +30,9 @@ class DPD {
 		double kin_en;				// system kinetic energy
 		double tot_en;				// system total energy
 		double pressure;			// pressure
-		double kB;				// Boltzmann constant
+		double kBT;				// Boltzmann constant
+		double thermProb;			// probability of thermostatting
+		double tau;				// rate of thermalizing 
 		double temp;				// temperature
 		double tempSum;				// temperature sum
 		double tempAv;				// temperature average
@@ -51,7 +53,7 @@ class DPD {
 		double rc2i;
 		double rc6i;
 		double ecut;
-		unsigned int saveCount = 10000;		// number of timestep between saves
+		unsigned int saveCount = 500;		// number of timestep between saves
 
 		// parameters for post-processing
 		// g(r) -- structure function
@@ -95,11 +97,10 @@ class DPD {
 
 		// Gaussian random numbers
 		// random device class instance, source of 'true' randomness for initializing random seed
-		// std::random_device rd;
+		std::random_device rd;
 		// Mersenne twister PRNG, initialized with seed from previous random device instance
-		// usage d{mean, variance}
-		// std::normal_distribution<> d{0,2};
-
+		// usage d{mean, std}
+		std::normal_distribution<> d{0,1};
 
 		/******************************************************************************************************/
 		/**************************************** INITIALIZATION ROUTINE **************************************/
@@ -161,11 +162,11 @@ class DPD {
 			Vec3D velAvg={0.0, 0.0, 0.0};
 			// Remove excess velocity
 			for (Particle& p: particles){
-				velAvg += p.w/particles.size();
+				velAvg += p.v/particles.size();
 			}
 
 			for (Particle& p: particles){
-				p.w -= velAvg;
+				p.v -= velAvg;
 			}
 
 		}
@@ -188,7 +189,7 @@ class DPD {
 			volume = pow(box, 3.0);			// system volume
 			npart = 1.0*particles.size();		// number of particles
 			rho = npart/volume;			// density of system 
-			dof = dim*(npart - 1)-2;		// total degrees of freedom
+			dof = dim*(npart - 1);			// total degrees of freedom (momentum only, no energy conservation)
 
 			// cut-off correction to potential
 			sig6 = pow(sigma,6);
@@ -208,7 +209,7 @@ class DPD {
 				// std::cout << rn << "\t" << Ncelx << "\t" << Ncely << "\t" << Ncelz << std::endl;
 				// force calculation
 				// forceCalc();
-				forceCalc_cellList();
+				// forceCalc_conservative();
 
 				// for (Particle&p : particles){
 				//	std::cout << "position: " << p.r << " and force: " << p.f << std::endl;
@@ -279,6 +280,7 @@ class DPD {
 						Fij.X = aii*( 1.0 - (dist/rcutoff) )*( minRij.X / dist);
 						Fij.Y = aii*( 1.0 - (dist/rcutoff) )*( minRij.Y / dist);
 						Fij.Z = aii*( 1.0 - (dist/rcutoff) )*( minRij.Z / dist);
+						
 						p->f += Fij;
 						q->f += Fij*(-1.0); 
 
@@ -308,8 +310,11 @@ class DPD {
 		/******************************************************************************************************/
 		/**************************************** CELL-LIST FORCE CALCULATION  ********************************/
 		/******************************************************************************************************/
+		/******************************************************************************************************/
+		/**************************************** CONSERVATIVE FORCES *****************************************/
+		/******************************************************************************************************/
 		// Cell list implementation of the force calculation
-		void forceCalc_cellList(){
+		void forceCalc_conservative(){
 
 			//LL: remove old linked list
 			for (Cell& cell : ll) cell.resize(0); 
@@ -513,7 +518,7 @@ class DPD {
 				Fij.X = aii*( 1.0 - (dist/rcutoff) )*( minRij.X / dist);
 				Fij.Y = aii*( 1.0 - (dist/rcutoff) )*( minRij.Y / dist);
 				Fij.Z = aii*( 1.0 - (dist/rcutoff) )*( minRij.Z / dist);
-				
+
 				p->f += Fij;
 				q->f += Fij*(-1.0); 
 
@@ -539,7 +544,7 @@ class DPD {
 				}
 			} 
 		}// computeForce() -- between 2 particles
-
+		
 		void computeForces(Cell& cell1, Cell& cell2) {
 			for (Particle* p : cell1)
 				for (Particle* q : cell2)
@@ -551,35 +556,244 @@ class DPD {
 				for (auto q = p+1;  q!=cell.end(); ++q)
 					computeForce(*p,*q);
 		}// computeForces() -- entire cell	
+		
+		/******************************************************************************************************/
+		/**************************************** DISSIPATIVE FORCES *****************************************/
+		/******************************************************************************************************/
+		// calculating the dissipative forces
+		void forceCalc_dissipative(){
 
-		// Integrating equations of motion -- Verlet Leap Frog scheme
+			// only identifying neighbors
+			// LL: loop over all contacts p=1..N, q=p+1..N to evaluate forces
+			for (unsigned int indx=0; indx<Ncelx; ++indx)
+			for (unsigned int indy=0; indy<Ncely; ++indy)
+			for (unsigned int indz=0; indz<Ncelz; ++indz) {
+						unsigned int ix = Ncelx*(Ncelx*indz + indy) + indx + 1 - 1;
+
+						unsigned int Nbor_indx; 
+						unsigned int Nbor_indy; 
+						unsigned int Nbor_indz; 
+						unsigned int Nbor_ix;  
+
+						Cell& cell = ll[ix];
+						// std::cout << "The cell number is: " << ix << ", with neighbours: ";
+
+						if (cell.size()==0) continue;
+						computeForces_dissipative(cell);		//compute forces between the particle pairs within a cell
+
+						// compute forces between neighbours
+						// neighbour 1
+						Nbor_indx = MOD(indx + 1, Ncelx); 
+						Nbor_indy = indy; 
+						Nbor_indz = indz; 
+						Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
+						// std::cout << Nbor_ix << ", ";				
+
+						// compute forces between cell and neighbour 1
+						computeForces_dissipative(cell, ll[Nbor_ix]);
+
+						// neighbour 2
+						Nbor_indx = (indx + 1)% Ncelx; 
+						Nbor_indy = (indy + 1)% Ncely; 
+						Nbor_indz = indz; 
+						Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
+						// std::cout << Nbor_ix << ", ";				
+
+						// compute forces between cell and neighbour 2
+						computeForces_dissipative(cell, ll[Nbor_ix]);
+
+						// neighbour 3
+						Nbor_indx = indx; 
+						Nbor_indy = (indy + 1)% Ncely; 
+						Nbor_indz = indz; 
+						Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
+						// std::cout << Nbor_ix << ", ";				
+
+						// compute forces between cell and neighbour 3
+						computeForces_dissipative(cell,ll[Nbor_ix]);
+
+						// neighbour 4
+						// Nbor_indx = (indx - 1)% Ncelx; 
+						Nbor_indx = MOD(indx-1, Ncelx);
+						Nbor_indy = (indy + 1)% Ncely; 
+						Nbor_indz = indz; 
+						Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
+						// std::cout << Nbor_ix << ", ";				
+
+						// compute forces between cell and neighbour 4
+						computeForces_dissipative(cell, ll[Nbor_ix]);
+
+						// neighbour 5	
+						Nbor_indx = (indx + 1)% Ncelx; 
+						Nbor_indy = indy; 
+						Nbor_indz = MOD(indz - 1, Ncelz); 
+						Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
+						// std::cout << Nbor_ix << ", ";				
+
+						// compute forces between cell and neighbour 5
+						computeForces_dissipative(cell, ll[Nbor_ix]);
+
+						// neighbour 6
+						Nbor_indx = (indx + 1)% Ncelx; 
+						Nbor_indy = (indy + 1)% Ncely; 
+						Nbor_indz = MOD(indz - 1, Ncelz); 
+						Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
+						// std::cout << Nbor_ix << ", ";				
+
+						// compute forces between cell and neighbour 6
+						computeForces_dissipative(cell, ll[Nbor_ix]);
+
+						// neighbour 7
+						Nbor_indx = indx; 
+						Nbor_indy = (indy + 1)% Ncely; 
+						Nbor_indz = MOD(indz - 1, Ncelz); 
+						Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
+						// std::cout << Nbor_ix << ", ";				
+
+						// compute forces between cell and neighbour 7
+						computeForces_dissipative(cell, ll[Nbor_ix]);
+
+						// neighbour 8
+						Nbor_indx = MOD(indx - 1, Ncelx); 
+						Nbor_indy = (indy + 1)% Ncely; 
+						Nbor_indz = MOD(indz - 1, Ncelz); 
+						Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
+						// std::cout << Nbor_ix << ", ";				
+
+						// compute forces between cell and neighbour 8
+						computeForces_dissipative(cell, ll[Nbor_ix]);
+
+						// neihgbour 9
+						Nbor_indx = (indx + 1)% Ncelx; 
+						Nbor_indy = indy; 
+						Nbor_indz = (indz + 1)% Ncelz; 
+						Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
+						// std::cout << Nbor_ix << ", ";				
+
+						// compute forces between cell and neighbour 9
+						computeForces_dissipative(cell, ll[Nbor_ix]);
+
+						// neighbour 10
+						Nbor_indx = (indx + 1)% Ncelx; 
+						Nbor_indy = (indy + 1)% Ncely; 
+						Nbor_indz = (indz + 1)% Ncelz; 
+						Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
+						// std::cout << Nbor_ix << ", ";				
+
+						// compute forces between cell and neighbour 10
+						computeForces_dissipative(cell, ll[Nbor_ix]);
+
+						// neighbour 11
+						Nbor_indx = indx; 
+						Nbor_indy = (indy + 1)% Ncely; 
+						Nbor_indz = (indz + 1)% Ncelz; 
+						Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
+						// std::cout << Nbor_ix << ", ";				
+
+						// compute forces between cell and neighbour 11
+						computeForces_dissipative(cell, ll[Nbor_ix]);
+
+						// neighbour 12
+						Nbor_indx = MOD(indx - 1, Ncelx); 
+						Nbor_indy = (indy + 1)% Ncely; 
+						Nbor_indz = (indz + 1)% Ncelz; 
+						Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
+						// std::cout << Nbor_ix << ", ";				
+
+						// compute forces between cell and neighbour 12
+						computeForces_dissipative(cell, ll[Nbor_ix]);
+
+						// neighbour 13
+						Nbor_indx = indx; 
+						Nbor_indy = indy; 
+						Nbor_indz = (indz + 1)% Ncelz; 
+						Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
+						// std::cout << Nbor_ix << ", ";				
+
+						// compute forces between cell and neighbour 13
+						computeForces_dissipative(cell, ll[Nbor_ix]);
+
+						// std::cout << std::endl;	
+					}
+		}
+
+		void computeForces_dissipative(Cell& cell1, Cell& cell2) {
+			for (Particle* p : cell1)
+				for (Particle* q : cell2)
+					computeForce_dissipative(p,q);
+		}// computeForces_dissipative() -- between 2 cells	
+
+		void computeForces_dissipative(Cell& cell) {
+			for (auto p = cell.begin();  p!=cell.end(); ++p)
+				for (auto q = p+1;  q!=cell.end(); ++q)
+					computeForce_dissipative(*p,*q);
+		}// computeForces_dissipative() -- entire cell	
+
+		void computeForce_dissipative(Particle* p, Particle* q) {
+
+			std::mt19937 gen(rd());
+			
+			Vec3D Rij = p->r - q->r;	
+			Vec3D Vij = p->v - q->v;	
+			Vec3D temp;
+			temp.X = Vec3D::roundOff_x(Rij, box);
+			temp.Y = Vec3D::roundOff_y(Rij, box);
+			temp.Z = Vec3D::roundOff_z(Rij, box);
+			Vec3D minRij = Rij - temp*box;
+			double r2 = minRij.getLengthSquared();
+			double dist = sqrt(r2);
+			Vec3D capRij = minRij/dist;
+
+			if ( r2 < rc2 ) {
+				
+				Vec3D Deltaij;
+
+				double zetaij = d(gen); 
+				double term1 = zetaij*sqrt(2.0*kBT/p->m);
+				double term2 = Vec3D::dot( Vij, capRij );
+				double term3 = term1 - term2;
+				
+				Deltaij.X = 0.5*capRij.X*term3;
+				Deltaij.Y = 0.5*capRij.Y*term3;
+				Deltaij.Z = 0.5*capRij.Z*term3;
+
+				// std::cout << Deltaij << std::endl;
+
+				p->v += Deltaij;
+				q->v += Deltaij*(-1.0); 
+			}		
+
+		}// computeForce() -- between 2 particles
+		
+		// Integrating equations of motion
 		void integrateEOS(){
-			for (Particle& p : particles) {
-				// store velocity (mid-step)
-				Vec3D w_old = p.w;
 
-				// update velocities (mid-step)
-				p.w += p.f*(dt/p.m);
+			// create linked list
+			createList();
+			
+			// intermediate velocity calculation + position update
+			for (Particle&p : particles){
+				p.v += (0.5)*(1/p.m)*p.f*dt;
+				p.r += p.v*dt;}
 
-				// update position (integral time step) using the velocities (mid-step)
-				p.r += p.w*dt;				
+			// apply periodic boundary condition	
+			pbc();
+	
+			// update force for new positions
+			// forceCalc_conservative();
 
-				// calculate velocity (integral time step)
-				p.v = 0.5*(w_old + p.w);
+			// intermediate velocity calculation 2
+			for (Particle&p : particles)
+				p.v += 0.5*(1/p.m)*p.f*dt;
 
-				// distribute velocities into velocity bins
-				if ( (step > velHist_tStart) && (step % velHist_tDelta == 0) ) {
-					int ivelX = ceil((velHist_velMax - p.v.X)/velHist_velDelta); 
-					int ivelY = ceil((velHist_velMax - p.v.Y)/velHist_velDelta); 
-					int ivelZ = ceil((velHist_velMax - p.v.Z)/velHist_velDelta); 
+			// Andersen momentum-conserving thermostat with a probability 
+			double randThermalize = ((double) rand() / (RAND_MAX));
 
-					velHistX[ivelX] += 1;
-					velHistY[ivelY] += 1;
-					velHistZ[ivelZ] += 1;
+			if ( randThermalize < thermProb ){
+				forceCalc_dissipative();}
 
-					tempSum += temp;
-					tempCount += 1;
-				}
+			// calculate physical quantities
+			for (Particle&p : particles){
 
 				// calculate the kinetic energy
 				kin_en += 0.5*p.m*(p.v.getLengthSquared());
@@ -589,9 +803,10 @@ class DPD {
 				momY += p.v.Y;
 				momZ += p.v.Z;
 			}
+
 			// ideal component of pressure
-			temp = 2*kin_en/dof;
-			double idealComp = rho*kB*temp; 
+			temp = 2.0*kin_en/dof;
+			double idealComp = rho*1.0*temp; 
 			pressure += idealComp;
 		}
 
@@ -607,213 +822,210 @@ class DPD {
 			}
 		}// pbc()
 
-		/*
-		   void energyMinimization(){
+		void createList(){
 
-//loop over all contacts p=1..N-1, q=p+1..N to evaluate forces
-for (auto p = particles.begin();  p!=particles.end()-1; ++p){
-//for_loop_inner_counter = 0;
-for (auto q = p+1;  q!=particles.end(); ++q) {
+			//LL: remove old linked list
+			for (Cell& cell : ll) cell.resize(0); 
+			// ll.resize(0); // this strangely gave me a segmentation fault
 
-Vec3D Rij = p->r - q->r;	
-Vec3D temp;
-temp.X = Vec3D::roundOff_x(Rij, box);
-temp.Y = Vec3D::roundOff_y(Rij, box);
-temp.Z = Vec3D::roundOff_z(Rij, box);
-Vec3D minRij = Rij - temp*box;
-double r2 = minRij.getLengthSquared();
+			//LL: re-initialise linked list
+			for (Particle& p : particles) {
 
-if ( r2 < rc2 ) {
-double r2i = 1/r2;
-double r6i = pow(r2i,3);
-double ff = 48.0*epsilon*sig6*r2i*r6i*(r6i - 0.5);
-Vec3D Fij = ff*minRij;
-p->f += Fij;
-q->f += Fij*(-1.0); 
+				double Lx = -1.0*(box/2.0) - p.r.getComponent(0);
+				double Ly = -1.0*(box/2.0) - p.r.getComponent(1);
+				double Lz = -1.0*(box/2.0) - p.r.getComponent(2);
 
-}		
+				unsigned int indx = -1.0*ceil(Lx/rn);
+				unsigned int indy = -1.0*ceil(Ly/rn);
+				unsigned int indz = -1.0*ceil(Lz/rn);
 
-}
-}
+				unsigned int ix = Ncelx*(Ncelx*indz + indy) + indx + 1 - 1;
+				// std::cout << "position: " << std::setw(10) << p.r << ", indices: "<< indx << ", " << indy << ", " <<indz << " and cell number: " << ix <<std::endl;
+				ll[ix].push_back(&p);
+				// std::cout << "successfully done for cell number: " << ix << std::endl; 
 
+				/*
+				// accessing ll			
+				for (int i=0; i < ll.size(); ++i){
+				Cell& cell = ll[i];
+				}*/
+			}
 
+		}
 
-}*/
-
-
-// Structure function g(r) calculation
-void grCalc(){
+		// Structure function g(r) calculation
+		void grCalc(){
 
 
-	// write the g(r) data to a file
-	std::ofstream grWrite("./data/gr_data.dat");
-	grWrite << "ri \t ro \t rad \t gr_count \t tot_part \t samples \t nHomo \t rho" << std::endl;
+			// write the g(r) data to a file
+			std::ofstream grWrite("./data/gr_data.dat");
+			grWrite << "ri \t ro \t rad \t gr_count \t tot_part \t samples \t nHomo \t rho" << std::endl;
 
-	for (int i=0; i < gR_nElem; ++i){
+			for (int i=0; i < gR_nElem; ++i){
 
-		double rad = gR_radDelta*( i + 0.5) + gR_radMin;		// radius in question	
-		double ri = i*gR_radDelta + 0.5;				// radius at i^th bin
-		double ro = (i+1)*gR_radDelta + 0.5;				// radius at (i+1)^th bin
-		// double shellVol = (4/3)*M_PI*( pow(ro, 3.0) - pow(ri, 3.0) );	// volume of shell
-		// double nHomo = shellVol*rho;					// number of particles if homogeneous
+				double rad = gR_radDelta*( i + 0.5) + gR_radMin;		// radius in question	
+				double ri = i*gR_radDelta + 0.5;				// radius at i^th bin
+				double ro = (i+1)*gR_radDelta + 0.5;				// radius at (i+1)^th bin
+				// double shellVol = (4/3)*M_PI*( pow(ro, 3.0) - pow(ri, 3.0) );	// volume of shell
+				// double nHomo = shellVol*rho;					// number of particles if homogeneous
 
-		// gR_nCount[i] /= (npart*gR_tSamples*nHomo);				// normalizing g(r)
+				// gR_nCount[i] /= (npart*gR_tSamples*nHomo);				// normalizing g(r)
 
-		grWrite << ri << "\t" << ro << "\t" << rad << "\t" << gR_nCount[i] << "\t" << npart << "\t" << gR_tSamples << "\t" << rho << std::endl;
-	}
+				grWrite << ri << "\t" << ro << "\t" << rad << "\t" << gR_nCount[i] << "\t" << npart << "\t" << gR_tSamples << "\t" << rho << std::endl;
+			}
 
-	std::cout << " the total number of samples is: " << gR_tSamples	<< std::endl;
-	std::cout << " the homogeneous density is: " << rho << std::endl;
-	std::cout << " the number of particles is: " << npart << std::endl;
+			std::cout << " the total number of samples is: " << gR_tSamples	<< std::endl;
+			std::cout << " the homogeneous density is: " << rho << std::endl;
+			std::cout << " the number of particles is: " << npart << std::endl;
 
-	// file close	
-	grWrite.close();
-}//grCalc()
+			// file close	
+			grWrite.close();
+		}//grCalc()
 
-// Velocity distribution calculation -- convert histogram to PDF
-void velHistCalc(){
+		// Velocity distribution calculation -- convert histogram to PDF
+		void velHistCalc(){
 
-	std::ofstream velDistdata("./data/velDist_data.dat"); 
+			std::ofstream velDistdata("./data/velDist_data.dat"); 
 
-	double trapzAreaX = 0.0;
-	double trapzAreaY = 0.0;
-	double trapzAreaZ = 0.0;
+			double trapzAreaX = 0.0;
+			double trapzAreaY = 0.0;
+			double trapzAreaZ = 0.0;
 
-	for (int i=1; i <= velHist_bins-1; ++i){
+			for (int i=1; i <= velHist_bins-1; ++i){
 
-		trapzAreaX += 2.0*velHistX[i];	
-		trapzAreaY += 2.0*velHistY[i]; 	
-		trapzAreaZ += 2.0*velHistZ[i];	
-	}	
+				trapzAreaX += 2.0*velHistX[i];	
+				trapzAreaY += 2.0*velHistY[i]; 	
+				trapzAreaZ += 2.0*velHistZ[i];	
+			}	
 
-	// adding the contributions from the first and last element
-	trapzAreaX += velHistX[0] + velHistX[velHist_bins];
-	trapzAreaY += velHistY[0] + velHistY[velHist_bins];
-	trapzAreaZ += velHistZ[0] + velHistZ[velHist_bins];
+			// adding the contributions from the first and last element
+			trapzAreaX += velHistX[0] + velHistX[velHist_bins];
+			trapzAreaY += velHistY[0] + velHistY[velHist_bins];
+			trapzAreaZ += velHistZ[0] + velHistZ[velHist_bins];
 
-	// multiplying the distance between the bins to get the final area
-	trapzAreaX *= velHist_velDelta/2.0;
-	trapzAreaY *= velHist_velDelta/2.0;
-	trapzAreaZ *= velHist_velDelta/2.0;
+			// multiplying the distance between the bins to get the final area
+			trapzAreaX *= velHist_velDelta/2.0;
+			trapzAreaY *= velHist_velDelta/2.0;
+			trapzAreaZ *= velHist_velDelta/2.0;
 
-	// converting histogram to PDF
-	for (int i=0; i< velHistX.size(); ++i){
-		double bin_lower = velHist_velMin + (i-1)*velHist_velDelta;
-		double bin_upper = velHist_velMin + (i+1-1)*velHist_velDelta;
-		double vel = (bin_lower + bin_upper)*0.5;
-		tempAv = tempSum/tempCount;
+			// converting histogram to PDF
+			for (int i=0; i< velHistX.size(); ++i){
+				double bin_lower = velHist_velMin + (i-1)*velHist_velDelta;
+				double bin_upper = velHist_velMin + (i+1-1)*velHist_velDelta;
+				double vel = (bin_lower + bin_upper)*0.5;
+				tempAv = tempSum/tempCount;
 
-		velDistdata << vel << "\t" << tempAv << "\t" << velHistX[i] << "\t" << trapzAreaX << "\t" << velHistY[i] << "\t" << trapzAreaY << "\t" << velHistZ[i] << "\t" << trapzAreaZ << std::endl;	
-	}
+				velDistdata << vel << "\t" << tempAv << "\t" << velHistX[i] << "\t" << trapzAreaX << "\t" << velHistY[i] << "\t" << trapzAreaY << "\t" << velHistZ[i] << "\t" << trapzAreaZ << std::endl;	
+			}
 
-	velDistdata.close();
-}
+			velDistdata.close();
+		}
 
-// Reset variables
-void resetVar(){
-	// energy reset to zero
-	pot_en = 0.0;
-	kin_en = 0.0;
-	tot_en = 0.0;
-	pressure = 0.0;
-	momX = 0.0;
-	momY = 0.0;
-	momZ = 0.0;
+		// Reset variables
+		void resetVar(){
+			// energy reset to zero
+			pot_en = 0.0;
+			kin_en = 0.0;
+			tot_en = 0.0;
+			pressure = 0.0;
+			momX = 0.0;
+			momY = 0.0;
+			momZ = 0.0;
 
-	// set all forces to zero
-	for (Particle& p : particles) {
-		p.f.setZero();
-	}
-}
+			// set all forces to zero
+			for (Particle& p : particles) {
+				p.f.setZero();
+			}
+		}
 
-// File writing
-void fileWrite(std::ofstream& enStats, std::ofstream& eosStats, std::ofstream& momStats){
+		// File writing
+		void fileWrite(std::ofstream& enStats, std::ofstream& eosStats, std::ofstream& momStats){
 
-	if ( step % 10000 == 0){
-		std::cout<< step << " steps out of " << stepMax << " completed " << std::endl;
-	}
+			if ( step % 10000 == 0){
+				std::cout<< step << " steps out of " << stepMax << " completed " << std::endl;
+			}
 
-	//write output file in the .data format every 10th time step
-	if (++counter>=saveCount) {
-		//reset the counter, write time to terminal
-		counter = 0;
+			//write output file in the .data format every 10th time step
+			if (++counter>=saveCount) {
+				//reset the counter, write time to terminal
+				counter = 0;
 
-		// particle positions in vtk file format
-		vtkFileWritePosVel();
+				// particle positions in vtk file format
+				vtkFileWritePosVel();
 
-		//writing the energy balance
-		enStats << pot_en << "\t" << kin_en << "\t" << tot_en << std::endl;
-		eosStats << rho << "\t" << temp << "\t" << pressure << std::endl;
-		momStats << momX << "\t" << momY << "\t" << momZ << std::endl;
-	}
+				//writing the energy balance
+				enStats << pot_en << "\t" << kin_en << "\t" << tot_en << std::endl;
+				eosStats << rho << "\t" << temp << "\t" << pressure << std::endl;
+				momStats << momX << "\t" << momY << "\t" << momZ << std::endl;
+			}
 
-}
+		}
 
-int MOD(int a, int b){
+		int MOD(int a, int b){
 
-	if (a >= 0)
-		return(a%b);
-	else
-		return( (a%b) + b);
-}
+			if (a >= 0)
+				return(a%b);
+			else
+				return( (a%b) + b);
+		}
 
-// Filewriting for the VTK format
-void vtkFileWritePosVel(){
+		// Filewriting for the VTK format
+		void vtkFileWritePosVel(){
 
-	char filename[40];
+			char filename[40];
 
-	sprintf( filename, "./data/data1_%d.vtu", step);  
-	std::ofstream file(filename);
-	file << "<?xml version=\"1.0\"?>" << std::endl;
-	file << "<VTKFile type=\"UnstructuredGrid\" version=\"0.1\" byte_order=\"LittleEndian\">" << std::endl;
-	file << "<UnstructuredGrid>";
-	file << "<Piece NumberOfPoints=\""<< particles.size() <<"\" NumberOfCells=\"0\">" << std::endl;
-	file << "<Points>" << std::endl;
-	// position data
-	file << "<DataArray type=\"Float32\" Name=\"Position\" NumberOfComponents=\"3\" format=\"ascii\">"<< std::endl;
-	for (Particle& p: particles)
-	{
-		file << p.r << std::endl;
+			sprintf( filename, "./data/data1_%d.vtu", step);  
+			std::ofstream file(filename);
+			file << "<?xml version=\"1.0\"?>" << std::endl;
+			file << "<VTKFile type=\"UnstructuredGrid\" version=\"0.1\" byte_order=\"LittleEndian\">" << std::endl;
+			file << "<UnstructuredGrid>";
+			file << "<Piece NumberOfPoints=\""<< particles.size() <<"\" NumberOfCells=\"0\">" << std::endl;
+			file << "<Points>" << std::endl;
+			// position data
+			file << "<DataArray type=\"Float32\" Name=\"Position\" NumberOfComponents=\"3\" format=\"ascii\">"<< std::endl;
+			for (Particle& p: particles)
+			{
+				file << p.r << std::endl;
 
-	}
-	file << "</DataArray>"<<std::endl;
-	file << "</Points>" << std::endl;	
+			}
+			file << "</DataArray>"<<std::endl;
+			file << "</Points>" << std::endl;	
 
-	// velocity data
-	file << "<PointData Vectors=\"vector\">"<< std::endl;	
-	file << "<DataArray type=\"Float32\" Name=\"Velocity\" NumberOfComponents=\"3\" format=\"ascii\">" << std::endl;
-	for (Particle& p: particles)
-	{
-		file <<  p.v << std::endl;
+			// velocity data
+			file << "<PointData Vectors=\"vector\">"<< std::endl;	
+			file << "<DataArray type=\"Float32\" Name=\"Velocity\" NumberOfComponents=\"3\" format=\"ascii\">" << std::endl;
+			for (Particle& p: particles)
+			{
+				file <<  p.v << std::endl;
 
-	}
-	file << "</DataArray>"<< std::endl;
+			}
+			file << "</DataArray>"<< std::endl;
 
-	// radius data
-	file << "<DataArray type=\"Float32\" Name=\"Radius\" format=\"ascii\">" << std::endl;
-	for (Particle& p: particles)
-	{
-		file <<  p.a << std::endl;
+			// radius data
+			file << "<DataArray type=\"Float32\" Name=\"Radius\" format=\"ascii\">" << std::endl;
+			for (Particle& p: particles)
+			{
+				file <<  p.a << std::endl;
 
-	}
-	file << "</DataArray>"<< std::endl;
-	file << "</PointData>" << std::endl;	
+			}
+			file << "</DataArray>"<< std::endl;
+			file << "</PointData>" << std::endl;	
 
-	// Cells data
-	file << "<Cells>"<< std::endl;	
-	file << "<DataArray type=\"Int32\" Name=\"connectivity\" format=\"ascii\"></DataArray>" << std::endl;
-	file << "<DataArray type=\"Int32\" Name=\"offsets\" format=\"ascii\"></DataArray>" << std::endl;
-	file << "<DataArray type=\"UInt8\" Name=\"types\" format=\"ascii\"></DataArray>" << std::endl;
-	file << "</Cells>" << std::endl;
+			// Cells data
+			file << "<Cells>"<< std::endl;	
+			file << "<DataArray type=\"Int32\" Name=\"connectivity\" format=\"ascii\"></DataArray>" << std::endl;
+			file << "<DataArray type=\"Int32\" Name=\"offsets\" format=\"ascii\"></DataArray>" << std::endl;
+			file << "<DataArray type=\"UInt8\" Name=\"types\" format=\"ascii\"></DataArray>" << std::endl;
+			file << "</Cells>" << std::endl;
 
-	// Piece
-	file << "</Piece>" << std::endl;
-	file << "</UnstructuredGrid>" << std::endl;
-	file << "</VTKFile>" << std::endl;
+			// Piece
+			file << "</Piece>" << std::endl;
+			file << "</UnstructuredGrid>" << std::endl;
+			file << "</VTKFile>" << std::endl;
 
-	file.close();
+			file.close();
 
-}
+		}
 
 };
 
