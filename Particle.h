@@ -10,7 +10,6 @@ public:
 	double a; //radius
 	double m; //mass
 	Vec3D r;  //position
-	Vec3D w;  //mid-step velocity
 	Vec3D v;  //integer-step velocity
 	Vec3D f;  //force
 };
