@@ -15,10 +15,12 @@ int main () {
 	coll2p.rc2 = pow(coll2p.rcutoff,2);	// square of cut-off distance
 	coll2p.dim = 3;				// 3D system
 
-	coll2p.dt = 1e-4;
+	coll2p.tau = 0.745;			// rate of thermalizing
+	coll2p.dt = 1e-2;
 	coll2p.step = 1;
-	coll2p.stepMax = 3e6;
-	coll2p.kB = 1.0;			// Boltzmann constant
+	coll2p.stepMax = 1e6;
+	coll2p.kBT = 1.0;			// Boltzmann constant
+	coll2p.thermProb = coll2p.dt*coll2p.tau;// probability of thermalizing 	
 
 	// Cell list parameters
 	coll2p.rn = coll2p.box/(round(coll2p.box/coll2p.rcutoff)); // size of cell
