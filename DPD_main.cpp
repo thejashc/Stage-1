@@ -17,7 +17,7 @@ int main () {
 
 	coll2p.dt = 1e-4;
 	coll2p.step = 1;
-	coll2p.stepMax = 2e6;
+	coll2p.stepMax = 3e6;
 	coll2p.kB = 1.0;			// Boltzmann constant
 
 	// Cell list parameters
