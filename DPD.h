@@ -209,7 +209,7 @@ class DPD {
 				// std::cout << rn << "\t" << Ncelx << "\t" << Ncely << "\t" << Ncelz << std::endl;
 				// force calculation
 				// forceCalc();
-				// forceCalc_conservative();
+				forceCalc_conservative();
 
 				// for (Particle&p : particles){
 				//	std::cout << "position: " << p.r << " and force: " << p.f << std::endl;
@@ -223,9 +223,10 @@ class DPD {
 				// Integrate equations of motion using Verlet leap_frog method
 				integrateEOS();
 
-				// total energy
+				// total energy and g(r) sample calculation
 				tot_en = kin_en + pot_en;
-
+				if ( (step > gR_tStart) && (step % gR_tDelta == 0) ) grSample();
+					
 				// Apply periodic boundary conditions
 				pbc();
 
@@ -253,6 +254,7 @@ class DPD {
 		/**************************************** FUNCTIONS ***************************************************/
 		/******************************************************************************************************/
 		// Brute force implementation of the Force Calculation 
+		/*
 		void forceCalc(){
 
 			//loop over all contacts p=1..N-1, q=p+1..N to evaluate forces
@@ -271,16 +273,10 @@ class DPD {
 
 					if ( r2 < rc2 ) {
 
-						Vec3D Fij;
-						/*
-						   Fij.X = 2.0*epsilon*( sigma - dist )*( minRij.X / dist );
-						   Fij.Y = 2.0*epsilon*( sigma - dist )*( minRij.Y / dist );
-						   Fij.Z = 2.0*epsilon*( sigma - dist )*( minRij.Z / dist );*/
-
 						Fij.X = aii*( 1.0 - (dist/rcutoff) )*( minRij.X / dist);
 						Fij.Y = aii*( 1.0 - (dist/rcutoff) )*( minRij.Y / dist);
 						Fij.Z = aii*( 1.0 - (dist/rcutoff) )*( minRij.Z / dist);
-						
+
 						p->f += Fij;
 						q->f += Fij*(-1.0); 
 
@@ -303,6 +299,32 @@ class DPD {
 							gR_nCount[ig] += 2;	
 						}
 					} 
+				}
+			}
+		}*/
+
+		// sample collection for g(r)
+		void grSample(){
+
+			//loop over all contacts p=1..N-1, q=p+1..N to evaluate forces
+			for (auto p = particles.begin();  p!=particles.end()-1; ++p){
+				//for_loop_inner_counter = 0;
+				for (auto q = p+1;  q!=particles.end(); ++q) {
+
+					Vec3D Rij = p->r - q->r;	
+					Vec3D temp;
+					temp.X = Vec3D::roundOff_x(Rij, box);
+					temp.Y = Vec3D::roundOff_y(Rij, box);
+					temp.Z = Vec3D::roundOff_z(Rij, box);
+					Vec3D minRij = Rij - temp*box;
+					double r2 = minRij.getLengthSquared();
+					double dist = sqrt(r2);
+
+					if ( dist < box/2.0 ) { 
+						int ig = round(dist/gR_radDelta) - 2;
+
+						gR_nCount[ig] += 2;	
+					}
 				}
 			}
 		}
@@ -544,7 +566,7 @@ class DPD {
 				}
 			} 
 		}// computeForce() -- between 2 particles
-		
+
 		void computeForces(Cell& cell1, Cell& cell2) {
 			for (Particle* p : cell1)
 				for (Particle* q : cell2)
@@ -556,7 +578,7 @@ class DPD {
 				for (auto q = p+1;  q!=cell.end(); ++q)
 					computeForce(*p,*q);
 		}// computeForces() -- entire cell	
-		
+
 		/******************************************************************************************************/
 		/**************************************** DISSIPATIVE FORCES *****************************************/
 		/******************************************************************************************************/
@@ -566,8 +588,8 @@ class DPD {
 			// only identifying neighbors
 			// LL: loop over all contacts p=1..N, q=p+1..N to evaluate forces
 			for (unsigned int indx=0; indx<Ncelx; ++indx)
-			for (unsigned int indy=0; indy<Ncely; ++indy)
-			for (unsigned int indz=0; indz<Ncelz; ++indz) {
+				for (unsigned int indy=0; indy<Ncely; ++indy)
+					for (unsigned int indz=0; indz<Ncelz; ++indz) {
 						unsigned int ix = Ncelx*(Ncelx*indz + indy) + indx + 1 - 1;
 
 						unsigned int Nbor_indx; 
@@ -732,7 +754,7 @@ class DPD {
 		void computeForce_dissipative(Particle* p, Particle* q) {
 
 			std::mt19937 gen(rd());
-			
+
 			Vec3D Rij = p->r - q->r;	
 			Vec3D Vij = p->v - q->v;	
 			Vec3D temp;
@@ -745,14 +767,14 @@ class DPD {
 			Vec3D capRij = minRij/dist;
 
 			if ( r2 < rc2 ) {
-				
+
 				Vec3D Deltaij;
 
 				double zetaij = d(gen); 
 				double term1 = zetaij*sqrt(2.0*kBT/p->m);
 				double term2 = Vec3D::dot( Vij, capRij );
 				double term3 = term1 - term2;
-				
+
 				Deltaij.X = 0.5*capRij.X*term3;
 				Deltaij.Y = 0.5*capRij.Y*term3;
 				Deltaij.Z = 0.5*capRij.Z*term3;
@@ -764,13 +786,13 @@ class DPD {
 			}		
 
 		}// computeForce() -- between 2 particles
-		
+
 		// Integrating equations of motion
 		void integrateEOS(){
 
 			// create linked list
 			createList();
-			
+
 			// intermediate velocity calculation + position update
 			for (Particle&p : particles){
 				p.v += (0.5)*(1/p.m)*p.f*dt;
@@ -778,7 +800,7 @@ class DPD {
 
 			// apply periodic boundary condition	
 			pbc();
-	
+
 			// update force for new positions
 			// forceCalc_conservative();
 
@@ -802,6 +824,20 @@ class DPD {
 				momX += p.v.X;
 				momY += p.v.Y;
 				momZ += p.v.Z;
+
+				// distribute velocities into velocity bins
+				if ( (step > velHist_tStart) && (step % velHist_tDelta == 0) ) {
+					int ivelX = ceil((velHist_velMax - p.v.X)/velHist_velDelta); 
+					int ivelY = ceil((velHist_velMax - p.v.Y)/velHist_velDelta); 
+					int ivelZ = ceil((velHist_velMax - p.v.Z)/velHist_velDelta); 
+
+					velHistX[ivelX] += 1;
+					velHistY[ivelY] += 1;
+					velHistZ[ivelZ] += 1;
+
+					tempSum += temp;
+					tempCount += 1;
+				}	
 			}
 
 			// ideal component of pressure
