@@ -53,7 +53,7 @@ class DPD {
 		double rc2i;
 		double rc6i;
 		double ecut;
-		unsigned int saveCount = 500;		// number of timestep between saves
+		unsigned int saveCount = 10000;		// number of timestep between saves
 
 		// parameters for post-processing
 		// g(r) -- structure function
@@ -338,38 +338,14 @@ class DPD {
 		// Cell list implementation of the force calculation
 		void forceCalc_conservative(){
 
-			//LL: remove old linked list
-			for (Cell& cell : ll) cell.resize(0); 
-			// ll.resize(0); // this strangely gave me a segmentation fault
-
-			//LL: re-initialise linked list
-			for (Particle& p : particles) {
-
-				double Lx = -1.0*(box/2.0) - p.r.getComponent(0);
-				double Ly = -1.0*(box/2.0) - p.r.getComponent(1);
-				double Lz = -1.0*(box/2.0) - p.r.getComponent(2);
-
-				unsigned int indx = -1.0*ceil(Lx/rn);
-				unsigned int indy = -1.0*ceil(Ly/rn);
-				unsigned int indz = -1.0*ceil(Lz/rn);
-
-				unsigned int ix = Ncelx*(Ncelx*indz + indy) + indx + 1 - 1;
-				// std::cout << "position: " << std::setw(10) << p.r << ", indices: "<< indx << ", " << indy << ", " <<indz << " and cell number: " << ix <<std::endl;
-				ll[ix].push_back(&p);
-				// std::cout << "successfully done for cell number: " << ix << std::endl; 
-
-				/*
-				// accessing ll			
-				for (int i=0; i < ll.size(); ++i){
-				Cell& cell = ll[i];
-				}*/
-			}
+			// creating the list for force calculation
+			createList();
 
 			// identifying neighbors
 			// LL: loop over all contacts p=1..N, q=p+1..N to evaluate forces
 			for (unsigned int indx=0; indx<Ncelx; ++indx)
-				for (unsigned int indy=0; indy<Ncely; ++indy)
-					for (unsigned int indz=0; indz<Ncelz; ++indz) {
+			for (unsigned int indy=0; indy<Ncely; ++indy)
+			for (unsigned int indz=0; indz<Ncelz; ++indz) {
 						unsigned int ix = Ncelx*(Ncelx*indz + indy) + indx + 1 - 1;
 
 						unsigned int Nbor_indx; 
@@ -532,10 +508,6 @@ class DPD {
 
 			if ( r2 < rc2 ) {
 				Vec3D Fij;
-				/*
-				   Fij.X = 2.0*epsilon*( sigma - dist )*( minRij.X / dist );
-				   Fij.Y = 2.0*epsilon*( sigma - dist )*( minRij.Y / dist );
-				   Fij.Z = 2.0*epsilon*( sigma - dist )*( minRij.Z / dist );*/
 
 				Fij.X = aii*( 1.0 - (dist/rcutoff) )*( minRij.X / dist);
 				Fij.Y = aii*( 1.0 - (dist/rcutoff) )*( minRij.Y / dist);
@@ -556,15 +528,6 @@ class DPD {
 
 			}		
 
-			// radial distribution function
-			if ( (step > gR_tStart) && (step % gR_tDelta == 0) ) {
-
-				if ( dist < box/2.0 ) { 
-					int ig = round(dist/gR_radDelta) - 2;
-
-					gR_nCount[ig] += 2;	
-				}
-			} 
 		}// computeForce() -- between 2 particles
 
 		void computeForces(Cell& cell1, Cell& cell2) {
@@ -588,8 +551,8 @@ class DPD {
 			// only identifying neighbors
 			// LL: loop over all contacts p=1..N, q=p+1..N to evaluate forces
 			for (unsigned int indx=0; indx<Ncelx; ++indx)
-				for (unsigned int indy=0; indy<Ncely; ++indy)
-					for (unsigned int indz=0; indz<Ncelz; ++indz) {
+			for (unsigned int indy=0; indy<Ncely; ++indy)
+			for (unsigned int indz=0; indz<Ncelz; ++indz) {
 						unsigned int ix = Ncelx*(Ncelx*indz + indy) + indx + 1 - 1;
 
 						unsigned int Nbor_indx; 
@@ -741,14 +704,14 @@ class DPD {
 
 		void computeForces_dissipative(Cell& cell1, Cell& cell2) {
 			for (Particle* p : cell1)
-				for (Particle* q : cell2)
-					computeForce_dissipative(p,q);
+			for (Particle* q : cell2)
+				computeForce_dissipative(p,q);
 		}// computeForces_dissipative() -- between 2 cells	
 
 		void computeForces_dissipative(Cell& cell) {
 			for (auto p = cell.begin();  p!=cell.end(); ++p)
-				for (auto q = p+1;  q!=cell.end(); ++q)
-					computeForce_dissipative(*p,*q);
+			for (auto q = p+1;  q!=cell.end(); ++q)
+				computeForce_dissipative(*p,*q);
 		}// computeForces_dissipative() -- entire cell	
 
 		void computeForce_dissipative(Particle* p, Particle* q) {
@@ -790,19 +753,24 @@ class DPD {
 		// Integrating equations of motion
 		void integrateEOS(){
 
-			// create linked list
-			createList();
+			// create linked list -- switch on only if purely dissipative
+			// createList();
 
 			// intermediate velocity calculation + position update
 			for (Particle&p : particles){
 				p.v += (0.5)*(1/p.m)*p.f*dt;
 				p.r += p.v*dt;}
 
-			// apply periodic boundary condition	
+			// apply periodic boundary condition and reset force to 0
 			pbc();
+		
+			// set all forces to zero
+			for (Particle& p : particles) {
+				p.f.setZero();
+			}
 
 			// update force for new positions
-			// forceCalc_conservative();
+			forceCalc_conservative();
 
 			// intermediate velocity calculation 2
 			for (Particle&p : particles)
@@ -810,9 +778,7 @@ class DPD {
 
 			// Andersen momentum-conserving thermostat with a probability 
 			double randThermalize = ((double) rand() / (RAND_MAX));
-
-			if ( randThermalize < thermProb ){
-				forceCalc_dissipative();}
+			if ( randThermalize < thermProb ) forceCalc_dissipative();
 
 			// calculate physical quantities
 			for (Particle&p : particles){
