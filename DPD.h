@@ -66,7 +66,7 @@ class DPD {
 		int gR_tEnd;				// end time for the measurement g(r)
 		int gR_tSamples;		 	// number of samples for g(r)	
 
-		std::vector<double> gR_nCount;		// g(r) function
+		std::vector<double> gR_nCount;// g(r) function
 
 		// momentum calculation
 		long double momX;
@@ -82,9 +82,9 @@ class DPD {
 		int velHist_tEnd;			// end time for measurements velHist
 		int velHist_bins;			// number of bins for velHist
 
-		std::vector<int> velHistX;		// velHist vector for X component
-		std::vector<int> velHistY;		// velHist vector for Y component
-		std::vector<int> velHistZ;		// velHist vector for Z component
+		std::vector<int> velHistX;	// velHist vector for X component
+		std::vector<int> velHistY;	// velHist vector for Y component
+		std::vector<int> velHistZ;	// velHist vector for Z component
 
 		std::vector<Particle> particles;     	// vector of particles
 
@@ -97,10 +97,10 @@ class DPD {
 
 		// Gaussian random numbers
 		// random device class instance, source of 'true' randomness for initializing random seed
-		std::random_device rd;
+		std::default_random_engine rd;
 		// Mersenne twister PRNG, initialized with seed from previous random device instance
 		// usage d{mean, std}
-		std::normal_distribution<> d{0,1};
+		std::normal_distribution<double> d{0,1};
 
 		/******************************************************************************************************/
 		/**************************************** INITIALIZATION ROUTINE **************************************/
@@ -152,7 +152,7 @@ class DPD {
 				gR_nCount.push_back(0.0);
 			}	
 
-			// Initialize the velHistX array
+			// Initialize the velocity histogram array
 			for (int i=0; i < velHist_bins ; ++i){
 				velHistX.push_back(0);
 				velHistY.push_back(0);
@@ -242,7 +242,7 @@ class DPD {
 			} //end time loop
 
 			// post-processing
-			grCalc();	 
+			// grCalc();	 
 			velHistCalc();
 			enStats.close();
 			eosStats.close();
@@ -308,7 +308,6 @@ class DPD {
 
 			//loop over all contacts p=1..N-1, q=p+1..N to evaluate forces
 			for (auto p = particles.begin();  p!=particles.end()-1; ++p){
-				//for_loop_inner_counter = 0;
 				for (auto q = p+1;  q!=particles.end(); ++q) {
 
 					Vec3D Rij = p->r - q->r;	
@@ -321,9 +320,11 @@ class DPD {
 					double dist = sqrt(r2);
 
 					if ( dist < box/2.0 ) { 
-						int ig = round(dist/gR_radDelta) - 2;
+						int ig = ceil(dist/gR_radDelta)-1;
 
-						gR_nCount[ig] += 2;	
+						if ( (ig < 0) || (ig >= gR_nElem)) {std::cout << " out of bounds " << std::endl;} 
+
+						gR_nCount[ig] += 2.0;	
 					}
 				}
 			}
@@ -716,7 +717,7 @@ class DPD {
 
 		void computeForce_dissipative(Particle* p, Particle* q) {
 
-			std::mt19937 gen(rd());
+			// std::mt19937 gen(rd());
 
 			Vec3D Rij = p->r - q->r;	
 			Vec3D Vij = p->v - q->v;	
@@ -733,7 +734,7 @@ class DPD {
 
 				Vec3D Deltaij;
 
-				double zetaij = d(gen); 
+				double zetaij = d(rd); 
 				double term1 = zetaij*sqrt(2.0*kBT/p->m);
 				double term2 = Vec3D::dot( Vij, capRij );
 				double term3 = term1 - term2;
@@ -793,10 +794,14 @@ class DPD {
 
 				// distribute velocities into velocity bins
 				if ( (step > velHist_tStart) && (step % velHist_tDelta == 0) ) {
-					int ivelX = ceil((velHist_velMax - p.v.X)/velHist_velDelta); 
-					int ivelY = ceil((velHist_velMax - p.v.Y)/velHist_velDelta); 
-					int ivelZ = ceil((velHist_velMax - p.v.Z)/velHist_velDelta); 
-
+					int ivelX = ceil(( p.v.X - velHist_velMin )/velHist_velDelta) - 1; 
+					int ivelY = ceil(( p.v.Y - velHist_velMin )/velHist_velDelta) - 1; 
+					int ivelZ = ceil(( p.v.Z - velHist_velMin )/velHist_velDelta) - 1; 
+				
+					if( ( ivelX < 0 ) || ( ivelX >= velHist_bins  ) ) std::cout << "out of bounds ivelX" << std::endl;
+					if( ( ivelY < 0 ) || ( ivelY >= velHist_bins  ) ) std::cout << "out of bounds ivelY" << std::endl;
+					if( ( ivelZ < 0 ) || ( ivelZ >= velHist_bins  ) ) std::cout << "out of bounds ivelZ" << std::endl;
+				
 					velHistX[ivelX] += 1;
 					velHistY[ivelY] += 1;
 					velHistZ[ivelZ] += 1;
@@ -893,7 +898,7 @@ class DPD {
 			double trapzAreaY = 0.0;
 			double trapzAreaZ = 0.0;
 
-			for (int i=1; i <= velHist_bins-1; ++i){
+			for (int i=1; i <= velHist_bins-2; ++i){
 
 				trapzAreaX += 2.0*velHistX[i];	
 				trapzAreaY += 2.0*velHistY[i]; 	
@@ -901,9 +906,9 @@ class DPD {
 			}	
 
 			// adding the contributions from the first and last element
-			trapzAreaX += velHistX[0] + velHistX[velHist_bins];
-			trapzAreaY += velHistY[0] + velHistY[velHist_bins];
-			trapzAreaZ += velHistZ[0] + velHistZ[velHist_bins];
+			trapzAreaX += velHistX[0] + velHistX[velHist_bins - 1];
+			trapzAreaY += velHistY[0] + velHistY[velHist_bins - 1];
+			trapzAreaZ += velHistZ[0] + velHistZ[velHist_bins - 1];
 
 			// multiplying the distance between the bins to get the final area
 			trapzAreaX *= velHist_velDelta/2.0;
@@ -911,9 +916,9 @@ class DPD {
 			trapzAreaZ *= velHist_velDelta/2.0;
 
 			// converting histogram to PDF
-			for (int i=0; i< velHistX.size(); ++i){
-				double bin_lower = velHist_velMin + (i-1)*velHist_velDelta;
-				double bin_upper = velHist_velMin + (i+1-1)*velHist_velDelta;
+			for (int i=0; i< velHist_bins; ++i){
+				double bin_lower = velHist_velMin + i*velHist_velDelta;
+				double bin_upper = velHist_velMin + (i+1)*velHist_velDelta;
 				double vel = (bin_lower + bin_upper)*0.5;
 				tempAv = tempSum/tempCount;
 
@@ -943,7 +948,7 @@ class DPD {
 		// File writing
 		void fileWrite(std::ofstream& enStats, std::ofstream& eosStats, std::ofstream& momStats){
 
-			if ( step % 10000 == 0){
+			if ( step % 1000 == 0){
 				std::cout<< step << " steps out of " << stepMax << " completed " << std::endl;
 			}
 
