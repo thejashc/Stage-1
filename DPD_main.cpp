@@ -30,7 +30,7 @@ int main () {
 	
 	// post-processing
 	// g(r) calculation
-	coll2p.gR_radMin = 0.5;			// minimum radius for g(r) 
+	coll2p.gR_radMin = 0.0;			// minimum radius for g(r) 
 	coll2p.gR_radDelta = 0.05;		// thickness of a shell
 	coll2p.gR_radMax = coll2p.box/2.0;	// maximum radius for g(r)
 	coll2p.gR_nElem  = round((coll2p.gR_radMax - coll2p.gR_radMin)/coll2p.gR_radDelta); // number of elements
