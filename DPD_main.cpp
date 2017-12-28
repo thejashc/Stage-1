@@ -18,8 +18,8 @@ int main () {
 	coll2p.tau = 0.745;			// rate of thermalizing
 	coll2p.dt = 1e-2;
 	coll2p.step = 1;
-	coll2p.stepMax = 2e5;
-	coll2p.kBT = 3.0;			// Boltzmann constant
+	coll2p.stepMax = 5e5;
+	coll2p.kBT = 1.0;			// Boltzmann constant
 	coll2p.thermProb = coll2p.dt*coll2p.tau;// probability of thermalizing 	
 
 	// Cell list parameters
@@ -31,7 +31,7 @@ int main () {
 	// post-processing
 	// g(r) calculation
 	coll2p.gR_radMin = 0.0;			// minimum radius for g(r) 
-	coll2p.gR_radDelta = 0.05;		// thickness of a shell
+	coll2p.gR_radDelta = 0.01;		// thickness of a shell
 	coll2p.gR_radMax = coll2p.box/2.0;	// maximum radius for g(r)
 	coll2p.gR_nElem  = round((coll2p.gR_radMax - coll2p.gR_radMin)/coll2p.gR_radDelta); // number of elements
 
