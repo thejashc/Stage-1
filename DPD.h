@@ -209,7 +209,7 @@ class DPD {
 				// std::cout << rn << "\t" << Ncelx << "\t" << Ncely << "\t" << Ncelz << std::endl;
 				// force calculation
 				// forceCalc();
-				forceCalc_conservative();
+				// forceCalc_conservative();
 
 				// for (Particle&p : particles){
 				//	std::cout << "position: " << p.r << " and force: " << p.f << std::endl;
@@ -242,7 +242,7 @@ class DPD {
 			} //end time loop
 
 			// post-processing
-			// grCalc();	 
+			grCalc();	 
 			velHistCalc();
 			enStats.close();
 			eosStats.close();
@@ -730,7 +730,7 @@ class DPD {
 			double dist = sqrt(r2);
 			Vec3D capRij = minRij/dist;
 
-			if ( r2 < rc2 ) {
+			if ( r2 <= rc2 ) {
 
 				Vec3D Deltaij;
 
@@ -755,7 +755,7 @@ class DPD {
 		void integrateEOS(){
 
 			// create linked list -- switch on only if purely dissipative
-			// createList();
+			createList();
 
 			// intermediate velocity calculation + position update
 			for (Particle&p : particles){
@@ -771,7 +771,7 @@ class DPD {
 			}
 
 			// update force for new positions
-			forceCalc_conservative();
+			// forceCalc_conservative();
 
 			// intermediate velocity calculation 2
 			for (Particle&p : particles)
@@ -871,8 +871,8 @@ class DPD {
 			for (int i=0; i < gR_nElem; ++i){
 
 				double rad = gR_radDelta*( i + 0.5) + gR_radMin;		// radius in question	
-				double ri = i*gR_radDelta + 0.5;				// radius at i^th bin
-				double ro = (i+1)*gR_radDelta + 0.5;				// radius at (i+1)^th bin
+				double ri = i*gR_radDelta + gR_radMin;				// radius at i^th bin
+				double ro = (i+1)*gR_radDelta + gR_radMin;				// radius at (i+1)^th bin
 				// double shellVol = (4/3)*M_PI*( pow(ro, 3.0) - pow(ri, 3.0) );	// volume of shell
 				// double nHomo = shellVol*rho;					// number of particles if homogeneous
 
@@ -948,7 +948,7 @@ class DPD {
 		// File writing
 		void fileWrite(std::ofstream& enStats, std::ofstream& eosStats, std::ofstream& momStats){
 
-			if ( step % 1000 == 0){
+			if ( step % 10000 == 0){
 				std::cout<< step << " steps out of " << stepMax << " completed " << std::endl;
 			}
 
