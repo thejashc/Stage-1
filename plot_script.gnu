@@ -67,7 +67,7 @@ plot './data/velDist_data.dat' u ($1):($3/$4) w lp ps 0.45 t'x',\
      './data/velDist_data.dat' u ($1):($5/$6) w lp ps 0.45 t'y',\
      './data/velDist_data.dat' u ($1):($7/$8) w lp ps 0.45 t'z',\
      './data/velDist_data.dat' u 1:(MB($1, $2)) w l t'MB(T_{sim})',\
-     './data/velDist_data.dat' u 1:(MB($1, 3.0)) w l t'MB(T_{set})'
+     './data/velDist_data.dat' u 1:(MB($1, 1.0)) w l t'MB(T_{set})'
 
 
 reset
