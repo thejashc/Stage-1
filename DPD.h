@@ -53,7 +53,7 @@ class DPD {
 		double rc2i;
 		double rc6i;
 		double ecut;
-		unsigned int saveCount = 10000;		// number of timestep between saves
+		unsigned int saveCount = 1000;		// number of timestep between saves
 
 		// parameters for post-processing
 		// g(r) -- structure function
@@ -169,6 +169,17 @@ class DPD {
 				p.v -= velAvg;
 			}
 
+			/*
+			Vec3D velAvg={0.0, 0.0, 0.0};
+			// Remove excess velocity
+			for (Particle& p: particles){
+				velAvg += p.w/particles.size();
+			}
+
+			for (Particle& p: particles){
+				p.w -= velAvg;
+			}*/
+
 		}
 
 		/******************************************************************************************************/
@@ -195,7 +206,8 @@ class DPD {
 			sig6 = pow(sigma,6);
 			rc2i = 1/rc2;
 			rc6i = pow(rc2i,3);
-			ecut = 4*epsilon*sig6*rc6i*(sig6*rc6i - 1.0);
+			// ecut = 4*epsilon*sig6*rc6i*(sig6*rc6i - 1.0);
+			ecut = 0;
 
 			counter = 0;					// initialize time, counter for file writing
 			std::ofstream enStats("./data/en_data.dat");	// initialize file stream for energy
@@ -209,7 +221,7 @@ class DPD {
 				// std::cout << rn << "\t" << Ncelx << "\t" << Ncely << "\t" << Ncelz << std::endl;
 				// force calculation
 				// forceCalc();
-				// forceCalc_conservative();
+				forceCalc_conservative();
 
 				// for (Particle&p : particles){
 				//	std::cout << "position: " << p.r << " and force: " << p.f << std::endl;
@@ -521,7 +533,7 @@ class DPD {
 				// double pair_pot_en = epsilon*(sigma - dist)*(sigma - dist);
 				// double pair_pot_en = aii*( 1.0  - (dist/rcutoff) )*( 1.0  - (dist/rcutoff) );
 				double pair_pot_en = (aii/2.0)*(1.0 - (dist/rcutoff))*( 1.0 - (dist/rcutoff) ) ;
-				pot_en += pair_pot_en - ecut;
+				pot_en += pair_pot_en;
 
 				// non-ideal comp pressure
 				double nonIdealcomp = Vec3D::dot(minRij, Fij)*(1.0/(dim*volume));
@@ -755,8 +767,9 @@ class DPD {
 		void integrateEOS(){
 
 			// create linked list -- switch on only if purely dissipative
-			createList();
+			// createList();
 
+			// DPD - VERLET SCHEME
 			// intermediate velocity calculation + position update
 			for (Particle&p : particles){
 				p.v += (0.5)*(1/p.m)*p.f*dt;
@@ -771,7 +784,7 @@ class DPD {
 			}
 
 			// update force for new positions
-			// forceCalc_conservative();
+			forceCalc_conservative();
 
 			// intermediate velocity calculation 2
 			for (Particle&p : particles)
@@ -779,10 +792,23 @@ class DPD {
 
 			// Andersen momentum-conserving thermostat with a probability 
 			double randThermalize = ((double) rand() / (RAND_MAX));
-			if ( randThermalize < thermProb ) forceCalc_dissipative();
+			// if ( randThermalize < thermProb ) forceCalc_dissipative();
 
 			// calculate physical quantities
 			for (Particle&p : particles){
+		
+				/* VELOCITY VERLET INTEGRATION	
+				// store velocity (mid-step)
+				Vec3D w_old = p.w;
+
+				// update velocities (mid-step)
+				p.w += p.f*(dt/p.m);
+
+				// update position (integral time step) using the velocities (mid-step)
+				p.r += p.w*dt;				
+
+				// calculate velocity (integral time step)
+				p.v = 0.5*(w_old + p.w);*/
 
 				// calculate the kinetic energy
 				kin_en += 0.5*p.m*(p.v.getLengthSquared());
@@ -958,12 +984,12 @@ class DPD {
 				counter = 0;
 
 				// particle positions in vtk file format
-				vtkFileWritePosVel();
+				// vtkFileWritePosVel();
 
 				//writing the energy balance
-				enStats << pot_en << "\t" << kin_en << "\t" << tot_en << std::endl;
-				eosStats << rho << "\t" << temp << "\t" << pressure << std::endl;
-				momStats << momX << "\t" << momY << "\t" << momZ << std::endl;
+				enStats << std::setw(20) << std::setprecision(15) << pot_en << "\t" << std::setw(20) << std::setprecision(15) << kin_en << "\t" << std::setw(20) << std::setprecision(15) << tot_en << std::endl;
+				eosStats << std::setw(20) << std::setprecision(15) << rho << "\t" << std::setw(20) << std::setprecision(15)  << temp << "\t" << std::setw(20) << std::setprecision(15) << pressure << std::endl;
+				momStats << std::setw(20) << std::setprecision(15) << momX << "\t" << std::setw(20) << std::setprecision(15) << momY << "\t" << std::setw(20) << std::setprecision(15) << momZ << std::endl;
 			}
 
 		}

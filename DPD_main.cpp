@@ -16,7 +16,7 @@ int main () {
 	coll2p.dim = 3;				// 3D system
 
 	coll2p.tau = 0.745;			// rate of thermalizing
-	coll2p.dt = 1e-2;
+	coll2p.dt = 4e-2;
 	coll2p.step = 1;
 	coll2p.stepMax = 5e5;
 	coll2p.kBT = 1.0;			// Boltzmann constant
@@ -41,9 +41,9 @@ int main () {
 	coll2p.gR_tSamples = round((coll2p.gR_tEnd - coll2p.gR_tStart)/(coll2p.gR_tDelta)) - 1;
 
 	// velocity distribution
-	coll2p.velHist_velMin = -10.0;			// minimum velocity 
+	coll2p.velHist_velMin = -25.0;			// minimum velocity 
 	coll2p.velHist_velDelta = 0.005;		// resolution of DeltaVel
-	coll2p.velHist_velMax = 10.0;			// maximum velocity
+	coll2p.velHist_velMax = 25.0;			// maximum velocity
 	coll2p.velHist_bins  = round((coll2p.velHist_velMax - coll2p.velHist_velMin)/coll2p.velHist_velDelta); // number of elements
 
 	coll2p.velHist_tStart = 5e4;
