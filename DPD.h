@@ -15,12 +15,16 @@ class DPD {
 	public:
 		// global parameters
 		double box;				// size of domain
-		double epsilon;				// well-depth in Lennard-Jones po
-		double sigma;				// distance at which potential is
+		double kBT;				// DPD fluid temperature
+		double xi;				// DPD noise level
+		double gamma;				// DPD dissipative force parameter
 		double aii;				// DPD conservative force parameter
 		double rcutoff;				// cut-off distance
 		double rc2;				// square of the cutoff distance
 		double dt;				// time step
+		double inv_sqrt_dt;			// inverse of square root of time step
+		double half_dt;				// inverse of square root of time step
+		double half_dt_sqr;			// inverse of square root of time step
 		double dim;				// dimension of system
 		double dof;				// degrees of freedom
 
@@ -30,7 +34,6 @@ class DPD {
 		double kin_en;				// system kinetic energy
 		double tot_en;				// system total energy
 		double pressure;			// pressure
-		double kBT;				// Boltzmann constant
 		double thermProb;			// probability of thermostatting
 		double tau;				// rate of thermalizing 
 		double temp;				// temperature
@@ -48,11 +51,7 @@ class DPD {
 		int Ncely;				// number of cells in y
 		int Ncelz;				// number of cells in z
 
-		// cut-off correction to potential
-		double sig6;
-		double rc2i;
-		double rc6i;
-		double ecut;
+		// file writing parameters
 		unsigned int saveCount = 1000;		// number of timestep between saves
 
 		// parameters for post-processing
@@ -135,7 +134,7 @@ class DPD {
 						   double rand_gen_velx = d(gen);
 						   double rand_gen_vely = d(gen);
 						   double rand_gen_velz = d(gen);*/
-						// initializing particle mass, radius, position and mid-step-velocity
+						// initializing particle radius, mass, position and velocity
 						particles.push_back({0.2,1.0,{xind, yind, zind},{rand_gen_velx, rand_gen_vely, rand_gen_velz}});
 
 						// update zind
@@ -201,13 +200,9 @@ class DPD {
 			npart = 1.0*particles.size();		// number of particles
 			rho = npart/volume;			// density of system 
 			dof = dim*(npart - 1);			// total degrees of freedom (momentum only, no energy conservation)
-
-			// cut-off correction to potential
-			sig6 = pow(sigma,6);
-			rc2i = 1/rc2;
-			rc6i = pow(rc2i,3);
-			// ecut = 4*epsilon*sig6*rc6i*(sig6*rc6i - 1.0);
-			ecut = 0;
+			inv_sqrt_dt = 1.0/sqrt(dt);		// inverse of square root of the time step
+			half_dt = 0.5*dt;			// 0.5*dt to be used in the integrateEOM()
+			half_dt_sqr = half_dt*dt;		// 0.5*dt*dt to be used in the integrateEOM()
 
 			counter = 0;					// initialize time, counter for file writing
 			std::ofstream enStats("./data/en_data.dat");	// initialize file stream for energy
@@ -220,8 +215,7 @@ class DPD {
 
 				// std::cout << rn << "\t" << Ncelx << "\t" << Ncely << "\t" << Ncelz << std::endl;
 				// force calculation
-				// forceCalc();
-				forceCalc_conservative();
+				forceCalc();
 
 				// for (Particle&p : particles){
 				//	std::cout << "position: " << p.r << " and force: " << p.f << std::endl;
@@ -233,14 +227,14 @@ class DPD {
 				// std::cout << step << std::endl;
 
 				// Integrate equations of motion using Verlet leap_frog method
-				integrateEOS();
+				integrateEOM();
 
 				// total energy and g(r) sample calculation
 				tot_en = kin_en + pot_en;
 				if ( (step > gR_tStart) && (step % gR_tDelta == 0) ) grSample();
 					
 				// Apply periodic boundary conditions
-				pbc();
+				// pbc();
 
 				// filewriting 
 				fileWrite(enStats, eosStats, momStats);
@@ -266,54 +260,14 @@ class DPD {
 		/**************************************** FUNCTIONS ***************************************************/
 		/******************************************************************************************************/
 		// Brute force implementation of the Force Calculation 
-		/*
 		void forceCalc(){
+		
+			// calculate conservative forces	
+			forceCalc_conservative();
 
-			//loop over all contacts p=1..N-1, q=p+1..N to evaluate forces
-			for (auto p = particles.begin();  p!=particles.end()-1; ++p){
-				//for_loop_inner_counter = 0;
-				for (auto q = p+1;  q!=particles.end(); ++q) {
-
-					Vec3D Rij = p->r - q->r;	
-					Vec3D temp;
-					temp.X = Vec3D::roundOff_x(Rij, box);
-					temp.Y = Vec3D::roundOff_y(Rij, box);
-					temp.Z = Vec3D::roundOff_z(Rij, box);
-					Vec3D minRij = Rij - temp*box;
-					double r2 = minRij.getLengthSquared();
-					double dist = sqrt(r2);
-
-					if ( r2 < rc2 ) {
-
-						Fij.X = aii*( 1.0 - (dist/rcutoff) )*( minRij.X / dist);
-						Fij.Y = aii*( 1.0 - (dist/rcutoff) )*( minRij.Y / dist);
-						Fij.Z = aii*( 1.0 - (dist/rcutoff) )*( minRij.Z / dist);
-
-						p->f += Fij;
-						q->f += Fij*(-1.0); 
-
-						// potential energy
-						// double pair_pot_en = epsilon*(sigma - dist)*(sigma - dist);
-						double pair_pot_en = aii*( 1.0  - (dist/rcutoff) )*( 1.0  - (dist/rcutoff) );
-						pot_en += pair_pot_en - ecut;
-
-						// non-ideal comp pressure
-						double nonIdealcomp = Vec3D::dot(minRij, Fij)*(1.0/(dim*volume));
-						pressure += nonIdealcomp;
-					}		
-
-					// radial distribution function
-					if ( (step > gR_tStart) && (step % gR_tDelta == 0) ) {
-
-						if ( dist < box/2.0 ) { 
-							int ig = round(dist/gR_radDelta) - 2;
-
-							gR_nCount[ig] += 2;	
-						}
-					} 
-				}
-			}
-		}*/
+			// calculate dissipative forces
+			forceCalc_dissipative();
+		}
 
 		// sample collection for g(r)
 		void grSample(){
@@ -519,15 +473,15 @@ class DPD {
 			double r2 = minRij.getLengthSquared();
 			double dist = sqrt(r2);
 
-			if ( r2 < rc2 ) {
-				Vec3D Fij;
+			if ( r2 <= rc2 ) {
+				Vec3D fCij;
 
-				Fij.X = aii*( 1.0 - (dist/rcutoff) )*( minRij.X / dist);
-				Fij.Y = aii*( 1.0 - (dist/rcutoff) )*( minRij.Y / dist);
-				Fij.Z = aii*( 1.0 - (dist/rcutoff) )*( minRij.Z / dist);
+				fCij.X = aii*( 1.0 - (dist/rcutoff) )*( minRij.X / dist);
+				fCij.Y = aii*( 1.0 - (dist/rcutoff) )*( minRij.Y / dist);
+				fCij.Z = aii*( 1.0 - (dist/rcutoff) )*( minRij.Z / dist);
 
-				p->f += Fij;
-				q->f += Fij*(-1.0); 
+				p->f += fCij;
+				q->f += fCij*(-1.0); 
 
 				// potential energy
 				// double pair_pot_en = epsilon*(sigma - dist)*(sigma - dist);
@@ -536,7 +490,7 @@ class DPD {
 				pot_en += pair_pot_en;
 
 				// non-ideal comp pressure
-				double nonIdealcomp = Vec3D::dot(minRij, Fij)*(1.0/(dim*volume));
+				double nonIdealcomp = Vec3D::dot(minRij, fCij)*(1.0/(dim*volume));
 				pressure += nonIdealcomp;
 
 			}		
@@ -727,6 +681,8 @@ class DPD {
 				computeForce_dissipative(*p,*q);
 		}// computeForces_dissipative() -- entire cell	
 
+		/*
+		// compute dissipative and random force -- Lowe thermostat
 		void computeForce_dissipative(Particle* p, Particle* q) {
 
 			// std::mt19937 gen(rd());
@@ -762,7 +718,50 @@ class DPD {
 			}		
 
 		}// computeForce() -- between 2 particles
+		*/
 
+		void computeForce_dissipative(Particle *p, Particle *q){
+		
+			Vec3D Rij = p->r - q->r;	
+			Vec3D Vij = p->v - q->v;	
+			Vec3D temp;
+			temp.X = Vec3D::roundOff_x(Rij, box);
+			temp.Y = Vec3D::roundOff_y(Rij, box);
+			temp.Z = Vec3D::roundOff_z(Rij, box);
+			Vec3D minRij = Rij - temp*box;
+			double r2 = minRij.getLengthSquared();
+
+
+			if ( r2 <= rc2 ){
+			
+				Vec3D fRij;
+				Vec3D fDij;
+				double dist = sqrt(r2);
+				Vec3D capRij = minRij/dist;
+				double thetaij = d(rd); 
+				double rDotv = Vec3D::dot( capRij, Vij );
+				double wR = ( 1.0 - dist/rcutoff);
+				double wD = wR*wR;
+
+				// random force	
+				fRij.X = xi*wR*thetaij*capRij.X;
+				fRij.Y = xi*wR*thetaij*capRij.Y;
+				fRij.Z = xi*wR*thetaij*capRij.Z;
+
+				// dissipative force
+				fDij.X = -1.0*gamma*wD*rDotv*capRij.X;
+				fDij.Y = -1.0*gamma*wD*rDotv*capRij.Y;
+				fDij.Z = -1.0*gamma*wD*rDotv*capRij.Z;
+
+				// total contribution to the force
+				Vec3D sumForce = fDij + fRij*inv_sqrt_dt;
+				p->f += sumForce;
+				q->f += -1.0*sumForce;
+			}
+
+		}// computeForce_dissipative() -- end of dissipative+random force between 2 particles
+
+		/*
 		// Integrating equations of motion
 		void integrateEOS(){
 
@@ -777,7 +776,7 @@ class DPD {
 
 			// apply periodic boundary condition and reset force to 0
 			pbc();
-		
+
 			// set all forces to zero
 			for (Particle& p : particles) {
 				p.f.setZero();
@@ -796,19 +795,19 @@ class DPD {
 
 			// calculate physical quantities
 			for (Particle&p : particles){
-		
-				/* VELOCITY VERLET INTEGRATION	
-				// store velocity (mid-step)
-				Vec3D w_old = p.w;
 
-				// update velocities (mid-step)
-				p.w += p.f*(dt/p.m);
+				// // VELOCITY VERLET INTEGRATION	
+				// // store velocity (mid-step)
+				// Vec3D w_old = p.w;
 
-				// update position (integral time step) using the velocities (mid-step)
-				p.r += p.w*dt;				
+				// // update velocities (mid-step)
+				// p.w += p.f*(dt/p.m);
 
-				// calculate velocity (integral time step)
-				p.v = 0.5*(w_old + p.w);*/
+				// // update position (integral time step) using the velocities (mid-step)
+				// p.r += p.w*dt;				
+
+				// // calculate velocity (integral time step)
+				// p.v = 0.5*(w_old + p.w);
 
 				// calculate the kinetic energy
 				kin_en += 0.5*p.m*(p.v.getLengthSquared());
@@ -823,11 +822,11 @@ class DPD {
 					int ivelX = ceil(( p.v.X - velHist_velMin )/velHist_velDelta) - 1; 
 					int ivelY = ceil(( p.v.Y - velHist_velMin )/velHist_velDelta) - 1; 
 					int ivelZ = ceil(( p.v.Z - velHist_velMin )/velHist_velDelta) - 1; 
-				
+
 					if( ( ivelX < 0 ) || ( ivelX >= velHist_bins  ) ) std::cout << "out of bounds ivelX" << std::endl;
 					if( ( ivelY < 0 ) || ( ivelY >= velHist_bins  ) ) std::cout << "out of bounds ivelY" << std::endl;
 					if( ( ivelZ < 0 ) || ( ivelZ >= velHist_bins  ) ) std::cout << "out of bounds ivelZ" << std::endl;
-				
+
 					velHistX[ivelX] += 1;
 					velHistY[ivelY] += 1;
 					velHistZ[ivelZ] += 1;
@@ -837,6 +836,74 @@ class DPD {
 				}	
 			}
 
+			// ideal component of pressure
+			temp = 2.0*kin_en/dof;
+			double idealComp = rho*1.0*temp; 
+			pressure += idealComp;
+		}*/
+
+		
+		// Integrating equations of motion using the velocity Verlet scheme
+		void integrateEOM(){
+
+			// intermediate step
+			for (Particle&p : particles){
+					
+					// update position
+					p.r += p.v*dt + half_dt_sqr*p.f; 
+
+					// calculate intermediate velocity w
+					p.w = p.v + half_dt*p.f;
+
+					// store old force value to a new force
+					p.f_old = p.f;
+			}
+
+			// apply periodic boundary condition -- particle positions have changed
+			pbc();
+		
+			// reset force to 0
+			for (Particle& p : particles) {
+				p.f.setZero();
+			}
+			
+			// calculate new set of forces for updated positions and velocities
+			forceCalc();
+
+			// final step 
+			for (Particle&p : particles){
+
+				// final update of velocity
+				p.v += half_dt*( p.f_old + p.f );
+				
+				// calculate the kinetic energy
+				kin_en += 0.5*p.m*(p.v.getLengthSquared());
+
+				// calculate the total momentum
+				momX += p.v.X;
+				momY += p.v.Y;
+				momZ += p.v.Z;
+
+				// distribute velocities into velocity bins
+				if ( (step > velHist_tStart) && (step % velHist_tDelta == 0) ) {
+					int ivelX = ceil(( p.v.X - velHist_velMin )/velHist_velDelta) - 1; 
+					int ivelY = ceil(( p.v.Y - velHist_velMin )/velHist_velDelta) - 1; 
+					int ivelZ = ceil(( p.v.Z - velHist_velMin )/velHist_velDelta) - 1; 
+
+					if( ( ivelX < 0 ) || ( ivelX >= velHist_bins  ) ) std::cout << "out of bounds ivelX" << std::endl;
+					if( ( ivelY < 0 ) || ( ivelY >= velHist_bins  ) ) std::cout << "out of bounds ivelY" << std::endl;
+					if( ( ivelZ < 0 ) || ( ivelZ >= velHist_bins  ) ) std::cout << "out of bounds ivelZ" << std::endl;
+
+					velHistX[ivelX] += 1;
+					velHistY[ivelY] += 1;
+					velHistZ[ivelZ] += 1;
+
+					tempSum += temp;
+					tempCount += 1;
+				}	
+
+			}					
+			
 			// ideal component of pressure
 			temp = 2.0*kin_en/dof;
 			double idealComp = rho*1.0*temp; 
@@ -968,6 +1035,8 @@ class DPD {
 			// set all forces to zero
 			for (Particle& p : particles) {
 				p.f.setZero();
+				p.w.setZero();
+				p.f_old.setZero();
 			}
 		}
 
