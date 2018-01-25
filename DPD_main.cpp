@@ -8,18 +8,18 @@ int main () {
 
 	// set global parameters
 	coll2p.box = 10.0;			// dimension of box
-	coll2p.epsilon = 100.0;			// energy well depth
-	coll2p.sigma = 1.0;			// zero-potential distance
-	coll2p.aii = 25.0;			// DPD interaction parameter
+	coll2p.kBT = 1.0;			// DPD fluid temperature 
+	coll2p.aii = 25.0;			// DPD conservative force interaction parameter
+	coll2p.xi = 1.0;			// DPD noise level
+	coll2p.gamma = pow(coll2p.xi,2.0)/(2.0*coll2p.kBT); // DPD dissipative force parameter
 	coll2p.rcutoff = 1.0;			// cut-off distance
 	coll2p.rc2 = pow(coll2p.rcutoff,2);	// square of cut-off distance
 	coll2p.dim = 3;				// 3D system
 
 	coll2p.tau = 0.745;			// rate of thermalizing
-	coll2p.dt = 4e-2;
+	coll2p.dt = 5e-3;
 	coll2p.step = 1;
-	coll2p.stepMax = 5e5;
-	coll2p.kBT = 1.0;			// Boltzmann constant
+	coll2p.stepMax = 1e5;
 	coll2p.thermProb = coll2p.dt*coll2p.tau;// probability of thermalizing 	
 
 	// Cell list parameters
