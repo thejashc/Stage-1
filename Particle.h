@@ -13,6 +13,7 @@ public:
 	Vec3D v;  // integer-step velocity
 	Vec3D w;  // mid-step velocity
 	Vec3D f;  // force
+	Vec3D f_old;	// force from previous step
 };
 
 #endif
