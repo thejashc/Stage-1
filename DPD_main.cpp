@@ -10,7 +10,7 @@ int main () {
 	coll2p.box = 10.0;			// dimension of box
 	coll2p.kBT = 1.0;			// DPD fluid temperature 
 	coll2p.aii = 00.0;			// DPD conservative force interaction parameter
-	coll2p.sigma = 1.0;			// DPD noise level
+	coll2p.sigma = 3.0;			// DPD noise level
 	coll2p.gamma = pow(coll2p.sigma,2.0)/(2.0*coll2p.kBT); // DPD dissipative force parameter
 	coll2p.rcutoff = 1.0;			// cut-off distance
 	coll2p.rc2 = pow(coll2p.rcutoff,2);	// square of cut-off distance
@@ -19,7 +19,7 @@ int main () {
 	coll2p.tau = 0.745;			// rate of thermalizing
 	coll2p.dt = 1e-2;
 	coll2p.step = 1;
-	coll2p.stepMax = 3e4;
+	coll2p.stepMax = 2e5;
 	coll2p.thermProb = coll2p.dt*coll2p.tau;// probability of thermalizing 	
 
 	// Cell list parameters
@@ -35,7 +35,7 @@ int main () {
 	coll2p.gR_radMax = coll2p.box/2.0;	// maximum radius for g(r)
 	coll2p.gR_nElem  = round((coll2p.gR_radMax - coll2p.gR_radMin)/coll2p.gR_radDelta); // number of elements
 
-	coll2p.gR_tStart = 2e4;
+	coll2p.gR_tStart = 5e4;
 	coll2p.gR_tDelta = 100;
 	coll2p.gR_tEnd = coll2p.stepMax;
 	coll2p.gR_tSamples = round((coll2p.gR_tEnd - coll2p.gR_tStart)/(coll2p.gR_tDelta)) - 1;
@@ -46,7 +46,7 @@ int main () {
 	coll2p.velHist_velMax = 25.0;			// maximum velocity
 	coll2p.velHist_bins  = round((coll2p.velHist_velMax - coll2p.velHist_velMin)/coll2p.velHist_velDelta); // number of elements
 
-	coll2p.velHist_tStart = 2e4;
+	coll2p.velHist_tStart = 5e4;
 	coll2p.velHist_tDelta = 100;
 	coll2p.velHist_tEnd = coll2p.stepMax;
 
