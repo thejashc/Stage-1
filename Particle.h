@@ -12,7 +12,7 @@ public:
 	Vec3D r;  // position
 	Vec3D v;  // integer-step velocity
 	Vec3D w;  // mid-step velocity
-	Vec3D f;  // force
+	Vec3D fC;  // force
 	Vec3D fD;  // dissipative force
 	Vec3D fR;  // random force
 	Vec3D f_old;	// force from previous step
