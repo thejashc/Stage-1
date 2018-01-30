@@ -101,8 +101,8 @@ class DPD {
 		// Mersenne twister PRNG, initialized with seed from previous random device instance
 		// usage d{mean, std}
 		// std::normal_distribution<double> d{0,1};
-             	std::uniform_real_distribution<double> d{0.0,1.0};
-		
+		std::uniform_real_distribution<double> d{0.0,1.0};
+
 		/******************************************************************************************************/
 		/**************************************** INITIALIZATION ROUTINE **************************************/
 		/******************************************************************************************************/
@@ -140,7 +140,7 @@ class DPD {
 						particles.push_back({0.2,1.0,{xind, yind, zind},{rand_gen_velx, rand_gen_vely, rand_gen_velz}});
 
 						// update zind
-						zind += 1.0;
+						zind += (1.0/4.0);
 
 					}// end of zind
 					yind += 1.0;
@@ -171,14 +171,14 @@ class DPD {
 			}
 
 			/*
-			Vec3D velAvg={0.0, 0.0, 0.0};
+			   Vec3D velAvg={0.0, 0.0, 0.0};
 			// Remove excess velocity
 			for (Particle& p: particles){
-				velAvg += p.w/particles.size();
+			velAvg += p.w/particles.size();
 			}
 
 			for (Particle& p: particles){
-				p.w -= velAvg;
+			p.w -= velAvg;
 			}*/
 
 		}
@@ -219,7 +219,8 @@ class DPD {
 				// std::cout << rn << "\t" << Ncelx << "\t" << Ncely << "\t" << Ncelz << std::endl;
 				// force calculation
 				// forceCalc_conservative();
-				forceCalc();
+				// createList();
+				////  forceCalc_CRD();
 
 				//exit(0);
 				// for (Particle&p : particles){
@@ -237,7 +238,7 @@ class DPD {
 				// total energy and g(r) sample calculation
 				tot_en = kin_en + pot_en;
 				if ( (step > gR_tStart) && (step % gR_tDelta == 0) ) grSample();
-					
+
 				// Apply periodic boundary conditions
 				// pbc();
 
@@ -250,7 +251,7 @@ class DPD {
 				// increment time step
 				step += 1;
 
-			} //end time loop
+			}//end time loop
 
 			// post-processing
 			grCalc();	 
@@ -264,18 +265,6 @@ class DPD {
 		/******************************************************************************************************/
 		/**************************************** FUNCTIONS ***************************************************/
 		/******************************************************************************************************/
-		// Brute force implementation of the Force Calculation 
-		void forceCalc(){
-		
-			// create list for force calculation
-			createList();
-
-			// forceCalc_conservative();
-
-			// calculate dissipative forces
-			forceCalc_dissipative();
-		}
-
 		// sample collection for g(r)
 		void grSample(){
 
@@ -310,15 +299,15 @@ class DPD {
 		/**************************************** CONSERVATIVE FORCES *****************************************/
 		/******************************************************************************************************/
 		// Cell list implementation of the force calculation
-		void forceCalc_conservative(){
+		void forceCalc_CRD(){
 
 			// creating the list for force calculation
 
 			// identifying neighbors
 			// LL: loop over all contacts p=1..N, q=p+1..N to evaluate forces
 			for (unsigned int indx=0; indx<Ncelx; ++indx)
-			for (unsigned int indy=0; indy<Ncely; ++indy)
-			for (unsigned int indz=0; indz<Ncelz; ++indz) {
+				for (unsigned int indy=0; indy<Ncely; ++indy)
+					for (unsigned int indz=0; indz<Ncelz; ++indz) {
 						unsigned int ix = Ncelx*(Ncelx*indz + indy) + indx + 1 - 1;
 
 						unsigned int Nbor_indx; 
@@ -468,41 +457,6 @@ class DPD {
 					}
 		}
 
-		void computeForce(Particle* p, Particle* q) {
-
-			Vec3D Rij = p->r - q->r;	
-			Vec3D temp;
-			temp.X = Vec3D::roundOff_x(Rij, box);
-			temp.Y = Vec3D::roundOff_y(Rij, box);
-			temp.Z = Vec3D::roundOff_z(Rij, box);
-			Vec3D minRij = Rij - temp*box;
-			double r2 = minRij.getLengthSquared();
-			double dist = std::sqrt(r2);
-
-			if ( r2 <= rc2 ) {
-				Vec3D fCij;
-
-				fCij.X = aii*( 1.0 - (dist/rcutoff) )*( minRij.X / dist);
-				fCij.Y = aii*( 1.0 - (dist/rcutoff) )*( minRij.Y / dist);
-				fCij.Z = aii*( 1.0 - (dist/rcutoff) )*( minRij.Z / dist);
-
-				p->f += fCij;
-				q->f += fCij*(-1.0); 
-
-				// potential energy
-				// double pair_pot_en = epsilon*(sigma - dist)*(sigma - dist);
-				// double pair_pot_en = aii*( 1.0  - (dist/rcutoff) )*( 1.0  - (dist/rcutoff) );
-				double pair_pot_en = (aii/2.0)*(1.0 - (dist/rcutoff))*( 1.0 - (dist/rcutoff) ) ;
-				pot_en += pair_pot_en;
-
-				// non-ideal comp pressure
-				double nonIdealcomp = Vec3D::dot(minRij, fCij)*(1.0/(dim*volume));
-				pressure += nonIdealcomp;
-
-			}		
-
-		}// computeForce() -- between 2 particles
-
 		void computeForces(Cell& cell1, Cell& cell2) {
 			for (Particle* p : cell1)
 				for (Particle* q : cell2)
@@ -515,6 +469,74 @@ class DPD {
 					computeForce(*p,*q);
 		}// computeForces() -- entire cell	
 
+		void computeForce(Particle* p, Particle* q) {
+
+			Vec3D Rij = p->r - q->r;	
+			Vec3D Vij = p->v - q->v;	
+			Vec3D temp;
+			temp.X = Vec3D::roundOff_x(Rij, box);
+			temp.Y = Vec3D::roundOff_y(Rij, box);
+			temp.Z = Vec3D::roundOff_z(Rij, box);
+			Vec3D minRij = Rij - temp*box;
+			double r2 = minRij.getLengthSquared();
+			double dist = std::sqrt(r2);
+
+			if ( r2 <= rc2 ) {
+
+				//	if (opt == 3){
+
+				Vec3D fCij;
+				Vec3D fRij;
+				Vec3D fDij;
+				Vec3D capRij = minRij/dist;
+
+				// conservative force
+				fCij.X = aii*( 1.0 - (dist/rcutoff) )*capRij.X;
+				fCij.Y = aii*( 1.0 - (dist/rcutoff) )*capRij.Y;
+				fCij.Z = aii*( 1.0 - (dist/rcutoff) )*capRij.Z;
+
+				p->fC += fCij;
+				q->fC += fCij*(-1.0); 
+
+				// random force	
+				double uniRand = d(rd); 
+				double thetaij = std::sqrt(12.0)*(uniRand-0.5); 
+				double wR = ( 1.0 - dist/rcutoff);
+				double magRand = sigma*wR*thetaij;
+				fRij.X = magRand*capRij.X;
+				fRij.Y = magRand*capRij.Y;
+				fRij.Z = magRand*capRij.Z;
+
+				Vec3D sumForce = fRij*inv_sqrt_dt;
+				p->fR += sumForce;
+				q->fR += -1.0*sumForce;
+
+				// dissipative force -- not calculated here
+				double wD = wR*wR;
+				double rDotv = Vec3D::dot( capRij, Vij );
+				double magDiss = -1.0*gamma*wD*rDotv;
+				fDij.X = magDiss*capRij.X;
+				fDij.Y = magDiss*capRij.Y;
+				fDij.Z = magDiss*capRij.Z;
+
+				p->fD += fDij;
+				q->fD += -1.0*fDij;
+
+				// potential energy
+				double pair_pot_en = (aii/2.0)*(1.0 - (dist/rcutoff))*( 1.0 - (dist/rcutoff) ) ;
+				pot_en += pair_pot_en;
+
+				/*
+				// non-ideal comp pressure
+				double nonIdealcomp = Vec3D::dot(minRij, fCij)*(1.0/(dim*volume));
+				pressure += nonIdealcomp;*/
+
+
+				//	}// calculate random, conservative and dissipative forces	
+			}// computeForce() -- between 2 particles
+		}
+
+
 		/******************************************************************************************************/
 		/**************************************** DISSIPATIVE FORCES *****************************************/
 		/******************************************************************************************************/
@@ -524,8 +546,8 @@ class DPD {
 			// only identifying neighbors
 			// LL: loop over all contacts p=1..N, q=p+1..N to evaluate forces
 			for (unsigned int indx=0; indx<Ncelx; ++indx)
-			for (unsigned int indy=0; indy<Ncely; ++indy)
-			for (unsigned int indz=0; indz<Ncelz; ++indz) {
+				for (unsigned int indy=0; indy<Ncely; ++indy)
+					for (unsigned int indz=0; indz<Ncelz; ++indz) {
 						unsigned int ix = Ncelx*(Ncelx*indz + indy) + indx + 1 - 1;
 
 						unsigned int Nbor_indx; 
@@ -677,18 +699,18 @@ class DPD {
 
 		void computeForces_dissipative(Cell& cell1, Cell& cell2) {
 			for (Particle* p : cell1)
-			for (Particle* q : cell2)
-				computeForce_dissipative(p,q);
+				for (Particle* q : cell2)
+					computeForce_dissipative(p,q);
 		}// computeForces_dissipative() -- between 2 cells	
 
 		void computeForces_dissipative(Cell& cell) {
 			for (auto p = cell.begin();  p!=cell.end(); ++p)
-			for (auto q = p+1;  q!=cell.end(); ++q)
-				computeForce_dissipative(*p,*q);
+				for (auto q = p+1;  q!=cell.end(); ++q)
+					computeForce_dissipative(*p,*q);
 		}// computeForces_dissipative() -- entire cell	
-		
+
 		void computeForce_dissipative(Particle *p, Particle *q){
-		
+
 			Vec3D Rij = p->r - q->r;	
 			Vec3D Vij = p->v - q->v;	
 			Vec3D temp;
@@ -699,7 +721,7 @@ class DPD {
 			double r2 = minRij.getLengthSquared();
 
 			if ( r2 <= rc2 ){
-			
+
 				Vec3D fRij;
 				Vec3D fDij;
 				double dist = std::sqrt(r2);
@@ -707,7 +729,6 @@ class DPD {
 				double rDotv = Vec3D::dot( capRij, Vij );
 				double uniRand = d(rd); 
 				double thetaij = std::sqrt(12.0)*(uniRand-0.5); 
-				//std::cout << thetaij << std::endl;
 				double wR = ( 1.0 - dist/rcutoff);
 				double wD = wR*wR;
 
@@ -717,22 +738,6 @@ class DPD {
 				fDij.Y = magDiss*capRij.Y;
 				fDij.Z = magDiss*capRij.Z;
 
-				// random force	
-				double magRand = sigma*wR*thetaij;
-				fRij.X = magRand*capRij.X;
-				fRij.Y = magRand*capRij.Y;
-				fRij.Z = magRand*capRij.Z;
-
-				// pairwise random forces
-				Vec3D sumForce = fRij*inv_sqrt_dt;
-				p->fR += sumForce;
-				q->fR += -1.0*sumForce;
-
-				// total contribution to the force
-				// Vec3D sumForce = fDij + fRij*inv_sqrt_dt;
-				// p->f += sumForce;
-				// q->f += -1.0*sumForce;
-				
 				// pairwise dissipative forces
 				p->fD += fDij;
 				q->fD += -1.0*fDij;
@@ -741,86 +746,49 @@ class DPD {
 
 		}// computeForce_dissipative() -- end of dissipative+random force between 2 particles
 
-		/*
-		// compute dissipative and random force -- Lowe thermostat
-		void computeForce_dissipative(Particle* p, Particle* q) {
-
-			// std::mt19937 gen(rd());
-
-			Vec3D Rij = p->r - q->r;	
-			Vec3D Vij = p->v - q->v;	
-			Vec3D temp;
-			temp.X = Vec3D::roundOff_x(Rij, box);
-			temp.Y = Vec3D::roundOff_y(Rij, box);
-			temp.Z = Vec3D::roundOff_z(Rij, box);
-			Vec3D minRij = Rij - temp*box;
-			double r2 = minRij.getLengthSquared();
-			double dist = sqrt(r2);
-			Vec3D capRij = minRij/dist;
-
-			if ( r2 <= rc2 ) {
-
-				Vec3D Deltaij;
-
-				double zetaij = d(rd); 
-				double term1 = zetaij*sqrt(2.0*kBT/p->m);
-				double term2 = Vec3D::dot( Vij, capRij );
-				double term3 = term1 - term2;
-
-				Deltaij.X = 0.5*capRij.X*term3;
-				Deltaij.Y = 0.5*capRij.Y*term3;
-				Deltaij.Z = 0.5*capRij.Z*term3;
-
-				// std::cout << Deltaij << std::endl;
-
-				p->v += Deltaij;
-				q->v += Deltaij*(-1.0); 
-			}		
-
-		}// computeForce() -- between 2 particles
-		*/
-
 		// Integrating equations of motion using the velocity Verlet scheme
 		void integrateEOM(){
 
 			// intermediate step
 			for (Particle&p : particles){
 
-				p.v += half_dt*(p.fD + p.fR);
-	
+				p.v += half_dt*(p.fC + p.fD + p.fR);
+
 				p.r += p.v*dt;
-					
+
 			}
 
 			// apply periodic boundary condition -- particle positions have changed
 			pbc();
-		
+
 			// reset force to 0
 			for (Particle& p : particles) {
-				p.f.setZero();
+				p.fC.setZero();
 				p.fR.setZero();
 				p.fD.setZero();
 			}
-			
-			// calculate new set of forces for updated positions and velocities
-			forceCalc();
+
+			// createList() and calculate random, dissipative and conservative
+			createList();
+			forceCalc_CRD();
 
 			// final step 
 			for (Particle&p : particles){
 
 				// update velocity using updated force
-				p.v += half_dt*(p.fR + p.fD);
-				
-				// reset dissipative force
-				// for (Particle& p : particles) {
-				// 	p.fD.setZero();
-				// }
+				p.v += half_dt*(p.fC + p.fD + p.fR);
+			}
 
-				// recalculate the dissipative force
-				// forceCalc_dissipative();
 
-				// final update to the velocity	
-				// p.v += half_dt*p.fD;
+			// reset dissipative force
+			for (Particle& p : particles) {
+				p.fD.setZero();
+			}
+
+			// recalculate only the dissipative force
+			forceCalc_dissipative();
+
+			for (Particle&p : particles){
 
 				// calculate the kinetic energy
 				vsqrSum += p.v.getLengthSquared();
@@ -986,15 +954,13 @@ class DPD {
 			momY = 0.0;
 			momZ = 0.0;
 
+			/*
 			// set all forces to zero
 			for (Particle& p : particles) {
-				p.f.setZero();
-				p.fR.setZero();
-				p.fD.setZero();
-				p.w.setZero();
-				p.f_old.setZero();
-				p.v_old.setZero();
-			}
+			p.fC.setZero();
+			p.fR.setZero();
+			p.fD.setZero();
+			}*/
 		}
 
 		// File writing
@@ -1087,5 +1053,46 @@ class DPD {
 		}
 
 };
+
+
+
+/*
+// compute dissipative and random force -- Lowe thermostat
+void computeForce_dissipative(Particle* p, Particle* q) {
+
+// std::mt19937 gen(rd());
+
+Vec3D Rij = p->r - q->r;	
+Vec3D Vij = p->v - q->v;	
+Vec3D temp;
+temp.X = Vec3D::roundOff_x(Rij, box);
+temp.Y = Vec3D::roundOff_y(Rij, box);
+temp.Z = Vec3D::roundOff_z(Rij, box);
+Vec3D minRij = Rij - temp*box;
+double r2 = minRij.getLengthSquared();
+double dist = sqrt(r2);
+Vec3D capRij = minRij/dist;
+
+if ( r2 <= rc2 ) {
+
+Vec3D Deltaij;
+
+double zetaij = d(rd); 
+double term1 = zetaij*sqrt(2.0*kBT/p->m);
+double term2 = Vec3D::dot( Vij, capRij );
+double term3 = term1 - term2;
+
+Deltaij.X = 0.5*capRij.X*term3;
+Deltaij.Y = 0.5*capRij.Y*term3;
+Deltaij.Z = 0.5*capRij.Z*term3;
+
+// std::cout << Deltaij << std::endl;
+
+p->v += Deltaij;
+q->v += Deltaij*(-1.0); 
+}		
+
+}// computeForce() -- between 2 particles
+ */
 
 #endif
