@@ -63,11 +63,11 @@ MB(x, T)=sqrt(m/(2.0*pi*kb*T))*exp(-(0.5*m*x**2.0)/(kb*T))
 set samples 1e4
 set key top left
 
-plot './data/velDist_data.dat' u ($1):($3/$4) w lp ps 0.45 t'x',\
+plot[-5:5] './data/velDist_data.dat' u ($1):($3/$4) w lp ps 0.45 t'x',\
      './data/velDist_data.dat' u ($1):($5/$6) w lp ps 0.45 t'y',\
      './data/velDist_data.dat' u ($1):($7/$8) w lp ps 0.45 t'z',\
      './data/velDist_data.dat' u 1:(MB($1, $2)) w l t'MB(T_{sim})',\
-     './data/velDist_data.dat' u 1:(MB($1, 1.0)) w l t'MB(T_{set})'
+     './data/velDist_data.dat' u 1:(MB($1, 1.0)) w l lc 'red' t'MB(T_{set})'
 
 
 reset
