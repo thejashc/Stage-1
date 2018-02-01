@@ -7,19 +7,27 @@ int main () {
 	DPD coll2p;	
 
 	// set global parameters
-	coll2p.box = 10.0;			// dimension of box
+	coll2p.box = 20.0;			// dimension of box
 	coll2p.kBT = 1.0;			// DPD fluid temperature 
-	coll2p.aii = 00.0;			// DPD conservative force interaction parameter
-	coll2p.sigma = 3.0;			// DPD noise level
+	// coll2p.aii = 00.0;			// DPD conservative force -- soft repulsive force
+	// coll2p.bVdW = 0.016;			// DPD conservative force -- many body force
+	// coll2p.aVdW = 1.9*coll2p.bVdW;	// DPD conservative force -- many body force
+	coll2p.Aij = -40.0;			// DPD Warren conservative force -- attractive parameter
+	coll2p.Bij = +40.0;			// DPD Warren conservative force -- repulsive parameter
+	coll2p.kappa = 8e-4;			// DPD conservative force -- surface tension force
+	coll2p.sigma = 1.0;			// DPD random force parameter
 	coll2p.gamma = pow(coll2p.sigma,2.0)/(2.0*coll2p.kBT); // DPD dissipative force parameter
-	coll2p.rcutoff = 1.0;			// cut-off distance
+	coll2p.rcutoff = 1.0;			// cut-off distance for pairwise attraction
+	coll2p.rd_cutoff = 0.8;			// cut-off distance for pairwise repulsion
+	coll2p.fifteen_by_twopi = 15.0/(2.0*M_PI*pow(coll2p.rd_cutoff,3.0));	// 15/(2*PI) used in Lucy weight function
 	coll2p.rc2 = pow(coll2p.rcutoff,2);	// square of cut-off distance
+	coll2p.rd2 = pow(coll2p.rd_cutoff,2);	// square of cut-off distance
 	coll2p.dim = 3;				// 3D system
 
 	coll2p.tau = 0.745;			// rate of thermalizing
-	coll2p.dt = 1e-2;
+	coll2p.dt = 1e-3;
 	coll2p.step = 1;
-	coll2p.stepMax = 2e5;
+	coll2p.stepMax = 2e4;
 	coll2p.thermProb = coll2p.dt*coll2p.tau;// probability of thermalizing 	
 
 	// Cell list parameters
@@ -60,7 +68,11 @@ int main () {
 
 	tend = time(0);
 
-	std::cout << "Total time for "<< coll2p.stepMax << " steps is: "<< difftime(tend, tstart) <<" second(s)."<< std::endl;
+	// std::cout << "Total time for "<< coll2p.stepMax << " steps is: "<< difftime(tend, tstart) <<" second(s)."<< std::endl;
+	std::fstream paraInfo;
+  	paraInfo.open ("parainfo.txt", std::fstream::in | std::fstream::out | std::fstream::app);
+	paraInfo << "Total Simulation time	" << "\t \t" <<  difftime(tend, tstart) << "seconds" << std::endl;
+	paraInfo.close();
 
 	return 0;
 }

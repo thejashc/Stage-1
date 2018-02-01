@@ -10,13 +10,13 @@ public:
 	double a; // radius
 	double m; // mass
 	Vec3D r;  // position
-	Vec3D v;  // integer-step velocity
 	Vec3D w;  // mid-step velocity
+	Vec3D v;  // integer-step velocity
 	Vec3D fC;  // force
 	Vec3D fD;  // dissipative force
 	Vec3D fR;  // random force
-	Vec3D f_old;	// force from previous step
-	Vec3D v_old;	// force from previous step
+	double dens; // calculating the local density at a particle
+	double dens_new; // calculating the local density at a particle
 };
 
 #endif
