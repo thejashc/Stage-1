@@ -18,8 +18,9 @@ int main () {
 	coll2p.sigma = 1.0;			// DPD random force parameter
 	coll2p.gamma = pow(coll2p.sigma,2.0)/(2.0*coll2p.kBT); // DPD dissipative force parameter
 	coll2p.rcutoff = 1.0;			// cut-off distance for pairwise attraction
-	coll2p.rd_cutoff = 0.8;			// cut-off distance for pairwise repulsion
-	coll2p.fifteen_by_twopi = 15.0/(2.0*M_PI*pow(coll2p.rd_cutoff,3.0));	// 15/(2*PI) used in Lucy weight function
+	coll2p.rd_cutoff = 0.75;			// cut-off distance for pairwise repulsion
+	coll2p.fifteen_by_twopi_by_rd = 15.0/(2.0*M_PI*pow(coll2p.rd_cutoff,3.0));	// 15/(2*PI*rd^3) used in Lucy weight function
+	coll2p.fifteen_by_twopi_by_rc = 15.0/(2.0*M_PI*pow(coll2p.rcutoff,3.0));	// 15/(2*PI*rc^3) used in Lucy weight function
 	coll2p.rc2 = pow(coll2p.rcutoff,2);	// square of cut-off distance
 	coll2p.rd2 = pow(coll2p.rd_cutoff,2);	// square of cut-off distance
 	coll2p.dim = 3;				// 3D system
@@ -27,7 +28,7 @@ int main () {
 	coll2p.tau = 0.745;			// rate of thermalizing
 	coll2p.dt = 1e-3;
 	coll2p.step = 1;
-	coll2p.stepMax = 2e4;
+	coll2p.stepMax = 2e5;
 	coll2p.thermProb = coll2p.dt*coll2p.tau;// probability of thermalizing 	
 
 	// Cell list parameters
