@@ -17,6 +17,7 @@ public:
 	Vec3D fR;  // random force
 	double dens; // calculating the local density at a particle
 	double dens_new; // calculating the local density at a particle
+	double rhoBar;	 // calculating self energy per particle
 };
 
 #endif
