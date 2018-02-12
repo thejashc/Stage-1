@@ -41,6 +41,9 @@ class DPD {
 		double pot_en;				// system potential energy
 		double kin_en;				// system kinetic energy
 		double vsqrSum;				// square of the velocity
+		double pair_pot_en_rep;			// repulsive pair potential energy
+		double pair_pot_en_att;			// attractive pair potential energy
+		double pair_pot_en;			// total pair potential energy
 		double tot_en;				// system total energy
 		double pressure;			// pressure
 		double thermProb;			// probability of thermostatting
@@ -61,7 +64,7 @@ class DPD {
 		int Ncelz;				// number of cells in z
 
 		// file writing parameters
-		unsigned int saveCount = 1000;		// number of timestep between saves
+		unsigned int saveCount = 500;		// number of timestep between saves
 
 		// parameters for post-processing
 		// g(r) -- structure function
@@ -102,7 +105,12 @@ class DPD {
 		double thirty_by_pi = 30.0/M_PI;			// 5/PI used in Lucy weight function
 		double neg_sixty_by_pi = -(60.0/M_PI);			// 60/PI used in first derivative of Lucy weight function
 		double neg_onetwenty_by_pi = 2.0*neg_sixty_by_pi;	// (120/PI) used in second derivative of Lucy weight function
-		double fifteen_by_twopi;				// (15/(2*pi*rd^3))
+		double fifteen_by_twopi_by_rd;				// (15/(2*pi*rd^3))
+		double fifteen_by_twopi_by_rc;				// (15/(2*pi*rc^3))
+		double rd4;						// rd^4
+		double piThirty;					// pi/30.0
+		double k1;
+		double k2;
 
 		//initialise time, and counter/ofstream for data output
 		unsigned int counter;
@@ -294,6 +302,10 @@ class DPD {
 			inv_sqrt_dt = 1.0/std::sqrt(dt);	// inverse of square root of the time step
 			half_dt = 0.5*dt;			// 0.5*dt to be used in the integrateEOM()
 			half_dt_sqr = half_dt*dt;		// 0.5*dt*dt to be used in the integrateEOM()
+			rd4 = pow(rd_cutoff, 4.0);		// fourth power of rd_cutoff
+			piThirty = M_PI/30.0;			// Pi/30.0 
+			k1 = piThirty*Aij;			// constant k1
+			k2 = piThirty*rd4*Bij;			// constant k2
 
 			counter = 0;					// initialize time, counter for file writing
 			std::ofstream enStats("./data/en_data.dat");	// initialize file stream for energy
@@ -310,19 +322,28 @@ class DPD {
 			// force calculation for first step
 			// createList() and calculate random, dissipative and conservative
 			// createList();
-			dens_calculate();
+			// dens_calculate();
+			createList();
+			dens_calculation();
 			//forceCalc_CRD();
 
 			// print the densities for particles	
 			// for (Particle& p : particles)
 			//	std::cout << "Position: " << p.r << ", Density: " << p.dens <<", conservative force: " << p.fC << std::endl;
 
+			//exit(0);
+			
+			// writing the parameters to a file
+			std::ofstream paraInfo("parainfo.txt");
+			paraWrite(paraInfo);
+			paraInfo.close();
+
 			while (step<stepMax) {
 
 				// std::cout << rn << "\t" << Ncelx << "\t" << Ncely << "\t" << Ncelz << std::endl;
 				// force calculation
 				// forceCalc_conservative();
-				createList();
+				// createList();
 				forceCalc_CRD();
 
 				//exit(0);
@@ -336,17 +357,29 @@ class DPD {
 				// std::cout << step << std::endl;
 				// std::cout << "step == 1, particles = " << npart << std::endl;
 
-				// Integrate equations of motion using Verlet leap_frog method
+				// Integrate equations of motion
 				integrateEOS();
 				//std::cout << "integration done" << std::endl;
-
-				// total energy and g(r) sample calculation
-				tot_en = kin_en + pot_en;
-				if ( (step > gR_tStart) && (step % gR_tDelta == 0) ) grSample();
 
 				// Apply periodic boundary conditions
 				pbc();
 
+				// calculate density
+				for (Particle& p : particles) {
+					p.dens = 0.0;
+				}
+				// dens_calculate();
+				createList();
+				dens_calculation();
+
+				// total energy and g(r) sample calculation
+				// potential energy
+				for (Particle& p : particles) {
+					pot_en += k1*p.rhoBar + k2*pow(p.dens, 2.0); 	// sum of self-energies of all particles
+				}
+				tot_en = kin_en + pot_en;
+				if ( (step > gR_tStart) && (step % gR_tDelta == 0) ) grSample();
+				
 				// filewriting 
 				fileWrite(enStats, eosStats, momStats);
 				// std::cout << "filewrite done" << std::endl;
@@ -371,9 +404,6 @@ class DPD {
 			eosStats.close();
 			momStats.close();
 
-			std::ofstream paraInfo("parainfo.txt");
-			paraWrite(paraInfo);
-			paraInfo.close();
 
 		} //void solve()
 
@@ -587,7 +617,7 @@ class DPD {
 		void computeForce(Particle* p, Particle* q) {
 
 			Vec3D Rij = p->r - q->r;	
-			Vec3D Vij = p->v - q->v;	
+			// Vec3D Vij = p->v - q->v;	
 			Vec3D temp;
 			temp.X = Vec3D::roundOff_x(Rij, box);
 			temp.Y = Vec3D::roundOff_y(Rij, box);
@@ -606,7 +636,9 @@ class DPD {
 				Vec3D capRij = minRij/dist;
 				double wR = ( 1.0 - dist);
 				double wR_pow_2 = wR*wR;
+				double term1 = 0.0;
 				double term2 = 0.0;
+				double term3 = 0.0;
 				// conservative force -- soft potential 
 				/*
 				   fCij.X = aii*wR*capRij.X;
@@ -637,18 +669,22 @@ class DPD {
 				// Warren's force
 				// Vapor-liquid coexistence in many-body dissipative particle dynamics, P. B. Warren, Phys. Rev. E 68, 066702 – Published 18 December 2003
 				if (r2 <= rd2){
-					double wdij = (1.0 - dist/rd_cutoff);
-					term2 = Bij*( p->dens + q->dens)*wdij;
+					double wCrij = (1.0 - dist/rd_cutoff);
+					term2 = Bij*(p->dens + q->dens)*wCrij;
 
-					double wdij_pow_2 = wdij*wdij; 
-					double wij = fifteen_by_twopi*wdij_pow_2;
+					/*
+					   double wdij_pow_2 = wdij*wdij; 
+					   double wij = fifteen_by_twopi*wdij_pow_2;
 
-					p->dens_new += wij;
-					q->dens_new += wij;
+					   p->dens_new += wij;
+					   q->dens_new += wij;
+					 */
+
+					// pair_pot_en_rep = -1.0*Bij*( p->dens + q->dens)*dist*(1.0 - dist/(2.0*rd_cutoff));
 				}
 
-				double term1 = Aij*wR;
-				double term3 = term1 + term2; 
+				term1 = Aij*wR;
+				term3 = term1 + term2; 
 				fCij.X = term3*capRij.X; 
 				fCij.Y = term3*capRij.Y; 
 				fCij.Z = term3*capRij.Z; 
@@ -679,14 +715,16 @@ class DPD {
 				p->fD += fDij;
 				q->fD += -1.0*fDij;
 				 */
+
 				// potential energy
-				/*
-				   double pair_pot_en = (aii/2.0)*(1.0 - (dist/rcutoff))*( 1.0 - (dist/rcutoff) ) ;
-				   pot_en += pair_pot_en;
-				 */
+				// pair_pot_en_att = -1.0*Aij*dist*(1.0 - dist/(2.0*rcutoff)); 
+				// double pair_pot_en = (aii/2.0)*(1.0 - (dist/rcutoff))*( 1.0 - (dist/rcutoff) ) ;
+				// pair_pot_en = pair_pot_en_att + pair_pot_en_rep; 
+				// pot_en += pair_pot_en;
+
 				// non-ideal comp pressure
-				double nonIdealcomp = Vec3D::dot(minRij, fCij)*(1.0/(2.0*dim*volume));
-				pressure += nonIdealcomp;
+				// double nonIdealcomp = Vec3D::dot(minRij, fCij)*(1.0/(2.0*dim*volume));
+				// pressure += nonIdealcomp;
 
 
 				//	}// calculate random, conservative and dissipative forces	
@@ -839,13 +877,20 @@ class DPD {
 					if ( r2 < rd2 ) { 
 
 						double wdij = (1.0 - dist/rd_cutoff);
+						double wcij = (1.0 - dist/rcutoff);
 						double wdij_pow_2 = wdij*wdij; 
-						double wij = fifteen_by_twopi*wdij_pow_2;
+						double wcij_pow_2 = wcij*wcij;
+						double wij = fifteen_by_twopi_by_rd*wdij_pow_2;
+						double rhoBarTemp = fifteen_by_twopi_by_rc*wcij_pow_2;
 
 						//	std::cout << "dist = " << dist << ", wdij=" << wdij << ", 15/2*pi= " << fifteen_by_twopi << std::endl;
 
 						p->dens += wij;
 						q->dens += wij;
+					
+						p->rhoBar += rhoBarTemp;
+						q->rhoBar += rhoBarTemp;
+					
 					}
 				}
 			}
@@ -1206,6 +1251,7 @@ class DPD {
 			paraInfo << "timestep (dt)		" << "\t \t" << std::setw(20) << std::setprecision(15) << dt << std::endl;
 			paraInfo << "number of particles (npart)" << "\t \t" << std::setw(20) << std::setprecision(15) << npart << std::endl;
 			paraInfo << "total run time (stepMax)   " << "\t \t" << std::setw(20) << std::setprecision(15) << stepMax << std::endl;
+			paraInfo << "Data frequency (saveCount) " << "\t \t" << std::setw(20) << std::setprecision(15) << saveCount << std::endl;
 			paraInfo << "---------------------------" << std::endl;
 			paraInfo << "Random & Dissipative Force " << std::endl;
 			paraInfo << "---------------------------" << std::endl;
@@ -1227,16 +1273,17 @@ class DPD {
 			// energy reset to zero
 			pot_en = 0.0;
 			kin_en = 0.0;
-			vsqrSum = 0.0;
 			tot_en = 0.0;
+			vsqrSum = 0.0;
 			pressure = 0.0;
 			momX = 0.0;
 			momY = 0.0;
 			momZ = 0.0;
 
 			for (Particle& p : particles){
-				p.dens = p.dens_new;
-				p.dens_new = 0.0;
+				// p.dens = p.dens_new;
+				// p.dens_new = 0.0;
+				p.rhoBar = 0.0;
 				p.fC.setZero();
 				p.fR.setZero();
 				p.fD.setZero();
@@ -1332,6 +1379,208 @@ class DPD {
 
 		}
 
+		void dens_calculation(){
+
+			// creating the list for force calculation
+
+			// identifying neighbors
+			// LL: loop over all contacts p=1..N, q=p+1..N to evaluate forces
+			for (unsigned int indx=0; indx<Ncelx; ++indx)
+				for (unsigned int indy=0; indy<Ncely; ++indy)
+					for (unsigned int indz=0; indz<Ncelz; ++indz) {
+						unsigned int ix = Ncelx*(Ncelx*indz + indy) + indx + 1 - 1;
+
+						unsigned int Nbor_indx; 
+						unsigned int Nbor_indy; 
+						unsigned int Nbor_indz; 
+						unsigned int Nbor_ix;  
+
+						Cell& cell = ll[ix];
+						// std::cout << "The cell number is: " << ix << ", with neighbours: ";
+
+						if (cell.size()==0) continue;
+						computeDens(cell);		//compute forces between the particle pairs within a cell
+
+						// compute forces between neighbours
+						// neighbour 1
+						Nbor_indx = MOD(indx + 1, Ncelx); 
+						Nbor_indy = indy; 
+						Nbor_indz = indz; 
+						Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
+						// std::cout << Nbor_ix << ", ";				
+
+						// compute forces between cell and neighbour 1
+						computeDens(cell, ll[Nbor_ix]);
+
+						// neighbour 2
+						Nbor_indx = (indx + 1)% Ncelx; 
+						Nbor_indy = (indy + 1)% Ncely; 
+						Nbor_indz = indz; 
+						Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
+						// std::cout << Nbor_ix << ", ";				
+
+						// compute forces between cell and neighbour 2
+						computeDens(cell, ll[Nbor_ix]);
+
+						// neighbour 3
+						Nbor_indx = indx; 
+						Nbor_indy = (indy + 1)% Ncely; 
+						Nbor_indz = indz; 
+						Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
+						// std::cout << Nbor_ix << ", ";				
+
+						// compute forces between cell and neighbour 3
+						computeDens(cell,ll[Nbor_ix]);
+
+						// neighbour 4
+						// Nbor_indx = (indx - 1)% Ncelx; 
+						Nbor_indx = MOD(indx-1, Ncelx);
+						Nbor_indy = (indy + 1)% Ncely; 
+						Nbor_indz = indz; 
+						Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
+						// std::cout << Nbor_ix << ", ";				
+
+						// compute forces between cell and neighbour 4
+						computeDens(cell, ll[Nbor_ix]);
+
+						// neighbour 5	
+						Nbor_indx = (indx + 1)% Ncelx; 
+						Nbor_indy = indy; 
+						Nbor_indz = MOD(indz - 1, Ncelz); 
+						Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
+						// std::cout << Nbor_ix << ", ";				
+
+						// compute forces between cell and neighbour 5
+						computeDens(cell, ll[Nbor_ix]);
+
+						// neighbour 6
+						Nbor_indx = (indx + 1)% Ncelx; 
+						Nbor_indy = (indy + 1)% Ncely; 
+						Nbor_indz = MOD(indz - 1, Ncelz); 
+						Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
+						// std::cout << Nbor_ix << ", ";				
+
+						// compute forces between cell and neighbour 6
+						computeDens(cell, ll[Nbor_ix]);
+
+						// neighbour 7
+						Nbor_indx = indx; 
+						Nbor_indy = (indy + 1)% Ncely; 
+						Nbor_indz = MOD(indz - 1, Ncelz); 
+						Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
+						// std::cout << Nbor_ix << ", ";				
+
+						// compute forces between cell and neighbour 7
+						computeDens(cell, ll[Nbor_ix]);
+
+						// neighbour 8
+						Nbor_indx = MOD(indx - 1, Ncelx); 
+						Nbor_indy = (indy + 1)% Ncely; 
+						Nbor_indz = MOD(indz - 1, Ncelz); 
+						Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
+						// std::cout << Nbor_ix << ", ";				
+
+						// compute forces between cell and neighbour 8
+						computeDens(cell, ll[Nbor_ix]);
+
+						// neihgbour 9
+						Nbor_indx = (indx + 1)% Ncelx; 
+						Nbor_indy = indy; 
+						Nbor_indz = (indz + 1)% Ncelz; 
+						Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
+						// std::cout << Nbor_ix << ", ";				
+
+						// compute forces between cell and neighbour 9
+						computeDens(cell, ll[Nbor_ix]);
+
+						// neighbour 10
+						Nbor_indx = (indx + 1)% Ncelx; 
+						Nbor_indy = (indy + 1)% Ncely; 
+						Nbor_indz = (indz + 1)% Ncelz; 
+						Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
+						// std::cout << Nbor_ix << ", ";				
+
+						// compute forces between cell and neighbour 10
+						computeDens(cell, ll[Nbor_ix]);
+
+						// neighbour 11
+						Nbor_indx = indx; 
+						Nbor_indy = (indy + 1)% Ncely; 
+						Nbor_indz = (indz + 1)% Ncelz; 
+						Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
+						// std::cout << Nbor_ix << ", ";				
+
+						// compute forces between cell and neighbour 11
+						computeDens(cell, ll[Nbor_ix]);
+
+						// neighbour 12
+						Nbor_indx = MOD(indx - 1, Ncelx); 
+						Nbor_indy = (indy + 1)% Ncely; 
+						Nbor_indz = (indz + 1)% Ncelz; 
+						Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
+						// std::cout << Nbor_ix << ", ";				
+
+						// compute forces between cell and neighbour 12
+						computeDens(cell, ll[Nbor_ix]);
+
+						// neighbour 13
+						Nbor_indx = indx; 
+						Nbor_indy = indy; 
+						Nbor_indz = (indz + 1)% Ncelz; 
+						Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
+						// std::cout << Nbor_ix << ", ";				
+
+						// compute forces between cell and neighbour 13
+						computeDens(cell, ll[Nbor_ix]);
+
+						// std::cout << std::endl;	
+					}
+		}
+
+		void computeDens(Cell& cell1, Cell& cell2) {
+			for (Particle* p : cell1)
+				for (Particle* q : cell2)
+					computeRho(p,q);
+		}// computeDens() -- between 2 cells	
+
+		void computeDens(Cell& cell) {
+			for (auto p = cell.begin();  p!=cell.end(); ++p)
+				for (auto q = p+1;  q!=cell.end(); ++q)
+					computeRho(*p,*q);
+		}// computeDens() -- entire cell	
+
+		void computeRho(Particle* p, Particle* q) {
+
+			Vec3D Rij = p->r - q->r;	
+			Vec3D temp;
+			temp.X = Vec3D::roundOff_x(Rij, box);
+			temp.Y = Vec3D::roundOff_y(Rij, box);
+			temp.Z = Vec3D::roundOff_z(Rij, box);
+			Vec3D minRij = Rij - temp*box;
+			double r2 = minRij.getLengthSquared();
+
+			if ( r2 <= rc2 ) {
+
+				double dist = std::sqrt(r2);
+				double wcij = (1.0 - dist/rcutoff);
+				double wcij_pow_2 = wcij*wcij;
+				double rhoBarTemp = fifteen_by_twopi_by_rc*wcij_pow_2;
+
+				p->rhoBar += rhoBarTemp;
+				q->rhoBar += rhoBarTemp;
+
+				if ( r2 <= rd2 ) {
+
+					// std::cout << "entered density calculation" << std::endl;
+					double wdij = (1.0 - dist/rd_cutoff);
+					double wdij_pow_2 = wdij*wdij; 
+					double wij = fifteen_by_twopi_by_rd*wdij_pow_2;
+
+					p->dens += wij;
+					q->dens += wij;
+				}
+			}
+		}
 };
 
 
