@@ -7,7 +7,7 @@ int main () {
 	DPD coll2p;	
 
 	// set global parameters
-	coll2p.box = 20.0;			// dimension of box
+	coll2p.box = 10.0;			// dimension of box
 	coll2p.kBT = 1.0;			// DPD fluid temperature 
 	// coll2p.aii = 00.0;			// DPD conservative force -- soft repulsive force
 	// coll2p.bVdW = 0.016;			// DPD conservative force -- many body force

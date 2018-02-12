@@ -211,10 +211,10 @@ class DPD {
 			double dropBox = 10.0;
 			double xind_min = -1.0*(dropBox/2.0) + 0.25;
 			double yind_min = -1.0*(dropBox/2.0) + 0.25;
-			double zind_min = -1.0*(dropBox/2.0) + 0.25;
+			double zind_min = -2.00;
 			double xind_max =  1.0*(dropBox/2.0);
 			double yind_max =  1.0*(dropBox/2.0);
-			double zind_max =  1.0*(dropBox/2.0);
+			double zind_max =  2.00;
 
 			double xind = xind_min;
 
