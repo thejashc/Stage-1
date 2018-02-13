@@ -26,7 +26,7 @@ int main () {
 	coll2p.dim = 3;				// 3D system
 
 	coll2p.tau = 0.745;			// rate of thermalizing
-	coll2p.dt = 1e-3;
+	coll2p.dt = 1e-5;
 	coll2p.step = 1;
 	coll2p.stepMax = 2e5;
 	coll2p.thermProb = coll2p.dt*coll2p.tau;// probability of thermalizing 	
@@ -72,7 +72,7 @@ int main () {
 	// std::cout << "Total time for "<< coll2p.stepMax << " steps is: "<< difftime(tend, tstart) <<" second(s)."<< std::endl;
 	std::fstream paraInfo;
   	paraInfo.open ("parainfo.txt", std::fstream::in | std::fstream::out | std::fstream::app);
-	paraInfo << "Total Simulation time	" << "\t \t" <<  difftime(tend, tstart) << "seconds" << std::endl;
+	paraInfo << "Total Simulation time	" << "\t \t" <<  difftime(tend, tstart) << " seconds" << std::endl;
 	paraInfo.close();
 
 	return 0;
