@@ -1,0 +1,8 @@
+//        subtraction 1
+  vctr3D& operator -= ( const vctr3D& inp )
+  {
+    comp[0] -= inp.comp[0];
+    comp[1] -= inp.comp[1];
+    comp[2] -= inp.comp[2];
+    return (*this);
+  }
