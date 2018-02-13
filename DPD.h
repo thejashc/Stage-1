@@ -16,6 +16,7 @@ class DPD {
 		// global parameters
 		double radSqr;				// square of the radius of the initial droplet
 		double box;				// size of domain
+		double boxEdge[3];			// box length in x,y,z directions
 		double kBT;				// DPD fluid temperature
 		double sigma;				// DPD noise level
 		double gamma;				// DPD dissipative force parameter
@@ -62,10 +63,25 @@ class DPD {
 		int Ncelx;				// number of cells in x
 		int Ncely;				// number of cells in y
 		int Ncelz;				// number of cells in z
+		
+		unsigned int MaxPerCell = 100;		// maximum number of particles in a cell
+		const int x = 0;			// value for x, y, z co-ordinates -- never change this
+		const int y = 1;			
+		const int z = 2;
+		int NrCells[3];				// Number of cells in x, y and z direction	
+		int mi[3];				// index for cells in grid list
+		int mini[3];				// minimum in the x,y,z directions
+		int maxi[3];				// maximum in the x,y,z directions
+		double scale[3];			// scale factor
 
+		// loop variables
+		int i;
+		int j;
+		int k;
+	
 		// file writing parameters
 		unsigned int saveCount = 500;		// number of timestep between saves
-
+		
 		// parameters for post-processing
 		// g(r) -- structure function
 		double gR_radMin;			// minimum radius for g(r)
@@ -132,17 +148,21 @@ class DPD {
 		/******************************************************************************************************/
 		void init(){
 
+			// boxEdges
+			boxEdge[x] = 4.0;
+			boxEdge[y] = 4.0;
+			boxEdge[z] = 4.0;
+			
 			// defining instance of random number class
 			// std::mt19937 gen(rd());
 
 			// Set max and min dimensions of boxy
-			/*
-			double xind_min = -1.0*(box/2.0) + 0.25;
-			double yind_min = -1.0*(box/2.0) + 0.25;
-			double zind_min = -1.0*(box/2.0) + 0.25;
-			double xind_max =  1.0*(box/2.0);
-			double yind_max =  1.0*(box/2.0);
-			double zind_max =  1.0*(box/2.0);
+			double xind_min = 0.25;
+			double yind_min = 0.25;
+			double zind_min = 0.25;
+			double xind_max = boxEdge[x];
+			double yind_max = boxEdge[y];
+			double zind_max = boxEdge[z];
 
 			double xind = xind_min;
 
@@ -168,102 +188,18 @@ class DPD {
 				}// end of yind			
 				xind += 1.0;
 			}// end of xind
-			*/
-
-			// Droplet-friendly initialization
-			// Set max and min dimensions of box
-			/*
-			   double xind_min = -2.5;
-			   double yind_min = -2.5;
-			   double zind_min = -1.0/2.0;
-			   double xind_max = +2.5;
-			   double yind_max = +2.5;
-			   double zind_max = +1.0/2.0;
-
-			   double xind = xind_min;
-
-			// Particle position intialization in a crystal structure 
-			while ( xind < xind_max){
-			double yind = yind_min;
-			while( yind < yind_max){
-			double zind = zind_min;
-			while( zind < zind_max){
-			// generate random velocities
-			double rand_gen_velx = ((double) rand() / (RAND_MAX));
-			double rand_gen_vely = ((double) rand() / (RAND_MAX));
-			double rand_gen_velz = ((double) rand() / (RAND_MAX));
-
-			// initializing particle radius, mass, position and velocity
-			particles.push_back({0.2,1.0,{xind, yind, zind},{rand_gen_velx, rand_gen_vely, rand_gen_velz}});
-
-			// update zind
-			zind += 0.1;
-			}// end of zind
-			yind += 0.25;
-			}// end of yind			
-			xind += 0.25;
-			}// end of xind
-			 */
-		
-			// Droplet Initialization	
-			double rad = 5.00;
-			radSqr = rad*rad;
-			double dropBox = 10.0;
-			double xind_min = -1.0*(dropBox/2.0) + 0.25;
-			double yind_min = -1.0*(dropBox/2.0) + 0.25;
-			double zind_min = -2.00;
-			double xind_max =  1.0*(dropBox/2.0);
-			double yind_max =  1.0*(dropBox/2.0);
-			double zind_max =  2.00;
-
-			double xind = xind_min;
-
-			// Particle position intialization in a crystal structure 
-			while ( xind < xind_max){
-				double yind = yind_min;
-				while( yind < yind_max){
-					double zind = zind_min;
-					while( zind < zind_max){
-						// generate random velocities
-						double rand_gen_velx = ((double) rand() / (RAND_MAX));
-						double rand_gen_vely = ((double) rand() / (RAND_MAX));
-						double rand_gen_velz = ((double) rand() / (RAND_MAX));
-
-						// initializing particle radius, mass, position and velocity
-						// if ( xind*xind + yind*yind + zind*zind <= radSqr )
-						particles.push_back({0.2,1.0,{xind, yind, zind},{rand_gen_velx, rand_gen_vely, rand_gen_velz}});
-
-						// update zind
-						zind += 0.63*rcutoff;
-					}// end of zind
-					yind += 0.63*rcutoff;
-				}// end of yind			
-				xind += 0.63*rcutoff;
-			}// end of xind
-
+			
 			// Initialize the gR_nCount array
-			for (int i=0; i < gR_nElem ; ++i){
+			for (i=0; i < gR_nElem ; ++i){
 				gR_nCount.push_back(0.0);
 			}	
 
 			// Initialize the velocity histogram array
-			for (int i=0; i < velHist_bins ; ++i){
+			for (i=0; i < velHist_bins ; ++i){
 				velHistX.push_back(0);
 				velHistY.push_back(0);
 				velHistZ.push_back(0);
 			}	
-
-			/*
-			Vec3D velAvg={0.0, 0.0, 0.0};
-			// Remove excess velocity
-			for (Particle& p: particles){
-				velAvg += p.v/particles.size();
-			}
-
-			for (Particle& p: particles){
-				p.v -= velAvg;
-			}
-			*/
 
 			Vec3D velAvg={0.0, 0.0, 0.0};
 			// Remove excess velocity
@@ -274,7 +210,22 @@ class DPD {
 			for (Particle& p: particles){
 				p.w -= velAvg;
 			}
+		
 
+			// initializing NrCells[3], scale	
+			for ( i = 0 ; i < 3 ; i++ )
+			{
+				NrCells[i] = int( boxEdge[i] / rcutoff ); // cellnr runs from 0 to NrCells-1
+				scale[i] = NrCells[i] * (1.0 / boxEdge[i]);
+				if ( NrCells[i] < 3 ) { std::cout << "*** NrCells[" << i << "] = " << NrCells[i] << std::endl ; abort(); }
+
+				std::cout << "NrCells[" << i << "] = " << NrCells[i] << std::endl;
+			}
+
+			// initializing mini[3], maxi[3]
+			mini[x] = 0; maxi[x] = NrCells[x] - 1;
+			mini[y] = 0; maxi[y] = NrCells[y] - 1;
+			mini[z] = 0; maxi[z] = NrCells[z] - 1;
 		}
 
 		/******************************************************************************************************/
@@ -312,27 +263,16 @@ class DPD {
 			std::ofstream eosStats("./data/eos_data.dat");	// pressure and temperature data
 			std::ofstream momStats("./data/mom_data.dat");	// pressure and temperature data
 
-			//	energyMinimization();
-
-			if ( rcutoff > 1.0){
-				std::cout << " rcutoff is more than one: please check variables wR, wR_pow_2, wij_1, wij_3, p->dens, q->dens " << std::endl;
-				std::cout << " Aborting ... " << std::endl;
-				exit(0);}
-
 			// force calculation for first step
-			// createList() and calculate random, dissipative and conservative
-			// createList();
-			// dens_calculate();
-			createList();
+			createGridList();
+			exit(0);
+			
 			dens_calculation();
-			//forceCalc_CRD();
 
 			// print the densities for particles	
 			// for (Particle& p : particles)
 			//	std::cout << "Position: " << p.r << ", Density: " << p.dens <<", conservative force: " << p.fC << std::endl;
 
-			//exit(0);
-			
 			// writing the parameters to a file
 			std::ofstream paraInfo("parainfo.txt");
 			paraWrite(paraInfo);
@@ -340,13 +280,10 @@ class DPD {
 
 			while (step<stepMax) {
 
-				// std::cout << rn << "\t" << Ncelx << "\t" << Ncely << "\t" << Ncelz << std::endl;
 				// force calculation
-				// forceCalc_conservative();
-				// createList();
+				// createGridList();
 				forceCalc_CRD();
 
-				//exit(0);
 				// for (Particle&p : particles){
 				//	std::cout << "position: " << p.r << " and force: " << p.f << std::endl;
 				//}
@@ -354,12 +291,8 @@ class DPD {
 				//for (Particle& p: particles)
 				//	std::cout << "the force on particle is: "<< p.f << std::endl;
 
-				// std::cout << step << std::endl;
-				// std::cout << "step == 1, particles = " << npart << std::endl;
-
 				// Integrate equations of motion
 				integrateEOS();
-				//std::cout << "integration done" << std::endl;
 
 				// Apply periodic boundary conditions
 				pbc();
@@ -369,7 +302,7 @@ class DPD {
 					p.dens = 0.0;
 				}
 				// dens_calculate();
-				createList();
+				createGridList();
 				dens_calculation();
 
 				// total energy and g(r) sample calculation
@@ -379,7 +312,7 @@ class DPD {
 				}
 				tot_en = kin_en + pot_en;
 				if ( (step > gR_tStart) && (step % gR_tDelta == 0) ) grSample();
-				
+
 				// filewriting 
 				fileWrite(enStats, eosStats, momStats);
 				// std::cout << "filewrite done" << std::endl;
@@ -392,8 +325,6 @@ class DPD {
 
 				// for (Particle& p : particles)
 				//	std::cout << "Position: " << p.r << ", Density: " << p.dens <<", conservative force: " << p.fC << std::endl;
-
-				//exit(0);
 
 			}//end time loop
 
@@ -410,6 +341,51 @@ class DPD {
 		/******************************************************************************************************/
 		/**************************************** FUNCTIONS ***************************************************/
 		/******************************************************************************************************/
+		// creating grid list
+		void createGridList(){
+
+			int grid[NrCells[x]][NrCells[y]][NrCells[z]][MaxPerCell];
+			
+		 	//	std::cout << "number of particles = " << npart << std::endl;
+
+			//		for (i = 0; i < npart; ++i)
+			//	std::cout << particles[i].r << std::endl;
+
+			// initialize grid to 0
+			for ( mi[x] = 0 ; mi[x] < NrCells[x] ; mi[x]++ )
+				for ( mi[y] = 0 ; mi[y] < NrCells[y] ; mi[y]++ )
+					for ( mi[z] = 0 ; mi[z] < NrCells[z] ; mi[z]++ )
+						grid[mi[x]][mi[y]][mi[z]][0] = 0;
+
+			for (i = 0; i < npart; ++i)
+			{ 
+				mi[x] = int( particles[i].r.getComponent(x) * scale[x] );
+				mi[y] = int( particles[i].r.getComponent(y) * scale[y] );
+				mi[z] = int( particles[i].r.getComponent(z) * scale[z] );
+				std::cout << "position of particle " << i << " =" << particles[i].r;
+				std::cout << ", mi[x], mi[y], mi[z] =  " << mi[x] << ", " << mi[y] << ", " << mi[z] << std::endl;
+				if ( mi[x] < mini[x] || mi[x] > maxi[x]   // debug
+						|| mi[y] < mini[y] || mi[y] > maxi[y] 
+						|| mi[z] < mini[z] || mi[z] > maxi[z] )
+				{ 
+					// std::cout << "*** particle " << i << " outside box" << std::endl;
+					std::cout << mini[x] << " < " << mi[x] << " < " << maxi[x] << std::endl;
+					std::cout << mini[y] << " < " << mi[y] << " < " << maxi[y] << std::endl;
+					std::cout << mini[z] << " < " << mi[z] << " < " << maxi[z] << std::endl;
+					abort();
+				}
+				if ( grid[mi[x]][mi[y]][mi[z]][0] == MaxPerCell )
+				{ 
+					std::cout << "*** cell overfull" << std::endl;
+					std::cout << mi[x] << "  " << mi[y] << "  " << mi[z] << std::endl;
+					abort();
+				}
+				grid[mi[x]][mi[y]][mi[z]][0] ++ ;
+				//  cout << i << "  " << mix << "  " << miy << "  " << miz << "  " << grid[mix][miy][miz][0] << endl;
+				   grid[mi[x]][mi[y]][mi[z]][ grid[mi[x]][mi[y]][mi[z]][0] ] = i;
+			} // i
+		}
+
 		// sample collection for g(r)
 		void grSample(){
 
@@ -796,8 +772,8 @@ class DPD {
 				}
 			}
 
-			// createList() and calculate random, dissipative and conservative
-			createList();
+			// createGridList() and calculate random, dissipative and conservative
+			createGridList();
 			dens_calculate();
 			forceCalc_CRD();
 
@@ -887,10 +863,10 @@ class DPD {
 
 						p->dens += wij;
 						q->dens += wij;
-					
+
 						p->rhoBar += rhoBarTemp;
 						q->rhoBar += rhoBarTemp;
-					
+
 					}
 				}
 			}
@@ -1141,35 +1117,33 @@ class DPD {
 			}
 		}// pbc()
 
-		void createList(){
 
-			//LL: remove old linked list
-			for (Cell& cell : ll) cell.resize(0); 
-			// ll.resize(0); // this strangely gave me a segmentation fault
 
-			//LL: re-initialise linked list
-			for (Particle& p : particles) {
+		/*
+		   void createGridList(){
 
-				double Lx = -1.0*(box/2.0) - p.r.getComponent(0);
-				double Ly = -1.0*(box/2.0) - p.r.getComponent(1);
-				double Lz = -1.0*(box/2.0) - p.r.getComponent(2);
+		//LL: remove old linked list
+		for (Cell& cell : ll) cell.resize(0); 
+		// ll.resize(0); // this strangely gave me a segmentation fault
 
-				unsigned int indx = -1.0*ceil(Lx/rn);
-				unsigned int indy = -1.0*ceil(Ly/rn);
-				unsigned int indz = -1.0*ceil(Lz/rn);
+		//LL: re-initialise linked list
+		for (Particle& p : particles) {
 
-				unsigned int ix = Ncelx*(Ncelx*indz + indy) + indx + 1 - 1;
-				// std::cout << "position: " << std::setw(10) << p.r << ", indices: "<< indx << ", " << indy << ", " <<indz << " and cell number: " << ix <<std::endl;
-				ll[ix].push_back(&p);
-				// std::cout << "successfully done for cell number: " << ix << std::endl; 
+		double Lx = -1.0*(box/2.0) - p.r.getComponent(0);
+		double Ly = -1.0*(box/2.0) - p.r.getComponent(1);
+		double Lz = -1.0*(box/2.0) - p.r.getComponent(2);
 
-				/*
-				// accessing ll			
-				for (int i=0; i < ll.size(); ++i){
-				Cell& cell = ll[i];
-				}*/
-			}
+		unsigned int indx = -1.0*ceil(Lx/rn);
+		unsigned int indy = -1.0*ceil(Ly/rn);
+		unsigned int indz = -1.0*ceil(Lz/rn);
+
+		unsigned int ix = Ncelx*(Ncelx*indz + indy) + indx + 1 - 1;
+		// std::cout << "position: " << std::setw(10) << p.r << ", indices: "<< indx << ", " << indy << ", " <<indz << " and cell number: " << ix <<std::endl;
+		ll[ix].push_back(&p);
+		// std::cout << "successfully done for cell number: " << ix << std::endl; 
 		}
+		}
+		 */
 
 		// Structure function g(r) calculation
 		void grCalc(){
@@ -1179,7 +1153,7 @@ class DPD {
 			std::ofstream grWrite("./data/gr_data.dat");
 			grWrite << "ri \t ro \t rad \t gr_count \t tot_part \t samples \t nHomo \t rho" << std::endl;
 
-			for (int i=0; i < gR_nElem; ++i){
+			for (i=0; i < gR_nElem; ++i){
 
 				double rad = gR_radDelta*( i + 0.5) + gR_radMin;		// radius in question	
 				double ri = i*gR_radDelta + gR_radMin;				// radius at i^th bin
@@ -1209,7 +1183,7 @@ class DPD {
 			double trapzAreaY = 0.0;
 			double trapzAreaZ = 0.0;
 
-			for (int i=1; i <= velHist_bins-2; ++i){
+			for (i=1; i <= velHist_bins-2; ++i){
 
 				trapzAreaX += 2.0*velHistX[i];	
 				trapzAreaY += 2.0*velHistY[i]; 	
@@ -1227,7 +1201,7 @@ class DPD {
 			trapzAreaZ *= velHist_velDelta/2.0;
 
 			// converting histogram to PDF
-			for (int i=0; i< velHist_bins; ++i){
+			for (i=0; i< velHist_bins; ++i){
 				double bin_lower = velHist_velMin + i*velHist_velDelta;
 				double bin_upper = velHist_velMin + (i+1)*velHist_velDelta;
 				double vel = (bin_lower + bin_upper)*0.5;

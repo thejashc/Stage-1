@@ -14,7 +14,7 @@ rm -f ./plots/*.eps
 g++ -o DPD.exe  -std=c++11 -ggdb3 Vec3D.cc DPD_main.cpp 
 #g++ -o DPD.exe  -std=c++11 Vec3D.cc DPD_main.cpp 
 
-./DPD.exe > simProg.txt &
+#./DPD.exe > simProg.txt &
 #./DPD.exe > randnum.dat &
 #./DPD.exe > local_density.txt &
 
