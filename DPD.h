@@ -63,25 +63,68 @@ class DPD {
 		int Ncelx;				// number of cells in x
 		int Ncely;				// number of cells in y
 		int Ncelz;				// number of cells in z
-		
+
 		unsigned int MaxPerCell = 100;		// maximum number of particles in a cell
 		const int x = 0;			// value for x, y, z co-ordinates -- never change this
 		const int y = 1;			
 		const int z = 2;
 		int NrCells[3];				// Number of cells in x, y and z direction	
-		int mi[3];				// index for cells in grid list
+		int mi[3];				// index for particle i in any cell
+		int mj[3];				// index for particle j in any cell
 		int mini[3];				// minimum in the x,y,z directions
 		int maxi[3];				// maximum in the x,y,z directions
 		double scale[3];			// scale factor
+		int MaxNrCells;				// maximum cells among x, y, z
+
+		// under completion
+		int dm[13][3] = {	
+			{  0,  0,  1 },
+			{  1,  0, -1 },
+			{  1,  0,  0 },
+			{  1,  0,  1 },
+			{ -1,  1, -1 },
+			{ -1,  1,  0 },
+			{ -1,  1,  1 },
+			{  0,  1, -1 },
+			{  0,  1,  0 },
+			{  0,  1,  1 },
+			{  1,  1, -1 },
+			{  1,  1,  0 },
+			{  1,  1,  1 } 
+		};
+
+		std::vector< std::vector < std::vector< std::vector<int> > > > grid;	// define grid as vectors
+		std::vector< std::vector <int> > periodN;				// determining the periodic neighbours
 
 		// loop variables
 		int i;
 		int j;
 		int k;
-	
+		int m;
+		int ii;		
+		int jj;
+		double r2;
+		double dist;
+		double wC;
+		double wCij;
+		double wCij_pow_2;
+		double wDij;
+		double term1;
+		double term2;
+		double term3;
+
+		// Vector 3D variables
+		Vec3D fCij;
+		Vec3D fRij;
+		Vec3D fDij;
+		Vec3D capRij;
+		Vec3D Rij;
+		Vec3D minRij;
+		Vec3D tempVec;
+
 		// file writing parameters
 		unsigned int saveCount = 500;		// number of timestep between saves
-		
+
 		// parameters for post-processing
 		// g(r) -- structure function
 		double gR_radMin;			// minimum radius for g(r)
@@ -149,10 +192,10 @@ class DPD {
 		void init(){
 
 			// boxEdges
-			boxEdge[x] = 4.0;
-			boxEdge[y] = 4.0;
-			boxEdge[z] = 4.0;
-			
+			boxEdge[x] = 3.0;
+			boxEdge[y] = 3.0;
+			boxEdge[z] = 3.0;
+
 			// defining instance of random number class
 			// std::mt19937 gen(rd());
 
@@ -181,14 +224,14 @@ class DPD {
 						particles.push_back({0.2,1.0,{xind, yind, zind},{rand_gen_velx, rand_gen_vely, rand_gen_velz}});
 
 						// update zind
-						zind += 1.0;
+						zind += 0.50;
 
 					}// end of zind
-					yind += 1.0;
+					yind += 1.00;
 				}// end of yind			
-				xind += 1.0;
+				xind += 1.00;
 			}// end of xind
-			
+
 			// Initialize the gR_nCount array
 			for (i=0; i < gR_nElem ; ++i){
 				gR_nCount.push_back(0.0);
@@ -210,7 +253,7 @@ class DPD {
 			for (Particle& p: particles){
 				p.w -= velAvg;
 			}
-		
+
 
 			// initializing NrCells[3], scale	
 			for ( i = 0 ; i < 3 ; i++ )
@@ -226,6 +269,34 @@ class DPD {
 			mini[x] = 0; maxi[x] = NrCells[x] - 1;
 			mini[y] = 0; maxi[y] = NrCells[y] - 1;
 			mini[z] = 0; maxi[z] = NrCells[z] - 1;
+
+			// defining grid matrix 
+			grid.resize( NrCells[x] );
+			for ( i = 0 ; i < NrCells[x] ; ++i ) {
+				grid[i].resize( NrCells[y] );
+				for (  j = 0 ; j < NrCells[y] ; ++j ){
+					grid[i][j].resize( NrCells[z] );
+					for ( k = 0 ; k < NrCells[z] ; ++k ){
+						grid[i][j][k].resize( MaxPerCell ); 	
+					} // k 
+				}// j
+			}// i
+
+			// defining periodN 
+			MaxNrCells = std::max( std::max( NrCells[x], NrCells[y] ), NrCells[z]);
+			periodN.resize( MaxNrCells + 2 );
+			for ( i = 0 ; i < MaxNrCells + 2 ; ++ i )
+				periodN[i].resize( 3 );
+			
+			for ( j = 0 ; j < 3 ; j++ )
+			{
+				periodN[0][j] = NrCells[j] - 1;          // left neighbour of leftmost cell
+				for ( i = 1 ;  i < NrCells[j] + 1 ; i++ )
+				{
+					periodN[i][j] = i - 1; // same cell
+				} // i
+				periodN[NrCells[j] + 1][j] = 0;          // right neigbour of rightmost cell
+			} // j
 		}
 
 		/******************************************************************************************************/
@@ -265,9 +336,8 @@ class DPD {
 
 			// force calculation for first step
 			createGridList();
-			exit(0);
-			
-			dens_calculation();
+
+			// dens_calculation();
 
 			// print the densities for particles	
 			// for (Particle& p : particles)
@@ -282,14 +352,12 @@ class DPD {
 
 				// force calculation
 				// createGridList();
-				forceCalc_CRD();
+				forceCalc();
 
-				// for (Particle&p : particles){
-				//	std::cout << "position: " << p.r << " and force: " << p.f << std::endl;
-				//}
+				for (Particle&p : particles)
+					std::cout << "position: " << p.r << " and force: " << p.fC << std::endl;
 
-				//for (Particle& p: particles)
-				//	std::cout << "the force on particle is: "<< p.f << std::endl;
+				exit(0);
 
 				// Integrate equations of motion
 				integrateEOS();
@@ -344,12 +412,6 @@ class DPD {
 		// creating grid list
 		void createGridList(){
 
-			int grid[NrCells[x]][NrCells[y]][NrCells[z]][MaxPerCell];
-			
-		 	//	std::cout << "number of particles = " << npart << std::endl;
-
-			//		for (i = 0; i < npart; ++i)
-			//	std::cout << particles[i].r << std::endl;
 
 			// initialize grid to 0
 			for ( mi[x] = 0 ; mi[x] < NrCells[x] ; mi[x]++ )
@@ -362,8 +424,8 @@ class DPD {
 				mi[x] = int( particles[i].r.getComponent(x) * scale[x] );
 				mi[y] = int( particles[i].r.getComponent(y) * scale[y] );
 				mi[z] = int( particles[i].r.getComponent(z) * scale[z] );
-				std::cout << "position of particle " << i << " =" << particles[i].r;
-				std::cout << ", mi[x], mi[y], mi[z] =  " << mi[x] << ", " << mi[y] << ", " << mi[z] << std::endl;
+				// std::cout << "position of particle " << i << " =" << particles[i].r;
+				// std::cout << ", mi[x], mi[y], mi[z] =  " << mi[x] << ", " << mi[y] << ", " << mi[z] << std::endl;
 				if ( mi[x] < mini[x] || mi[x] > maxi[x]   // debug
 						|| mi[y] < mini[y] || mi[y] > maxi[y] 
 						|| mi[z] < mini[z] || mi[z] > maxi[z] )
@@ -381,9 +443,49 @@ class DPD {
 					abort();
 				}
 				grid[mi[x]][mi[y]][mi[z]][0] ++ ;
-				//  cout << i << "  " << mix << "  " << miy << "  " << miz << "  " << grid[mix][miy][miz][0] << endl;
-				   grid[mi[x]][mi[y]][mi[z]][ grid[mi[x]][mi[y]][mi[z]][0] ] = i;
+				grid[mi[x]][mi[y]][mi[z]][ grid[mi[x]][mi[y]][mi[z]][0] ] = i;
 			} // i
+		}
+
+		void forceCalc(){
+
+			for ( mi[x] = 0 ; mi[x] < NrCells[x] ; ++mi[x] )
+				for ( mi[y] = 0 ; mi[y] < NrCells[y] ; ++mi[y] )
+					for ( mi[z] = 0 ; mi[z] < NrCells[z] ; ++mi[z] )
+						for ( ii = 1 ; ii <= grid[mi[x]][mi[y]][mi[z]][0] ; ++ii ){
+							i = grid[mi[x]][mi[y]][mi[z]][ii];
+							// printf("i  %i %i %i %i %i \n",mix,miy,miz,ii,i);
+
+							// particle j in same cell as i
+							// Vec3D dR;
+							for ( jj = ii + 1 ; jj <= grid[mi[x]][mi[y]][mi[z]][0] ; ++jj )
+							{
+								j = grid[mi[x]][mi[y]][mi[z]][jj];
+								// std::cout << "j1 "<<  mi[x] << " " << mi[y] << " " << mi[z] << " " << jj << " " << j << std::endl;
+
+#include "pairforce.h"
+
+							} // jj
+
+							// particle j in neighbour cell to i
+							for ( m = 0 ; m < 13 ; m++ )
+							{
+								mj[x]      = periodN[ mi[x] + dm[m][x] + 1 ][x];
+								mj[y]      = periodN[ mi[y] + dm[m][y] + 1 ][y];
+								mj[z]      = periodN[ mi[z] + dm[m][z] + 1 ][z];
+								// dR.X = periodR[ mi[x] + dm[m][x] + 1 ][x];
+								// dR.Y = periodR[ mi[y] + dm[m][y] + 1 ][y];
+								// dR.Z = periodR[ mi[z] + dm[m][z] + 1 ][z];
+								for ( jj = 1 ; jj <= grid[mj[x]][mj[y]][mj[z]][0] ; ++jj )
+								{
+									j = grid[mj[x]][mj[y]][mj[z]][jj];
+									// std::cout << "j2 " << m << " " << mj[x] << " " << mj[y] << " " << mj[z] << " " << jj << " " << j << std::endl;
+
+#include "pairforce.h"
+
+								} // jj
+							} // m
+						} // ii
 		}
 
 		// sample collection for g(r)
@@ -393,14 +495,15 @@ class DPD {
 			for (auto p = particles.begin();  p!=particles.end()-1; ++p){
 				for (auto q = p+1;  q!=particles.end(); ++q) {
 
-					Vec3D Rij = p->r - q->r;	
-					Vec3D temp;
-					temp.X = Vec3D::roundOff_x(Rij, box);
-					temp.Y = Vec3D::roundOff_y(Rij, box);
-					temp.Z = Vec3D::roundOff_z(Rij, box);
-					Vec3D minRij = Rij - temp*box;
-					double r2 = minRij.getLengthSquared();
-					double dist = std::sqrt(r2);
+					Rij = p->r - q->r;	
+					tempVec.X = Vec3D::roundOff_x(Rij, box);
+					tempVec.Y = Vec3D::roundOff_y(Rij, box);
+					tempVec.Z = Vec3D::roundOff_z(Rij, box);
+					minRij.X = Rij.X - tempVec.X*boxEdge[x];
+					minRij.Y = Rij.Y - tempVec.Y*boxEdge[y];
+					minRij.Z = Rij.Z - tempVec.Z*boxEdge[z];
+					r2 = minRij.getLengthSquared();
+					dist = std::sqrt(r2);
 
 					if ( dist < box/2.0 ) { 
 						int ig = ceil(dist/gR_radDelta)-1;
@@ -413,301 +516,6 @@ class DPD {
 			}
 		}
 
-		/******************************************************************************************************/
-		/**************************************** CELL-LIST FORCE CALCULATION  ********************************/
-		/******************************************************************************************************/
-		/******************************************************************************************************/
-		/**************************************** CONSERVATIVE FORCES *****************************************/
-		/******************************************************************************************************/
-		// Cell list implementation of the force calculation
-		void forceCalc_CRD(){
-
-			// creating the list for force calculation
-
-			// identifying neighbors
-			// LL: loop over all contacts p=1..N, q=p+1..N to evaluate forces
-			for (unsigned int indx=0; indx<Ncelx; ++indx)
-				for (unsigned int indy=0; indy<Ncely; ++indy)
-					for (unsigned int indz=0; indz<Ncelz; ++indz) {
-						unsigned int ix = Ncelx*(Ncelx*indz + indy) + indx + 1 - 1;
-
-						unsigned int Nbor_indx; 
-						unsigned int Nbor_indy; 
-						unsigned int Nbor_indz; 
-						unsigned int Nbor_ix;  
-
-						Cell& cell = ll[ix];
-						// std::cout << "The cell number is: " << ix << ", with neighbours: ";
-
-						if (cell.size()==0) continue;
-						computeForces(cell);		//compute forces between the particle pairs within a cell
-
-						// compute forces between neighbours
-						// neighbour 1
-						Nbor_indx = MOD(indx + 1, Ncelx); 
-						Nbor_indy = indy; 
-						Nbor_indz = indz; 
-						Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
-						// std::cout << Nbor_ix << ", ";				
-
-						// compute forces between cell and neighbour 1
-						computeForces(cell, ll[Nbor_ix]);
-
-						// neighbour 2
-						Nbor_indx = (indx + 1)% Ncelx; 
-						Nbor_indy = (indy + 1)% Ncely; 
-						Nbor_indz = indz; 
-						Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
-						// std::cout << Nbor_ix << ", ";				
-
-						// compute forces between cell and neighbour 2
-						computeForces(cell, ll[Nbor_ix]);
-
-						// neighbour 3
-						Nbor_indx = indx; 
-						Nbor_indy = (indy + 1)% Ncely; 
-						Nbor_indz = indz; 
-						Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
-						// std::cout << Nbor_ix << ", ";				
-
-						// compute forces between cell and neighbour 3
-						computeForces(cell,ll[Nbor_ix]);
-
-						// neighbour 4
-						// Nbor_indx = (indx - 1)% Ncelx; 
-						Nbor_indx = MOD(indx-1, Ncelx);
-						Nbor_indy = (indy + 1)% Ncely; 
-						Nbor_indz = indz; 
-						Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
-						// std::cout << Nbor_ix << ", ";				
-
-						// compute forces between cell and neighbour 4
-						computeForces(cell, ll[Nbor_ix]);
-
-						// neighbour 5	
-						Nbor_indx = (indx + 1)% Ncelx; 
-						Nbor_indy = indy; 
-						Nbor_indz = MOD(indz - 1, Ncelz); 
-						Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
-						// std::cout << Nbor_ix << ", ";				
-
-						// compute forces between cell and neighbour 5
-						computeForces(cell, ll[Nbor_ix]);
-
-						// neighbour 6
-						Nbor_indx = (indx + 1)% Ncelx; 
-						Nbor_indy = (indy + 1)% Ncely; 
-						Nbor_indz = MOD(indz - 1, Ncelz); 
-						Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
-						// std::cout << Nbor_ix << ", ";				
-
-						// compute forces between cell and neighbour 6
-						computeForces(cell, ll[Nbor_ix]);
-
-						// neighbour 7
-						Nbor_indx = indx; 
-						Nbor_indy = (indy + 1)% Ncely; 
-						Nbor_indz = MOD(indz - 1, Ncelz); 
-						Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
-						// std::cout << Nbor_ix << ", ";				
-
-						// compute forces between cell and neighbour 7
-						computeForces(cell, ll[Nbor_ix]);
-
-						// neighbour 8
-						Nbor_indx = MOD(indx - 1, Ncelx); 
-						Nbor_indy = (indy + 1)% Ncely; 
-						Nbor_indz = MOD(indz - 1, Ncelz); 
-						Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
-						// std::cout << Nbor_ix << ", ";				
-
-						// compute forces between cell and neighbour 8
-						computeForces(cell, ll[Nbor_ix]);
-
-						// neihgbour 9
-						Nbor_indx = (indx + 1)% Ncelx; 
-						Nbor_indy = indy; 
-						Nbor_indz = (indz + 1)% Ncelz; 
-						Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
-						// std::cout << Nbor_ix << ", ";				
-
-						// compute forces between cell and neighbour 9
-						computeForces(cell, ll[Nbor_ix]);
-
-						// neighbour 10
-						Nbor_indx = (indx + 1)% Ncelx; 
-						Nbor_indy = (indy + 1)% Ncely; 
-						Nbor_indz = (indz + 1)% Ncelz; 
-						Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
-						// std::cout << Nbor_ix << ", ";				
-
-						// compute forces between cell and neighbour 10
-						computeForces(cell, ll[Nbor_ix]);
-
-						// neighbour 11
-						Nbor_indx = indx; 
-						Nbor_indy = (indy + 1)% Ncely; 
-						Nbor_indz = (indz + 1)% Ncelz; 
-						Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
-						// std::cout << Nbor_ix << ", ";				
-
-						// compute forces between cell and neighbour 11
-						computeForces(cell, ll[Nbor_ix]);
-
-						// neighbour 12
-						Nbor_indx = MOD(indx - 1, Ncelx); 
-						Nbor_indy = (indy + 1)% Ncely; 
-						Nbor_indz = (indz + 1)% Ncelz; 
-						Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
-						// std::cout << Nbor_ix << ", ";				
-
-						// compute forces between cell and neighbour 12
-						computeForces(cell, ll[Nbor_ix]);
-
-						// neighbour 13
-						Nbor_indx = indx; 
-						Nbor_indy = indy; 
-						Nbor_indz = (indz + 1)% Ncelz; 
-						Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
-						// std::cout << Nbor_ix << ", ";				
-
-						// compute forces between cell and neighbour 13
-						computeForces(cell, ll[Nbor_ix]);
-
-						// std::cout << std::endl;	
-					}
-		}
-
-		void computeForces(Cell& cell1, Cell& cell2) {
-			for (Particle* p : cell1)
-				for (Particle* q : cell2)
-					computeForce(p,q);
-		}// computeForces() -- between 2 cells	
-
-		void computeForces(Cell& cell) {
-			for (auto p = cell.begin();  p!=cell.end(); ++p)
-				for (auto q = p+1;  q!=cell.end(); ++q)
-					computeForce(*p,*q);
-		}// computeForces() -- entire cell	
-
-		void computeForce(Particle* p, Particle* q) {
-
-			Vec3D Rij = p->r - q->r;	
-			// Vec3D Vij = p->v - q->v;	
-			Vec3D temp;
-			temp.X = Vec3D::roundOff_x(Rij, box);
-			temp.Y = Vec3D::roundOff_y(Rij, box);
-			temp.Z = Vec3D::roundOff_z(Rij, box);
-			Vec3D minRij = Rij - temp*box;
-			double r2 = minRij.getLengthSquared();
-
-			if ( r2 <= rc2 ) {
-
-				//	if (opt == 3){
-
-				Vec3D fCij;
-				Vec3D fRij;
-				Vec3D fDij;
-				double dist = std::sqrt(r2);
-				Vec3D capRij = minRij/dist;
-				double wR = ( 1.0 - dist);
-				double wR_pow_2 = wR*wR;
-				double term1 = 0.0;
-				double term2 = 0.0;
-				double term3 = 0.0;
-				// conservative force -- soft potential 
-				/*
-				   fCij.X = aii*wR*capRij.X;
-				   fCij.Y = aii*wR*capRij.Y;
-				   fCij.Z = aii*wR*capRij.Z;
-				   fCij.X = thirty_by_pi*aii*wR*capRij.X;
-				   fCij.Y = thirty_by_pi*aii*wR*capRij.Y;
-				   fCij.Z = thirty_by_pi*aii*wR*capRij.Z;
-				 */
-
-				// conservative force -- many body potential
-				// Van der Waals force
-				// Dissipative-particle-dynamics model for two-phase flows, Anupam Tiwari and John Abraham, Phys. Rev. E 74, 056701 – Published 1 November 2006 
-				/*
-				   double wij_1 = neg_sixty_by_pi*dist*wR_pow_2;
-				   double wij_3 = neg_onetwenty_by_pi*(-2.0 + 3.0*dist);
-				   double term1 = 1.0/( 1.0 - bVdW*(p->dens) );
-				   double term2 = 1.0/( 1.0 - bVdW*(q->dens) );
-				   double term3 = ( -1.0*bVdW*kBT*( term1 + term2) + 2.0*aVdW )*wij_1 + kappa*wij_3;
-				   fCij.X = term3*capRij.X; 
-				   fCij.Y = term3*capRij.Y; 
-				   fCij.Z = term3*capRij.Z; 
-
-				   p->fC += fCij;
-				   q->fC += fCij*(-1.0); 
-				 */
-
-				// Warren's force
-				// Vapor-liquid coexistence in many-body dissipative particle dynamics, P. B. Warren, Phys. Rev. E 68, 066702 – Published 18 December 2003
-				if (r2 <= rd2){
-					double wCrij = (1.0 - dist/rd_cutoff);
-					term2 = Bij*(p->dens + q->dens)*wCrij;
-
-					/*
-					   double wdij_pow_2 = wdij*wdij; 
-					   double wij = fifteen_by_twopi*wdij_pow_2;
-
-					   p->dens_new += wij;
-					   q->dens_new += wij;
-					 */
-
-					// pair_pot_en_rep = -1.0*Bij*( p->dens + q->dens)*dist*(1.0 - dist/(2.0*rd_cutoff));
-				}
-
-				term1 = Aij*wR;
-				term3 = term1 + term2; 
-				fCij.X = term3*capRij.X; 
-				fCij.Y = term3*capRij.Y; 
-				fCij.Z = term3*capRij.Z; 
-
-				p->fC += fCij;
-				q->fC += fCij*(-1.0); 
-
-				/*
-				// random force	
-				double uniRand = d(rd); 
-				double thetaij = std::sqrt(12.0)*(uniRand-0.5); 
-				double magRand = sigma*wR*thetaij;
-				fRij.X = magRand*capRij.X;
-				fRij.Y = magRand*capRij.Y;
-				fRij.Z = magRand*capRij.Z;
-
-				Vec3D sumForce = fRij*inv_sqrt_dt;
-				p->fR += sumForce;
-				q->fR += -1.0*sumForce;
-
-				// dissipative force -- not calculated here
-				double rDotv = Vec3D::dot( capRij, Vij );
-				double magDiss = -1.0*gamma*wR_pow_2*rDotv;
-				fDij.X = magDiss*capRij.X;
-				fDij.Y = magDiss*capRij.Y;
-				fDij.Z = magDiss*capRij.Z;
-
-				p->fD += fDij;
-				q->fD += -1.0*fDij;
-				 */
-
-				// potential energy
-				// pair_pot_en_att = -1.0*Aij*dist*(1.0 - dist/(2.0*rcutoff)); 
-				// double pair_pot_en = (aii/2.0)*(1.0 - (dist/rcutoff))*( 1.0 - (dist/rcutoff) ) ;
-				// pair_pot_en = pair_pot_en_att + pair_pot_en_rep; 
-				// pot_en += pair_pot_en;
-
-				// non-ideal comp pressure
-				// double nonIdealcomp = Vec3D::dot(minRij, fCij)*(1.0/(2.0*dim*volume));
-				// pressure += nonIdealcomp;
-
-
-				//	}// calculate random, conservative and dissipative forces	
-			}// computeForce() -- between 2 particles
-		}
-
-		// simple Leap-Frog Verlet
 		void integrateEOS(){
 			for (Particle& p : particles) {
 				// store velocity (mid-step)
@@ -745,110 +553,20 @@ class DPD {
 			pressure += idealComp;
 		}
 
-		// Integrating equations of motion using the velocity Verlet scheme
-		void integrateEOM(){
-
-			// calculate v(t + dt/2) and r(t + dt) usind v(t), r(t), fC(t), fD(t), fR(t)
-			for (Particle&p : particles){
-
-				// calculate v(t + dt/2)  using v(t), r(t), fC(t), fD(t), fR(t)
-				p.v += half_dt*(p.fC + p.fD + p.fR);
-
-				// calculate r(t + dt) using v(t), r(t), fC(t), fD(t), fR(t)
-				p.r += p.v*dt;
-			}
-
-			// apply periodic boundary condition -- particle positions have changed
-			pbc();
-
-			// reset force to 0
-			for (Particle& p : particles) {
-				p.fC.setZero();
-				p.fR.setZero();
-				p.fD.setZero();
-
-				if (step == 1){
-					p.dens = 0.0;
-				}
-			}
-
-			// createGridList() and calculate random, dissipative and conservative
-			createGridList();
-			dens_calculate();
-			forceCalc_CRD();
-
-			// final step 
-			for (Particle&p : particles){
-
-				// v(t + dt) using fC(t+dt), fR(t+dt), fD(t+dt/2)
-				p.v += half_dt*(p.fC + p.fD + p.fR);
-			}
-
-
-			// fD = 0 for new calculation
-			for (Particle& p : particles) {
-				p.fD.setZero();
-			}
-
-			// fD using v(t + dt), r(t+dt)
-			forceCalc_dissipative();
-
-			for (Particle&p : particles){
-
-				// calculate the kinetic energy
-				vsqrSum += p.v.getLengthSquared();
-
-				// calculate the total momentum
-				momX += p.v.X;
-				momY += p.v.Y;
-				momZ += p.v.Z;
-
-				// distribute velocities into velocity bins
-				if ( (step > velHist_tStart) && (step % velHist_tDelta == 0) ) {
-					int ivelX = ceil(( p.v.X - velHist_velMin )/velHist_velDelta) - 1; 
-					int ivelY = ceil(( p.v.Y - velHist_velMin )/velHist_velDelta) - 1; 
-					int ivelZ = ceil(( p.v.Z - velHist_velMin )/velHist_velDelta) - 1; 
-
-					if( ( ivelX < 0 ) || ( ivelX >= velHist_bins  ) ) std::cout << "out of bounds ivelX" << std::endl;
-					if( ( ivelY < 0 ) || ( ivelY >= velHist_bins  ) ) std::cout << "out of bounds ivelY" << std::endl;
-					if( ( ivelZ < 0 ) || ( ivelZ >= velHist_bins  ) ) std::cout << "out of bounds ivelZ" << std::endl;
-
-					velHistX[ivelX] += 1;
-					velHistY[ivelY] += 1;
-					velHistZ[ivelZ] += 1;
-
-					// tempSum += temp;
-					// tempCount += 1;
-				}	
-
-			}					
-
-			// ideal component of pressure
-			kin_en = 0.5*vsqrSum;
-			temp = vsqrSum/dof;
-			double idealComp = rho*1.0*temp; 
-			pressure += idealComp;
-
-			if ( (step > velHist_tStart) && (step % velHist_tDelta == 0) ) {
-
-				tempSum += temp;
-				tempCount += 1;
-			}
-		}
-
 		void dens_calculate(){
 			//loop over all contacts p=1..N-1, q=p+1..N to evaluate forces
 			for (auto p = particles.begin();  p!=particles.end()-1; ++p){
 				for (auto q = p+1;  q!=particles.end(); ++q) {
 
-					Vec3D Rij = p->r - q->r;	
-					Vec3D temp;
-					temp.X = Vec3D::roundOff_x(Rij, box);
-					temp.Y = Vec3D::roundOff_y(Rij, box);
-					temp.Z = Vec3D::roundOff_z(Rij, box);
-					Vec3D minRij = Rij - temp*box;
-					double r2 = minRij.getLengthSquared();
-					double dist = std::sqrt(r2);
+					Rij = p->r - q->r;	
+					tempVec.X = Vec3D::roundOff_x(Rij, box);
+					tempVec.Y = Vec3D::roundOff_y(Rij, box);
+					tempVec.Z = Vec3D::roundOff_z(Rij, box);
+					minRij.X = Rij.X - tempVec.X*boxEdge[x];
+					minRij.Y = Rij.Y - tempVec.Y*boxEdge[y];
+					minRij.Z = Rij.Z - tempVec.Z*boxEdge[z];
+					r2 = minRij.getLengthSquared();
+					dist = std::sqrt(r2);
 
 					if ( r2 < rd2 ) { 
 
@@ -872,278 +590,19 @@ class DPD {
 			}
 		}
 
-		/******************************************************************************************************/
-		/**************************************** DISSIPATIVE FORCES *****************************************/
-		/******************************************************************************************************/
-		// calculating the dissipative forces
-		void forceCalc_dissipative(){
-
-			// only identifying neighbors
-			// LL: loop over all contacts p=1..N, q=p+1..N to evaluate forces
-			for (unsigned int indx=0; indx<Ncelx; ++indx)
-				for (unsigned int indy=0; indy<Ncely; ++indy)
-					for (unsigned int indz=0; indz<Ncelz; ++indz) {
-						unsigned int ix = Ncelx*(Ncelx*indz + indy) + indx + 1 - 1;
-
-						unsigned int Nbor_indx; 
-						unsigned int Nbor_indy; 
-						unsigned int Nbor_indz; 
-						unsigned int Nbor_ix;  
-
-						Cell& cell = ll[ix];
-						// std::cout << "The cell number is: " << ix << ", with neighbours: ";
-
-						if (cell.size()==0) continue;
-						computeForces_dissipative(cell);		//compute forces between the particle pairs within a cell
-
-						// compute forces between neighbours
-						// neighbour 1
-						Nbor_indx = MOD(indx + 1, Ncelx); 
-						Nbor_indy = indy; 
-						Nbor_indz = indz; 
-						Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
-						// std::cout << Nbor_ix << ", ";				
-
-						// compute forces between cell and neighbour 1
-						computeForces_dissipative(cell, ll[Nbor_ix]);
-
-						// neighbour 2
-						Nbor_indx = (indx + 1)% Ncelx; 
-						Nbor_indy = (indy + 1)% Ncely; 
-						Nbor_indz = indz; 
-						Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
-						// std::cout << Nbor_ix << ", ";				
-
-						// compute forces between cell and neighbour 2
-						computeForces_dissipative(cell, ll[Nbor_ix]);
-
-						// neighbour 3
-						Nbor_indx = indx; 
-						Nbor_indy = (indy + 1)% Ncely; 
-						Nbor_indz = indz; 
-						Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
-						// std::cout << Nbor_ix << ", ";				
-
-						// compute forces between cell and neighbour 3
-						computeForces_dissipative(cell,ll[Nbor_ix]);
-
-						// neighbour 4
-						// Nbor_indx = (indx - 1)% Ncelx; 
-						Nbor_indx = MOD(indx-1, Ncelx);
-						Nbor_indy = (indy + 1)% Ncely; 
-						Nbor_indz = indz; 
-						Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
-						// std::cout << Nbor_ix << ", ";				
-
-						// compute forces between cell and neighbour 4
-						computeForces_dissipative(cell, ll[Nbor_ix]);
-
-						// neighbour 5	
-						Nbor_indx = (indx + 1)% Ncelx; 
-						Nbor_indy = indy; 
-						Nbor_indz = MOD(indz - 1, Ncelz); 
-						Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
-						// std::cout << Nbor_ix << ", ";				
-
-						// compute forces between cell and neighbour 5
-						computeForces_dissipative(cell, ll[Nbor_ix]);
-
-						// neighbour 6
-						Nbor_indx = (indx + 1)% Ncelx; 
-						Nbor_indy = (indy + 1)% Ncely; 
-						Nbor_indz = MOD(indz - 1, Ncelz); 
-						Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
-						// std::cout << Nbor_ix << ", ";				
-
-						// compute forces between cell and neighbour 6
-						computeForces_dissipative(cell, ll[Nbor_ix]);
-
-						// neighbour 7
-						Nbor_indx = indx; 
-						Nbor_indy = (indy + 1)% Ncely; 
-						Nbor_indz = MOD(indz - 1, Ncelz); 
-						Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
-						// std::cout << Nbor_ix << ", ";				
-
-						// compute forces between cell and neighbour 7
-						computeForces_dissipative(cell, ll[Nbor_ix]);
-
-						// neighbour 8
-						Nbor_indx = MOD(indx - 1, Ncelx); 
-						Nbor_indy = (indy + 1)% Ncely; 
-						Nbor_indz = MOD(indz - 1, Ncelz); 
-						Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
-						// std::cout << Nbor_ix << ", ";				
-
-						// compute forces between cell and neighbour 8
-						computeForces_dissipative(cell, ll[Nbor_ix]);
-
-						// neihgbour 9
-						Nbor_indx = (indx + 1)% Ncelx; 
-						Nbor_indy = indy; 
-						Nbor_indz = (indz + 1)% Ncelz; 
-						Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
-						// std::cout << Nbor_ix << ", ";				
-
-						// compute forces between cell and neighbour 9
-						computeForces_dissipative(cell, ll[Nbor_ix]);
-
-						// neighbour 10
-						Nbor_indx = (indx + 1)% Ncelx; 
-						Nbor_indy = (indy + 1)% Ncely; 
-						Nbor_indz = (indz + 1)% Ncelz; 
-						Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
-						// std::cout << Nbor_ix << ", ";				
-
-						// compute forces between cell and neighbour 10
-						computeForces_dissipative(cell, ll[Nbor_ix]);
-
-						// neighbour 11
-						Nbor_indx = indx; 
-						Nbor_indy = (indy + 1)% Ncely; 
-						Nbor_indz = (indz + 1)% Ncelz; 
-						Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
-						// std::cout << Nbor_ix << ", ";				
-
-						// compute forces between cell and neighbour 11
-						computeForces_dissipative(cell, ll[Nbor_ix]);
-
-						// neighbour 12
-						Nbor_indx = MOD(indx - 1, Ncelx); 
-						Nbor_indy = (indy + 1)% Ncely; 
-						Nbor_indz = (indz + 1)% Ncelz; 
-						Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
-						// std::cout << Nbor_ix << ", ";				
-
-						// compute forces between cell and neighbour 12
-						computeForces_dissipative(cell, ll[Nbor_ix]);
-
-						// neighbour 13
-						Nbor_indx = indx; 
-						Nbor_indy = indy; 
-						Nbor_indz = (indz + 1)% Ncelz; 
-						Nbor_ix = Ncelx*(Ncelx*Nbor_indz + Nbor_indy) + Nbor_indx + 1 - 1;
-						// std::cout << Nbor_ix << ", ";				
-
-						// compute forces between cell and neighbour 13
-						computeForces_dissipative(cell, ll[Nbor_ix]);
-
-						// std::cout << std::endl;	
-					}
-		}
-
-		void computeForces_dissipative(Cell& cell1, Cell& cell2) {
-			for (Particle* p : cell1)
-				for (Particle* q : cell2)
-					computeForce_dissipative(p,q);
-		}// computeForces_dissipative() -- between 2 cells	
-
-		void computeForces_dissipative(Cell& cell) {
-			for (auto p = cell.begin();  p!=cell.end(); ++p)
-				for (auto q = p+1;  q!=cell.end(); ++q)
-					computeForce_dissipative(*p,*q);
-		}// computeForces_dissipative() -- entire cell	
-
-		void computeForce_dissipative(Particle *p, Particle *q){
-
-			Vec3D Rij = p->r - q->r;	
-			Vec3D Vij = p->v - q->v;	
-			Vec3D temp;
-			temp.X = Vec3D::roundOff_x(Rij, box);
-			temp.Y = Vec3D::roundOff_y(Rij, box);
-			temp.Z = Vec3D::roundOff_z(Rij, box);
-			Vec3D minRij = Rij - temp*box;
-			double r2 = minRij.getLengthSquared();
-
-			if ( r2 <= rc2 ){
-
-				Vec3D fRij;
-				Vec3D fDij;
-				double dist = std::sqrt(r2);
-				Vec3D capRij = minRij/dist;
-				double rDotv = Vec3D::dot( capRij, Vij );
-				double uniRand = d(rd); 
-				double thetaij = std::sqrt(12.0)*(uniRand-0.5); 
-				double wR = ( 1.0 - dist);
-				double wR_pow_2 = wR*wR;
-
-				// calculate local density at particle position
-				// p->dens and q-> dens is calculated here to be used 
-				// for the next iteration -- first step gives rubbish
-				// weight function used -- Lucy weight function
-				/*
-				   double wR_pow_3 = wR*wR_pow_2;
-				   double wij = five_by_pi*(1.0 + 3.0*dist)*wR_pow_3;
-				   p->dens += wij; 
-				   q->dens += wij;
-				 */
-
-				/*
-				// Warren weight function
-				if (r2 <= rd2){
-				double inv_r3 = 1.0/(dist*dist*dist);
-				double wdij = (1.0 - dist/rd_cutoff);
-				double wdij_pow_2 = wdij*wdij; 
-				double wij = fifteen_by_twopi*wdij_pow_2;
-
-				p->dens += wij;
-				q->dens += wij;
-				}
-
-				// dissipative force
-				double magDiss = -1.0*gamma*wR_pow_2*rDotv;
-				fDij.X = magDiss*capRij.X;
-				fDij.Y = magDiss*capRij.Y;
-				fDij.Z = magDiss*capRij.Z;
-
-				// pairwise dissipative forces
-				p->fD += fDij;
-				q->fD += -1.0*fDij;
-				 */
-
-			}
-
-		}// computeForce_dissipative() -- end of dissipative+random force between 2 particles
-
 		// Periodic boundary conditions
 		void pbc(){
 			for (Particle& p : particles) {
 
-				Vec3D temp;
-				temp.X = Vec3D::roundOff_x(p.r, box);
-				temp.Y = Vec3D::roundOff_y(p.r, box);
-				temp.Z = Vec3D::roundOff_z(p.r, box);
-				p.r  = p.r - temp*box;				
+				tempVec.X = Vec3D::roundOff_x(p.r, box);
+				tempVec.Y = Vec3D::roundOff_y(p.r, box);
+				tempVec.Z = Vec3D::roundOff_z(p.r, box);
+				p.r.X = p.r.X - tempVec.X*boxEdge[x];
+				p.r.Y = p.r.Y - tempVec.Y*boxEdge[y];
+				p.r.Z = p.r.Z - tempVec.Z*boxEdge[z];
 			}
 		}// pbc()
 
-
-
-		/*
-		   void createGridList(){
-
-		//LL: remove old linked list
-		for (Cell& cell : ll) cell.resize(0); 
-		// ll.resize(0); // this strangely gave me a segmentation fault
-
-		//LL: re-initialise linked list
-		for (Particle& p : particles) {
-
-		double Lx = -1.0*(box/2.0) - p.r.getComponent(0);
-		double Ly = -1.0*(box/2.0) - p.r.getComponent(1);
-		double Lz = -1.0*(box/2.0) - p.r.getComponent(2);
-
-		unsigned int indx = -1.0*ceil(Lx/rn);
-		unsigned int indy = -1.0*ceil(Ly/rn);
-		unsigned int indz = -1.0*ceil(Lz/rn);
-
-		unsigned int ix = Ncelx*(Ncelx*indz + indy) + indx + 1 - 1;
-		// std::cout << "position: " << std::setw(10) << p.r << ", indices: "<< indx << ", " << indy << ", " <<indz << " and cell number: " << ix <<std::endl;
-		ll[ix].push_back(&p);
-		// std::cout << "successfully done for cell number: " << ix << std::endl; 
-		}
-		}
-		 */
 
 		// Structure function g(r) calculation
 		void grCalc(){
@@ -1525,13 +984,14 @@ class DPD {
 
 		void computeRho(Particle* p, Particle* q) {
 
-			Vec3D Rij = p->r - q->r;	
-			Vec3D temp;
-			temp.X = Vec3D::roundOff_x(Rij, box);
-			temp.Y = Vec3D::roundOff_y(Rij, box);
-			temp.Z = Vec3D::roundOff_z(Rij, box);
-			Vec3D minRij = Rij - temp*box;
-			double r2 = minRij.getLengthSquared();
+			Rij = p->r - q->r;	
+			tempVec.X = Vec3D::roundOff_x(Rij, box);
+			tempVec.Y = Vec3D::roundOff_y(Rij, box);
+			tempVec.Z = Vec3D::roundOff_z(Rij, box);
+			minRij.X = Rij.X - tempVec.X*boxEdge[x];
+			minRij.Y = Rij.Y - tempVec.Y*boxEdge[y];
+			minRij.Z = Rij.Z - tempVec.Z*boxEdge[z];
+			r2 = minRij.getLengthSquared();
 
 			if ( r2 <= rc2 ) {
 
@@ -1556,46 +1016,5 @@ class DPD {
 			}
 		}
 };
-
-
-
-/*
-// compute dissipative and random force -- Lowe thermostat
-void computeForce_dissipative(Particle* p, Particle* q) {
-
-// std::mt19937 gen(rd());
-
-Vec3D Rij = p->r - q->r;	
-Vec3D Vij = p->v - q->v;	
-Vec3D temp;
-temp.X = Vec3D::roundOff_x(Rij, box);
-temp.Y = Vec3D::roundOff_y(Rij, box);
-temp.Z = Vec3D::roundOff_z(Rij, box);
-Vec3D minRij = Rij - temp*box;
-double r2 = minRij.getLengthSquared();
-double dist = sqrt(r2);
-Vec3D capRij = minRij/dist;
-
-if ( r2 <= rc2 ) {
-
-Vec3D Deltaij;
-
-double zetaij = d(rd); 
-double term1 = zetaij*sqrt(2.0*kBT/p->m);
-double term2 = Vec3D::dot( Vij, capRij );
-double term3 = term1 - term2;
-
-Deltaij.X = 0.5*capRij.X*term3;
-Deltaij.Y = 0.5*capRij.Y*term3;
-Deltaij.Z = 0.5*capRij.Z*term3;
-
-// std::cout << Deltaij << std::endl;
-
-p->v += Deltaij;
-q->v += Deltaij*(-1.0); 
-}		
-
-}// computeForce() -- between 2 particles
- */
 
 #endif

@@ -1,5 +1,8 @@
 #!bash
 
+# OCD
+reset
+
 # remove object files
 rm -f *.txt
 rm -f *.o
