@@ -17,6 +17,8 @@ class DPD {
 		double radSqr;				// square of the radius of the initial droplet
 		double box;				// size of domain
 		double boxEdge[3];			// box length in x,y,z directions
+		double boxHalve[3];			// box length in x,y,z directions
+		double boxRecip[3];			// box length in x,y,z directions
 		double kBT;				// DPD fluid temperature
 		double sigma;				// DPD noise level
 		double gamma;				// DPD dissipative force parameter
@@ -42,8 +44,6 @@ class DPD {
 		double pot_en;				// system potential energy
 		double kin_en;				// system kinetic energy
 		double vsqrSum;				// square of the velocity
-		double pair_pot_en_rep;			// repulsive pair potential energy
-		double pair_pot_en_att;			// attractive pair potential energy
 		double pair_pot_en;			// total pair potential energy
 		double tot_en;				// system total energy
 		double pressure;			// pressure
@@ -75,8 +75,10 @@ class DPD {
 		int maxi[3];				// maximum in the x,y,z directions
 		double scale[3];			// scale factor
 		int MaxNrCells;				// maximum cells among x, y, z
-
-		// under completion
+		int mx;
+		int my;
+		int mz;
+		
 		int dm[13][3] = {	
 			{  0,  0,  1 },
 			{  1,  0, -1 },
@@ -95,6 +97,8 @@ class DPD {
 
 		std::vector< std::vector < std::vector< std::vector<int> > > > grid;	// define grid as vectors
 		std::vector< std::vector <int> > periodN;				// determining the periodic neighbours
+		std::vector< std::vector <double> > periodR;				// determining the actual distance
+		
 
 		// loop variables
 		int i;
@@ -121,9 +125,10 @@ class DPD {
 		Vec3D Rij;
 		Vec3D minRij;
 		Vec3D tempVec;
+		Vec3D dR;
 
 		// file writing parameters
-		unsigned int saveCount = 500;		// number of timestep between saves
+		unsigned int saveCount = 10000;		// number of timestep between saves
 
 		// parameters for post-processing
 		// g(r) -- structure function
@@ -192,9 +197,19 @@ class DPD {
 		void init(){
 
 			// boxEdges
-			boxEdge[x] = 3.0;
-			boxEdge[y] = 3.0;
-			boxEdge[z] = 3.0;
+			boxEdge[x] = 10.0;
+			boxEdge[y] = 10.0;
+			boxEdge[z] = 10.0;
+		
+			// Half box size
+			boxHalve[x] = boxEdge[x] / 2.0;
+			boxHalve[y] = boxEdge[y] / 2.0;
+			boxHalve[z] = boxEdge[z] / 2.0;
+			
+			// Reciprocal box size
+			boxRecip[x] = 1.0 / boxEdge[x];
+			boxRecip[y] = 1.0 / boxEdge[y];
+			boxRecip[z] = 1.0 / boxEdge[z];
 
 			// defining instance of random number class
 			// std::mt19937 gen(rd());
@@ -224,12 +239,12 @@ class DPD {
 						particles.push_back({0.2,1.0,{xind, yind, zind},{rand_gen_velx, rand_gen_vely, rand_gen_velz}});
 
 						// update zind
-						zind += 0.50;
+						zind += 1.00*rcutoff;
 
 					}// end of zind
-					yind += 1.00;
+					yind += 1.00*rcutoff;
 				}// end of yind			
-				xind += 1.00;
+				xind += 1.00*rcutoff;
 			}// end of xind
 
 			// Initialize the gR_nCount array
@@ -259,10 +274,10 @@ class DPD {
 			for ( i = 0 ; i < 3 ; i++ )
 			{
 				NrCells[i] = int( boxEdge[i] / rcutoff ); // cellnr runs from 0 to NrCells-1
-				scale[i] = NrCells[i] * (1.0 / boxEdge[i]);
+				scale[i] = NrCells[i] * boxRecip[i] ;
 				if ( NrCells[i] < 3 ) { std::cout << "*** NrCells[" << i << "] = " << NrCells[i] << std::endl ; abort(); }
 
-				std::cout << "NrCells[" << i << "] = " << NrCells[i] << std::endl;
+				// std::cout << "NrCells[" << i << "] = " << NrCells[i] << std::endl;
 			}
 
 			// initializing mini[3], maxi[3]
@@ -285,18 +300,25 @@ class DPD {
 			// defining periodN 
 			MaxNrCells = std::max( std::max( NrCells[x], NrCells[y] ), NrCells[z]);
 			periodN.resize( MaxNrCells + 2 );
-			for ( i = 0 ; i < MaxNrCells + 2 ; ++ i )
-				periodN[i].resize( 3 );
-			
+			periodR.resize( MaxNrCells + 2 );
+			for ( i = 0 ; i < MaxNrCells + 2 ; ++ i ){
+				periodN[ i ].resize( 3 );
+				periodR[ i ].resize( 3 );
+			}
+
 			for ( j = 0 ; j < 3 ; j++ )
 			{
 				periodN[0][j] = NrCells[j] - 1;          // left neighbour of leftmost cell
+				periodR[0][j] = -boxEdge[j];       // correction to add to particle j in rij = ri - rj
 				for ( i = 1 ;  i < NrCells[j] + 1 ; i++ )
-				{
+				{ 
 					periodN[i][j] = i - 1; // same cell
+					periodR[i][j] = 0.;
 				} // i
 				periodN[NrCells[j] + 1][j] = 0;          // right neigbour of rightmost cell
+				periodR[NrCells[j] + 1][j] = +boxEdge[j];
 			} // j
+
 		}
 
 		/******************************************************************************************************/
@@ -335,7 +357,7 @@ class DPD {
 			std::ofstream momStats("./data/mom_data.dat");	// pressure and temperature data
 
 			// force calculation for first step
-			createGridList();
+			// createGridList();
 
 			// dens_calculation();
 
@@ -351,33 +373,34 @@ class DPD {
 			while (step<stepMax) {
 
 				// force calculation
-				// createGridList();
+				createGridList();
 				forceCalc();
 
-				for (Particle&p : particles)
-					std::cout << "position: " << p.r << " and force: " << p.fC << std::endl;
+				// for (Particle&p : particles)
+				//	std::cout << "position: " << p.r << " and force: " << p.fC << std::endl;
 
-				exit(0);
 
 				// Integrate equations of motion
 				integrateEOS();
 
 				// Apply periodic boundary conditions
-				pbc();
+				#include "pbc.h"
 
 				// calculate density
-				for (Particle& p : particles) {
-					p.dens = 0.0;
-				}
+				/*
+				   for (Particle& p : particles) {
+				   p.dens = 0.0;
+				   }
 				// dens_calculate();
 				createGridList();
-				dens_calculation();
+				dens_calculation();*/
 
 				// total energy and g(r) sample calculation
 				// potential energy
-				for (Particle& p : particles) {
-					pot_en += k1*p.rhoBar + k2*pow(p.dens, 2.0); 	// sum of self-energies of all particles
-				}
+				/*
+				   for (Particle& p : particles) {
+				   pot_en += k1*p.rhoBar + k2*pow(p.dens, 2.0); 	// sum of self-energies of all particles
+				   }*/
 				tot_en = kin_en + pot_en;
 				if ( (step > gR_tStart) && (step % gR_tDelta == 0) ) grSample();
 
@@ -393,6 +416,8 @@ class DPD {
 
 				// for (Particle& p : particles)
 				//	std::cout << "Position: " << p.r << ", Density: " << p.dens <<", conservative force: " << p.fC << std::endl;
+
+				// std::cout << step << std::endl;
 
 			}//end time loop
 
@@ -457,31 +482,31 @@ class DPD {
 							// printf("i  %i %i %i %i %i \n",mix,miy,miz,ii,i);
 
 							// particle j in same cell as i
-							// Vec3D dR;
+							dR.setZero();
 							for ( jj = ii + 1 ; jj <= grid[mi[x]][mi[y]][mi[z]][0] ; ++jj )
 							{
 								j = grid[mi[x]][mi[y]][mi[z]][jj];
 								// std::cout << "j1 "<<  mi[x] << " " << mi[y] << " " << mi[z] << " " << jj << " " << j << std::endl;
 
-#include "pairforce.h"
+								#include "pairforce.h"
 
 							} // jj
 
 							// particle j in neighbour cell to i
 							for ( m = 0 ; m < 13 ; m++ )
 							{
-								mj[x]      = periodN[ mi[x] + dm[m][x] + 1 ][x];
-								mj[y]      = periodN[ mi[y] + dm[m][y] + 1 ][y];
-								mj[z]      = periodN[ mi[z] + dm[m][z] + 1 ][z];
-								// dR.X = periodR[ mi[x] + dm[m][x] + 1 ][x];
-								// dR.Y = periodR[ mi[y] + dm[m][y] + 1 ][y];
-								// dR.Z = periodR[ mi[z] + dm[m][z] + 1 ][z];
+								mj[x]	     = periodN[ mi[x] + dm[m][x] + 1 ][x];
+								mj[y]	     = periodN[ mi[y] + dm[m][y] + 1 ][y];
+								mj[z]	     = periodN[ mi[z] + dm[m][z] + 1 ][z];
+								dR.X	     = periodR[ mi[x] + dm[m][x] + 1 ][x];
+								dR.Y	     = periodR[ mi[y] + dm[m][y] + 1 ][y];
+								dR.Z	     = periodR[ mi[z] + dm[m][z] + 1 ][z];
 								for ( jj = 1 ; jj <= grid[mj[x]][mj[y]][mj[z]][0] ; ++jj )
 								{
 									j = grid[mj[x]][mj[y]][mj[z]][jj];
 									// std::cout << "j2 " << m << " " << mj[x] << " " << mj[y] << " " << mj[z] << " " << jj << " " << j << std::endl;
 
-#include "pairforce.h"
+								#include "pairforce.h"
 
 								} // jj
 							} // m
@@ -592,14 +617,16 @@ class DPD {
 
 		// Periodic boundary conditions
 		void pbc(){
-			for (Particle& p : particles) {
+			for ( i = 0; i < npart; ++i ) {
 
-				tempVec.X = Vec3D::roundOff_x(p.r, box);
-				tempVec.Y = Vec3D::roundOff_y(p.r, box);
-				tempVec.Z = Vec3D::roundOff_z(p.r, box);
-				p.r.X = p.r.X - tempVec.X*boxEdge[x];
-				p.r.Y = p.r.Y - tempVec.Y*boxEdge[y];
-				p.r.Z = p.r.Z - tempVec.Z*boxEdge[z];
+				/*tempVec.X = Vec3D::roundOff_x(p.r, box);
+				  tempVec.Y = Vec3D::roundOff_y(p.r, box);
+				  tempVec.Z = Vec3D::roundOff_z(p.r, box);
+				  p.r.X = p.r.X - tempVec.X*boxEdge[x];
+				  p.r.Y = p.r.Y - tempVec.Y*boxEdge[y];
+				  p.r.Z = p.r.Z - tempVec.Z*boxEdge[z];*/
+
+
 			}
 		}// pbc()
 
@@ -675,7 +702,7 @@ class DPD {
 		void paraWrite(std::ofstream& paraInfo){
 
 			paraInfo << "set temperature (kbT)  	" << "\t \t" << std::setw(20) << std::setprecision(15) << kBT << std::endl;
-			paraInfo << "droplet radius (rad)  	" << "\t \t" << std::setw(20) << std::setprecision(15) << sqrt(radSqr) << std::endl;
+			// paraInfo << "droplet radius (rad)  	" << "\t \t" << std::setw(20) << std::setprecision(15) << sqrt(radSqr) << std::endl;
 			paraInfo << "box length (box)   	" << "\t \t" << std::setw(20) << std::setprecision(15)<< box << std::endl;
 			paraInfo << "cutoff attr (rcutoff)	" << "\t \t" << std::setw(20) << std::setprecision(15) << rcutoff << std::endl;
 			paraInfo << "cutoff rep (rd_cutoff)	" << "\t \t" << std::setw(20) << std::setprecision(15) << rd_cutoff << std::endl;

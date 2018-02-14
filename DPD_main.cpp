@@ -26,7 +26,7 @@ int main () {
 	coll2p.dim = 3;				// 3D system
 
 	coll2p.tau = 0.745;			// rate of thermalizing
-	coll2p.dt = 1e-5;
+	coll2p.dt = 1e-3;
 	coll2p.step = 1;
 	coll2p.stepMax = 2e5;
 	coll2p.thermProb = coll2p.dt*coll2p.tau;// probability of thermalizing 	
