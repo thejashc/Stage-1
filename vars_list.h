@@ -44,7 +44,7 @@ double tempAv;				// temperature average
 int tempCount;				// counting number of samples
 
 double volume;				// system volume
-double npart;				// number of particles
+int    npart;				// number of particles
 double rho;				// density of system 
 
 // init function
@@ -114,8 +114,11 @@ double r2;
 double dist;
 double wC;
 double wCij;
-double wCij_pow_2;
+double wCij2;
 double wDij;
+double wDij2;
+double rho_temp;
+double rhoBartemp;
 double term1;
 double term2;
 double term3;
