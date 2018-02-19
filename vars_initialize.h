@@ -5,7 +5,7 @@ coll2p.kBT = 1.0;			// DPD fluid temperature
 // coll2p.aii = 00.0;			// DPD conservative force -- soft repulsive force
 // coll2p.bVdW = 0.016;			// DPD conservative force -- many body force
 // coll2p.aVdW = 1.9*coll2p.bVdW;	// DPD conservative force -- many body force
-coll2p.Aij = -50.0;			// DPD Warren conservative force -- attractive parameter
+coll2p.Aij = -40.0;			// DPD Warren conservative force -- attractive parameter
 coll2p.Bij = +40.0;			// DPD Warren conservative force -- repulsive parameter
 coll2p.kappa = 8e-4;			// DPD conservative force -- surface tension force
 coll2p.sigma = 1.0;			// DPD random force parameter
@@ -22,7 +22,6 @@ coll2p.tau = 0.745;			// rate of thermalizing
 coll2p.dt = 0.001;
 coll2p.step = 1;
 coll2p.stepMax = 2e5;
-coll2p.thermProb = coll2p.dt*coll2p.tau;// probability of thermalizing 	
 
 // Cell list parameters
 coll2p.rn = coll2p.box/(round(coll2p.box/coll2p.rcutoff)); // size of cell

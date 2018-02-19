@@ -10,6 +10,12 @@
 #include <ctime>
 #include <random> 
 
+// configuration of particles
+#define SPHERICAL_DROPLET 0
+#define CYLINDER_DROPLET 1
+#define CRYSTAL	0
+#define RESTART	0
+
 //declare DPD solver
 class DPD {
 	public:
@@ -34,7 +40,7 @@ class DPD {
 			tempAv = 0.0;
 			tempCount = 0;
 			volume = pow(box, 3.0);			// system volume
-			npart = 1.0*particles.size();		// number of particles
+			npart = particles.size();		// number of particles
 			rho = npart/volume;			// density of system 
 			dof = dim*(npart - 1);			// total degrees of freedom (momentum only, no energy conservation)
 			inv_sqrt_dt = 1.0/std::sqrt(dt);	// inverse of square root of the time step
@@ -49,10 +55,19 @@ class DPD {
 			std::ofstream enStats("./data/en_data.dat");	// initialize file stream for energy
 			std::ofstream eosStats("./data/eos_data.dat");	// pressure and temperature data
 			std::ofstream momStats("./data/mom_data.dat");	// pressure and temperature data
+			std::ofstream writeConfig;
 
 			/* // debug
-			 for (Particle& p : particles)
-				std::cout << "Position: " << p.r << ", Density: " << p.dens <<", conservative force: " << p.fC << std::endl;*/
+			   for (Particle& p : particles)
+			   std::cout << "Position: " << p.r << ", Density: " << p.dens <<", conservative force: " << p.fC << std::endl;*/
+
+			// force calculation
+			// createGridList();
+			// forceCalc();
+			// resetVar();
+
+			createGridList();
+			dens_calculation();
 
 			// writing the parameters to a file
 			std::ofstream paraInfo("parainfo.txt");
@@ -62,32 +77,28 @@ class DPD {
 			while (step<stepMax) {
 
 				// force calculation
-				createGridList();
 				forceCalc();
-		
-				 /* // debug 
-				 for (Particle&p : particles)
-					std::cout << "position: " << p.r << " and force: " << p.fC << std::endl;*/
 
+				/*// debug 
+				  for (Particle&p : particles)
+				  std::cout << "position: " << p.r << " and force: " << p.fC << std::endl;*/
 
-				// Integrate equations of motion
+				// Integrate equations of motion (including pbc)
 				integrateEOM();
 
 				// calculate density
-				/*
-				   for (Particle& p : particles) {
-				   p.dens = 0.0;
-				   }
+				for (Particle& p : particles) {
+					p.dens = 0.0;
+				}
 				// dens_calculate();
 				createGridList();
-				dens_calculation();*/
+				dens_calculation();
 
 				// total energy and g(r) sample calculation
 				// potential energy
-				/*
-				   for (Particle& p : particles) {
-				   pot_en += k1*p.rhoBar + k2*pow(p.dens, 2.0); 	// sum of self-energies of all particles
-				   }*/
+				for (Particle& p : particles) {
+					pot_en += k1*p.rhoBar + k2*pow(p.dens, 2.0); 	// sum of self-energies of all particles
+				}
 				tot_en = kin_en + pot_en;
 				if ( (step > gR_tStart) && (step % gR_tDelta == 0) ) grSample();
 
@@ -106,6 +117,11 @@ class DPD {
 
 			}//end time loop
 
+			// write position velocity stats 
+			writeConfig.open ( "./restart/posvelrestartfile.dat", std::ios::binary | std::ios::out );	// example binary file
+			finalposvelWrite( writeConfig );	
+			writeConfig.close();
+
 			// post-processing
 			grCalc();	 
 			velHistCalc();
@@ -122,12 +138,12 @@ class DPD {
 			boxEdge[x] = 10.0;
 			boxEdge[y] = 10.0;
 			boxEdge[z] = 10.0;
-		
+
 			// Half box size
 			boxHalve[x] = boxEdge[x] / 2.0;
 			boxHalve[y] = boxEdge[y] / 2.0;
 			boxHalve[z] = boxEdge[z] / 2.0;
-			
+
 			// Reciprocal box size
 			boxRecip[x] = 1.0 / boxEdge[x];
 			boxRecip[y] = 1.0 / boxEdge[y];
@@ -136,37 +152,15 @@ class DPD {
 			// defining instance of random number class
 			// std::mt19937 gen(rd());
 
-			// Set max and min dimensions of boxy
-			xind_min = 0.25;
-			yind_min = 0.25;
-			zind_min = 0.25;
-			xind_max = boxEdge[x];
-			yind_max = boxEdge[y];
-			zind_max = boxEdge[z];
-
-			xind = xind_min;
-			// Particle position intialization in a crystal structure 
-			while ( xind < xind_max){
-				yind = yind_min;
-				while( yind < yind_max){
-					zind = zind_min;
-					while( zind < zind_max){
-						// generate random velocities
-						rand_gen_velx = ((double) rand() / (RAND_MAX));
-						rand_gen_vely = ((double) rand() / (RAND_MAX));
-						rand_gen_velz = ((double) rand() / (RAND_MAX));
-
-						// initializing particle radius, mass, position and velocity
-						particles.push_back({0.2,1.0,{xind, yind, zind},{rand_gen_velx, rand_gen_vely, rand_gen_velz}});
-
-						// update zind
-						zind += 1.00*rcutoff;
-
-					}// end of zind
-					yind += 1.00*rcutoff;
-				}// end of yind			
-				xind += 1.00*rcutoff;
-			}// end of xind
+			#if SPHERICAL_DROPLET 
+				#include "sphDropInit.h"
+			#elif CYLINDER_DROPLET 
+				#include "cylDropInit.h"
+			#elif CRYSTAL
+				#include "crystalInit.h"
+			#elif RESTART 
+				#include "restartConfig.h"
+			#endif
 
 			// Initialize the gR_nCount array
 			for (i=0; i < gR_nElem ; ++i){
@@ -240,8 +234,53 @@ class DPD {
 				periodR[NrCells[j] + 1][j] = +boxEdge[j];
 			} // j
 
-		}
-		
+		}//init
+
+		//--------------------------------------- Density Calculation --------------------------------------//
+		void dens_calculation(){
+
+
+			for ( mi[x] = 0 ; mi[x] < NrCells[x] ; ++mi[x] )
+				for ( mi[y] = 0 ; mi[y] < NrCells[y] ; ++mi[y] )
+					for ( mi[z] = 0 ; mi[z] < NrCells[z] ; ++mi[z] )
+						for ( ii = 1 ; ii <= grid[mi[x]][mi[y]][mi[z]][0] ; ++ii ){
+							i = grid[mi[x]][mi[y]][mi[z]][ii];
+							// printf("i  %i %i %i %i %i \n",mix,miy,miz,ii,i);
+
+							// particle j in same cell as i
+							dR.setZero();
+							for ( jj = ii + 1 ; jj <= grid[mi[x]][mi[y]][mi[z]][0] ; ++jj )
+							{
+								j = grid[mi[x]][mi[y]][mi[z]][jj];
+								// std::cout << "j1 "<<  mi[x] << " " << mi[y] << " " << mi[z] << " " << jj << " " << j << std::endl;
+
+								#include "dens_calculate.h"
+
+							} // jj
+
+							// particle j in neighbour cell to i
+							for ( m = 0 ; m < 13 ; m++ )
+							{
+								mj[x]	     = periodN[ mi[x] + dm[m][x] + 1 ][x];
+								mj[y]	     = periodN[ mi[y] + dm[m][y] + 1 ][y];
+								mj[z]	     = periodN[ mi[z] + dm[m][z] + 1 ][z];
+								dR.X	     = periodR[ mi[x] + dm[m][x] + 1 ][x];
+								dR.Y	     = periodR[ mi[y] + dm[m][y] + 1 ][y];
+								dR.Z	     = periodR[ mi[z] + dm[m][z] + 1 ][z];
+								for ( jj = 1 ; jj <= grid[mj[x]][mj[y]][mj[z]][0] ; ++jj )
+								{
+									j = grid[mj[x]][mj[y]][mj[z]][jj];
+									// std::cout << "j2 " << m << " " << mj[x] << " " << mj[y] << " " << mj[z] << " " << jj << " " << j << std::endl;
+
+									#include "dens_calculate.h"
+
+								} // jj
+							} // m
+						} // ii
+
+
+		}// dens_calculation
+
 		//--------------------------------------- Grid List creation--------------------------------------//
 		void createGridList(){
 
@@ -315,7 +354,7 @@ class DPD {
 									j = grid[mj[x]][mj[y]][mj[z]][jj];
 									// std::cout << "j2 " << m << " " << mj[x] << " " << mj[y] << " " << mj[z] << " " << jj << " " << j << std::endl;
 
-								#include "pairforce.h"
+									#include "pairforce.h"
 
 								} // jj
 							} // m
@@ -353,7 +392,7 @@ class DPD {
 
 				// implement periodic boundary condition 
 				#include "pbc.h"
-				
+
 				// calculate the kinetic energy
 				kin_en += 0.5*p.m*(p.v.getLengthSquared());
 			}
@@ -445,6 +484,7 @@ class DPD {
 		void velHistCalc(){
 
 			std::ofstream velDistdata("./data/velDist_data.dat"); 
+			velDistdata << "velBin" << "\t" << "AvgTemp" << "\t" << "velHistX" << "\t" << "trapzAreaX" << "\t" << "velHistY" << "\t" << "trapzAreaY" << "\t" << "velHistZ[i]" << "\t" << "trapzAreaZ" << std::endl;	
 
 			trapzAreaX = 0.0;
 			trapzAreaY = 0.0;
@@ -591,38 +631,26 @@ class DPD {
 
 		}
 
-		void computeRho(Particle* p, Particle* q) {
+		//-------------------- Final velocity and positions ----------------------//
+		void finalposvelWrite( std::ofstream& writeConfig ){
 
-			Rij = p->r - q->r;	
-			tempVec.X = Vec3D::roundOff_x(Rij, box);
-			tempVec.Y = Vec3D::roundOff_y(Rij, box);
-			tempVec.Z = Vec3D::roundOff_z(Rij, box);
-			minRij.X = Rij.X - tempVec.X*boxEdge[x];
-			minRij.Y = Rij.Y - tempVec.Y*boxEdge[y];
-			minRij.Z = Rij.Z - tempVec.Z*boxEdge[z];
-			r2 = minRij.getLengthSquared();
+			writeConfig.write( reinterpret_cast< const char * >( &npart ), sizeof( npart ) );
 
-			if ( r2 <= rc2 ) {
-
-				double dist = std::sqrt(r2);
-				double wcij = (1.0 - dist/rcutoff);
-				double wcij_pow_2 = wcij*wcij;
-				double rhoBarTemp = fifteen_by_twopi_by_rc*wcij_pow_2;
-
-				p->rhoBar += rhoBarTemp;
-				q->rhoBar += rhoBarTemp;
-
-				if ( r2 <= rd2 ) {
-
-					// std::cout << "entered density calculation" << std::endl;
-					double wdij = (1.0 - dist/rd_cutoff);
-					double wdij_pow_2 = wdij*wdij; 
-					double wij = fifteen_by_twopi_by_rd*wdij_pow_2;
-
-					p->dens += wij;
-					q->dens += wij;
-				}
+			for (Particle& p : particles){
+				writeConfig.write( reinterpret_cast< const char * >( &p.r.X ), sizeof( p.r.X ) );
+				//writeConfig.write( &tab, sizeof( tab ) );
+				writeConfig.write( reinterpret_cast< const char * >( &p.r.Y ), sizeof( p.r.Y ) );
+				//writeConfig.write( &tab, sizeof( tab ) );
+				writeConfig.write( reinterpret_cast< const char * >( &p.r.Z ), sizeof( p.r.Z ) );
+				//writeConfig.write( &tab, sizeof( tab ) );
+				writeConfig.write( reinterpret_cast< const char * >( &p.w.X ), sizeof( p.w.X ) );
+				//writeConfig.write( &tab, sizeof( tab ) );
+				writeConfig.write( reinterpret_cast< const char * >( &p.w.Y ), sizeof( p.w.Y ) );
+				//writeConfig.write( &tab, sizeof( tab ) );
+				writeConfig.write( reinterpret_cast< const char * >( &p.w.Z ), sizeof( p.w.Z ) );
+				//myFile.write( &newline, sizeof( newline ) );
 			}
+
 		}
 };
 

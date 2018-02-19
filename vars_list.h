@@ -2,7 +2,6 @@
 std::vector<Particle> particles;     	// vector of particles
 
 // global parameters
-double radSqr;				// square of the radius of the initial droplet
 double box;				// size of domain
 double boxEdge[3];			// box length in x,y,z directions
 double boxHalve[3];			// box length in x,y,z directions
@@ -10,9 +9,6 @@ double boxRecip[3];			// box length in x,y,z directions
 double kBT;				// DPD fluid temperature
 double sigma;				// DPD noise level
 double gamma;				// DPD dissipative force parameter
-double aii;				// DPD conservative force parameter -- soft pair potential
-// double aVdW;				// DPD conservative force -- many body force (attractive force)
-// double bVdW;	                        // DPD conservative force -- many body force (excluded volume)
 double Aij;				// DPD Warren conservative force -- attractive parameter
 double Bij;                             // DPD Warren conservative force -- repulsive parameter
 double kappa;				// DPD conservative force -- surface tension force
@@ -36,7 +32,6 @@ double pair_pot_en;			// total pair potential energy
 double tot_en;				// system total energy
 double pressure;			// pressure
 double idealComp;			// ideal component of pressure
-double thermProb;			// probability of thermostatting
 double tau;				// rate of thermalizing 
 double temp;				// temperature
 double tempSum;				// temperature sum
@@ -61,6 +56,16 @@ double zind;
 double rand_gen_velx;
 double rand_gen_vely;
 double rand_gen_velz;
+
+// geometry initialization
+#if SPHERICAL_DROPLET 
+	double dropBox;
+#elif CYLINDER_DROPLET 
+	double cylCenterX;
+	double cylCenterY;
+	double cylHeight;
+	double cylRad;	
+#endif
 
 // Cell list variables
 double rn;				// size of a cell in x, y, z directions
@@ -134,7 +139,7 @@ Vec3D tempVec;
 Vec3D dR;
 
 // file writing parameters
-unsigned int saveCount = 10000;		// number of timestep between saves
+unsigned int saveCount = 500;		// number of timestep between saves
 
 // parameters for post-processing
 // g(r) -- structure function
