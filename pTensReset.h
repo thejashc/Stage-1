@@ -1,0 +1,9 @@
+pTensor[0][0] = 0.0;
+pTensor[0][1] = 0.0;
+pTensor[0][2] = 0.0;
+pTensor[1][0] = 0.0;
+pTensor[1][1] = 0.0;
+pTensor[1][2] = 0.0;
+pTensor[2][0] = 0.0;
+pTensor[2][1] = 0.0;
+pTensor[2][2] = 0.0;

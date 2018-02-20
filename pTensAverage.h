@@ -1,0 +1,9 @@
+pTensor[0][0] /= counter;
+pTensor[0][1] /= counter;
+pTensor[0][2] /= counter;
+pTensor[1][0] /= counter;
+pTensor[1][1] /= counter;
+pTensor[1][2] /= counter;
+pTensor[2][0] /= counter;
+pTensor[2][1] /= counter;
+pTensor[2][2] /= counter;
