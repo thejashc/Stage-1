@@ -2,7 +2,6 @@
 std::vector<Particle> particles;     	// vector of particles
 
 // global parameters
-double box;				// size of domain
 double boxEdge[3];			// box length in x,y,z directions
 double boxHalve[3];			// box length in x,y,z directions
 double boxRecip[3];			// box length in x,y,z directions
@@ -27,12 +26,17 @@ int step;				// counter for number of steps
 double stepMax;				// total number of steps
 double pot_en;				// system potential energy
 double kin_en;				// system kinetic energy
-double vsqrSum;				// square of the velocity
+double vx2;				// square of the x-velocity
+double vy2;				// square of the y-velocity
+double vz2;				// square of the z-velocity
+double v2;				// square of the velocity vector
 double pair_pot_en;			// total pair potential energy
 double tot_en;				// system total energy
 double pressure;			// pressure
+double pIdeal[3][3];			// Ideal component of pressure tensor
+double pNonIdeal[3][3];			// Non Ideal component of pressure tensor
+double pTensor[3][3];			// Virial component of pressure tensor
 double idealComp;			// ideal component of pressure
-double tau;				// rate of thermalizing 
 double temp;				// temperature
 double tempSum;				// temperature sum
 double tempAv;				// temperature average
@@ -65,6 +69,8 @@ double rand_gen_velz;
 	double cylCenterY;
 	double cylHeight;
 	double cylRad;	
+#elif PLANAR_SLAB
+	double slabWidth;
 #endif
 
 // Cell list variables
@@ -139,7 +145,7 @@ Vec3D tempVec;
 Vec3D dR;
 
 // file writing parameters
-unsigned int saveCount = 500;		// number of timestep between saves
+unsigned int saveCount = 10000;		// number of timestep between saves
 
 // parameters for post-processing
 // g(r) -- structure function
@@ -159,6 +165,23 @@ double ro;	// outer radius
 double rad;	// mean radius
 int ig;		// index for r
 
+// rhoZ calculation-- liquid density calculation
+#if PLANAR_SLAB
+double rhoZ_Zmin;		// minimum Z for rhoZ
+double rhoZ_Zdelta;		// thickness of differential slab 
+double rhoZ_Zmax;		// maximum Z for rhoZ
+double vol;			// volume of differential slab
+
+int rhoZ_bins;			// number of bins for rhoZ
+
+std::vector<double> rhoZ;// keeps count of rhoZ at given Z
+
+int iRhoZ;			// index -- bookkeeping
+
+double Zpos;
+
+char filename[40];		// filename for data writing
+#endif
 // momentum calculation
 long double momX;
 long double momY;
