@@ -7,7 +7,7 @@ int main () {
 	//define an instance of the DPD solver
 	DPD coll2p;	
 
-	#include "vars_initialize.h"
+	// #include "vars_initialize.h"
 	
 	// monitor total run time
 	tstart = time(0);
