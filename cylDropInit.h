@@ -28,7 +28,7 @@ while ( zind < zind_max ){
 
 				// initializing particle radius, mass, position and velocity
 				// if ( xind*xind + yind*yind + zind*zind <= radSqr )
-				particles.push_back({0.2,1.0,{xind, yind, zind},{rand_gen_velx, rand_gen_vely, rand_gen_velz}});
+				particles.push_back({1.0,1.0,{xind, yind, zind},{rand_gen_velx, rand_gen_vely, rand_gen_velz}});
 
 			}// inside cylinder
 			yind += 0.63*rcutoff;
