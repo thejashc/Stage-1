@@ -32,7 +32,6 @@ plt.grid()
 plt.savefig( './plots/energy.eps', format='eps', dpi=1200)
 #plt.show()
 
-
 #------ MOMENTUM STATISTICS --------#
 data = np.loadtxt( './data/mom_data.dat' )
 
@@ -51,6 +50,57 @@ plt.ylim( (-1e-10,1e-10) )
 plt.grid()
 plt.legend()
 plt.savefig( './plots/momentum.eps', format='eps', dpi=1200)
+
+#------------- TEMPERATURE AND PRESSURE -------------#
+data = np.loadtxt( './data/eos_data.dat' )
+
+time 	= data[:,0]
+Temp	= data[:,1]
+Pressure= data[:,2]
+
+figEnv()
+plt.plot( Temp, c='r', label='<T>' )
+plt.xlabel( 'time' )
+plt.ylabel( 'T' )
+plt.grid()
+plt.legend()
+plt.savefig( './plots/temp.eps', format='eps', dpi=1200 )
+
+figEnv()
+plt.plot( Pressure, c='b', label='<P>' )
+plt.xlabel( 'time' )
+plt.ylabel( 'P' )
+plt.grid()
+plt.legend()
+plt.savefig( './plots/pressure.eps', format='eps', dpi=1200 )
+
+#------------- DENSITY PROFILE-------------#
+filelist=[]
+
+for i in range(51,162):
+    filelist.append("./data/rhoZ_%s.dat" %(i * 10000) )
+
+# setting up matrices for averaging
+data = np.loadtxt( "./data/rhoZ_10000.dat" )
+z 		= data[:,0]
+vol		= data[:,1]
+m	 	= len(z) 
+rhoZCount 	= np.zeros(m)
+counter 	= np.zeros(m)
+
+figEnv()
+for fname in filelist:
+	data = np.loadtxt( fname )
+	rhoZCount 	= rhoZCount + data[:,2]
+	counter 	= counter + data[:,3]
+	
+rhoZ 		= ( rhoZCount ) / ( counter * vol )
+plt.plot( z, rhoZ )
+plt.xlabel( r"$ z $" )
+plt.ylabel( r"$ \rho $" )
+plt.grid()
+plt.legend()
+plt.savefig( './plots/rhoZ_vs_Z.eps', format='eps', dpi=1200 )
 
 #------- VELOCITY DISTRIBUTION ------#
 data = np.loadtxt( './data/velDist_data.dat' )
@@ -111,26 +161,3 @@ plt.ylabel( 'g(r)' )
 plt.grid()
 plt.legend()
 plt.savefig( './plots/gr.eps', format='eps', dpi=1200)
-
-#------------- TEMPERATURE AND PRESSURE -------------#
-data = np.loadtxt( './data/eos_data.dat' )
-
-time 	= data[:,0]
-Temp	= data[:,1]
-Pressure= data[:,2]
-
-figEnv()
-plt.plot( Temp, c='r', label='<T>' )
-plt.xlabel( 'time' )
-plt.ylabel( 'T' )
-plt.grid()
-plt.legend()
-plt.savefig( './plots/temp.eps', format='eps', dpi=1200 )
-
-figEnv()
-plt.plot( Pressure, c='b', label='<P>' )
-plt.xlabel( 'time' )
-plt.ylabel( 'P' )
-plt.grid()
-plt.legend()
-plt.savefig( './plots/pressure.eps', format='eps', dpi=1200 )
