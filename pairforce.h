@@ -78,5 +78,16 @@ if ( r2 <= rc2 ) {
 	// double nonIdealcomp = Vec3D::dot(minRij, fCij)*(1.0/(2.0*dim*volume));
 	// pressure += nonIdealcomp;
 
+	pNonIdeal[0][0] = Rij.X * fCij.X;
+	pNonIdeal[0][1] = Rij.X * fCij.Y;
+	pNonIdeal[0][2] = Rij.X * fCij.Z;
+
+	pNonIdeal[1][0] = Rij.Y * fCij.X;
+	pNonIdeal[1][1] = Rij.Y * fCij.Y;
+	pNonIdeal[1][2] = Rij.Y * fCij.Z;
+
+	pNonIdeal[2][0] = Rij.Z * fCij.X;
+	pNonIdeal[2][1] = Rij.Z * fCij.Y;
+	pNonIdeal[2][2] = Rij.Z * fCij.Z;
 
 } // rcutoff
