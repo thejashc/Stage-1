@@ -12,7 +12,8 @@
 
 // configuration of particles
 #define SPHERICAL_DROPLET 0
-#define CYLINDER_DROPLET 1
+#define CYLINDER_DROPLET 0
+#define PLANAR_SLAB 1
 #define CRYSTAL	0
 #define RESTART	0
 
@@ -29,48 +30,37 @@ class DPD {
 
 			// initialize position, velocity, hoc, ll
 			init();
-			ll.resize(Ncelx*Ncelx*Ncelx); 
-
 			vtkFileWritePosVel();
 
 			// parameters declaration
-			vsqrSum = 0.0;
 			temp = 0.0;
 			tempSum = 0.0;
 			tempAv = 0.0;
 			tempCount = 0;
-			volume = pow(box, 3.0);			// system volume
-			npart = particles.size();		// number of particles
-			rho = npart/volume;			// density of system 
-			dof = dim*(npart - 1);			// total degrees of freedom (momentum only, no energy conservation)
-			inv_sqrt_dt = 1.0/std::sqrt(dt);	// inverse of square root of the time step
-			half_dt = 0.5*dt;			// 0.5*dt to be used in the integrateEOM()
-			half_dt_sqr = half_dt*dt;		// 0.5*dt*dt to be used in the integrateEOM()
-			rd4 = pow(rd_cutoff, 4.0);		// fourth power of rd_cutoff
-			piThirty = M_PI/30.0;			// Pi/30.0 
-			k1 = piThirty*Aij;			// constant k1
-			k2 = piThirty*rd4*Bij;			// constant k2
+			volume = boxEdge[x] * boxEdge[y] * boxEdge[z];		// system volume
+			npart = particles.size();				// number of particles
+			rho = npart/volume;					// density of system 
+			dof = dim*(npart - 1);					// total degrees of freedom (momentum only, no energy conservation)
+			inv_sqrt_dt = 1.0/std::sqrt(dt);			// inverse of square root of the time step
+			half_dt = 0.5*dt;					// 0.5*dt to be used in the integrateEOM()
+			half_dt_sqr = half_dt*dt;				// 0.5*dt*dt to be used in the integrateEOM()
+			rd4 = pow(rd_cutoff, 4.0);				// fourth power of rd_cutoff
+			piThirty = M_PI/30.0;					// Pi/30.0 
+			k1 = piThirty*Aij;					// constant k1
+			k2 = piThirty*rd4*Bij;					// constant k2
 
 			counter = 0;					// initialize time, counter for file writing
-			std::ofstream enStats("./data/en_data.dat");	// initialize file stream for energy
-			std::ofstream eosStats("./data/eos_data.dat");	// pressure and temperature data
-			std::ofstream momStats("./data/mom_data.dat");	// pressure and temperature data
+			std::ofstream enStats 	( "./data/en_data.dat"	);	// Kinetic, Potential and total energy
+			std::ofstream eosStats	( "./data/eos_data.dat"	);	// Mean Pressure and temperature data
+			std::ofstream pTensStats( "./data/pTens.dat"	);	// Pressure tensor data
+			std::ofstream momStats	( "./data/mom_data.dat"	);	// pressure and temperature data
 			std::ofstream writeConfig;
-
-			/* // debug
-			   for (Particle& p : particles)
-			   std::cout << "Position: " << p.r << ", Density: " << p.dens <<", conservative force: " << p.fC << std::endl;*/
-
-			// force calculation
-			// createGridList();
-			// forceCalc();
-			// resetVar();
 
 			createGridList();
 			dens_calculation();
 
 			// writing the parameters to a file
-			std::ofstream paraInfo("parainfo.txt");
+			std::ofstream paraInfo( "parainfo.txt" );
 			paraWrite(paraInfo);
 			paraInfo.close();
 
@@ -103,7 +93,7 @@ class DPD {
 				if ( (step > gR_tStart) && (step % gR_tDelta == 0) ) grSample();
 
 				// filewriting 
-				fileWrite(enStats, eosStats, momStats);
+				fileWrite(enStats, eosStats, momStats, pTensStats);
 				// std::cout << "filewrite done" << std::endl;
 
 				// reset variables to zero
@@ -134,26 +124,16 @@ class DPD {
 		//--------------------------------------- INITIALIZATION ROUTINE --------------------------------------//
 		void init(){
 
-			// boxEdges
-			boxEdge[x] = 10.0;
-			boxEdge[y] = 10.0;
-			boxEdge[z] = 10.0;
 
-			// Half box size
-			boxHalve[x] = boxEdge[x] / 2.0;
-			boxHalve[y] = boxEdge[y] / 2.0;
-			boxHalve[z] = boxEdge[z] / 2.0;
-
-			// Reciprocal box size
-			boxRecip[x] = 1.0 / boxEdge[x];
-			boxRecip[y] = 1.0 / boxEdge[y];
-			boxRecip[z] = 1.0 / boxEdge[z];
+			#include "paramIn.h"
 
 			// defining instance of random number class
 			// std::mt19937 gen(rd());
 
 			#if SPHERICAL_DROPLET 
 				#include "sphDropInit.h"
+			#elif PLANAR_SLAB
+				#include "planarSlabInit.h"
 			#elif CYLINDER_DROPLET 
 				#include "cylDropInit.h"
 			#elif CRYSTAL
@@ -173,6 +153,13 @@ class DPD {
 				velHistY.push_back(0);
 				velHistZ.push_back(0);
 			}	
+
+			#if PLANAR_SLAB
+				// Initialize the gR_nCount array
+				for ( i=0; i < rhoZ_bins ; ++i ){
+					rhoZ.push_back(0.0);
+				}	
+			#endif
 
 			Vec3D velAvg={0.0, 0.0, 0.0};
 			// Remove excess velocity
@@ -234,6 +221,38 @@ class DPD {
 				periodR[NrCells[j] + 1][j] = +boxEdge[j];
 			} // j
 
+		
+			// Initialize Ideal, Non-Ideal and complete Pressure tensor
+			pIdeal[0][0] = 0.0;
+			pIdeal[0][1] = 0.0;
+			pIdeal[0][2] = 0.0;
+			pIdeal[1][0] = 0.0;
+			pIdeal[1][1] = 0.0;
+			pIdeal[1][2] = 0.0;
+			pIdeal[2][0] = 0.0;
+			pIdeal[2][1] = 0.0;
+			pIdeal[2][2] = 0.0;
+
+			pNonIdeal[0][0] = 0.0;
+			pNonIdeal[0][1] = 0.0;
+			pNonIdeal[0][2] = 0.0;
+			pNonIdeal[1][0] = 0.0;
+			pNonIdeal[1][1] = 0.0;
+			pNonIdeal[1][2] = 0.0;
+			pNonIdeal[2][0] = 0.0;
+			pNonIdeal[2][1] = 0.0;
+			pNonIdeal[2][2] = 0.0;
+
+			pTensor[0][0] = 0.0;
+			pTensor[0][1] = 0.0;
+			pTensor[0][2] = 0.0;
+			pTensor[1][0] = 0.0;
+			pTensor[1][1] = 0.0;
+			pTensor[1][2] = 0.0;
+			pTensor[2][0] = 0.0;
+			pTensor[2][1] = 0.0;
+			pTensor[2][2] = 0.0;
+
 		}//init
 
 		//--------------------------------------- Density Calculation --------------------------------------//
@@ -276,6 +295,7 @@ class DPD {
 
 								} // jj
 							} // m
+
 						} // ii
 
 
@@ -302,7 +322,8 @@ class DPD {
 						|| mi[y] < mini[y] || mi[y] > maxi[y] 
 						|| mi[z] < mini[z] || mi[z] > maxi[z] )
 				{ 
-					// std::cout << "*** particle " << i << " outside box" << std::endl;
+					std::cout << "*** particle " << i << " outside box in step: " << step << std::endl;
+					std::cout << "*** position: " << particles[i].r << std::endl;
 					std::cout << mini[x] << " < " << mi[x] << " < " << maxi[x] << std::endl;
 					std::cout << mini[y] << " < " << mi[y] << " < " << maxi[y] << std::endl;
 					std::cout << mini[z] << " < " << mi[z] << " < " << maxi[z] << std::endl;
@@ -374,32 +395,49 @@ class DPD {
 				p.r += p.w*dt;				
 
 				// calculate velocity (integral time step)
-				p.v = 0.5*(w_old + p.w);
+				p.v = 0.5*( w_old + p.w );
+
+				// implement periodic boundary condition 
+				#include "pbc.h"
 
 				// distribute velocities into velocity bins
 				if ( (step > velHist_tStart) && (step % velHist_tDelta == 0) ) {
-					ivelX = ceil((velHist_velMax - p.v.X)/velHist_velDelta); 
-					ivelY = ceil((velHist_velMax - p.v.Y)/velHist_velDelta); 
-					ivelZ = ceil((velHist_velMax - p.v.Z)/velHist_velDelta); 
+					ivelX = ceil( ( velHist_velMax - p.v.X )/ velHist_velDelta ); 
+					ivelY = ceil( ( velHist_velMax - p.v.Y )/ velHist_velDelta ); 
+					ivelZ = ceil( ( velHist_velMax - p.v.Z )/ velHist_velDelta ); 
 
 					velHistX[ivelX] += 1;
 					velHistY[ivelY] += 1;
 					velHistZ[ivelZ] += 1;
 
-					tempSum += temp;
-					tempCount += 1;
 				}
 
-				// implement periodic boundary condition 
-				#include "pbc.h"
+				
+				#if PLANAR_SLAB
+					// calculate density profile
+					iRhoZ =   ceil ( ( p.r.getComponent(z) - rhoZ_Zmin ) / rhoZ_Zdelta ) - 1;		
+					
+					if ( iRhoZ < 0 || iRhoZ > rhoZ_bins  ) { std::cout << " planar slab particle out of bounds" << std::endl; abort(); } 						
+
+					rhoZ[ iRhoZ ] += 1;
+				#endif
 
 				// calculate the kinetic energy
-				kin_en += 0.5*p.m*(p.v.getLengthSquared());
+				vx2 += p.v.X * p.v.X;
+				vy2 += p.v.Y * p.v.Y;
+				vz2 += p.v.Z * p.v.Z;
 			}
-			// ideal component of pressure
-			temp = 2*kin_en/dof;
-			idealComp = rho*1.0*temp; 
-			pressure += idealComp;
+		
+			// temperature calculation	
+			v2 = ( vx2 + vy2 + vz2 ) / ( 3. * npart );
+			kin_en = 0.5 * v2;		// unit mass assumption
+			temp = 2.*kin_en/dof;
+
+			tempSum += temp;
+			tempCount += 1;
+
+			// calculation of  pressure tensor 
+			#include "pTensCalc.h"
 		}
 		//--------------------------------------- Resetting variables--------------------------------------//
 		void resetVar(){
@@ -407,7 +445,10 @@ class DPD {
 			pot_en = 0.0;
 			kin_en = 0.0;
 			tot_en = 0.0;
-			vsqrSum = 0.0;
+			vx2 = 0.0;
+			vy2 = 0.0;
+			vz2 = 0.0;
+			v2 = 0.0;
 			pressure = 0.0;
 			momX = 0.0;
 			momY = 0.0;
@@ -421,6 +462,27 @@ class DPD {
 				p.fR.setZero();
 				p.fD.setZero();
 			}
+
+			// reset ideal and non-ideal component of pressure tensor
+			pIdeal[0][0] = 0.0;
+			pIdeal[0][1] = 0.0;
+			pIdeal[0][2] = 0.0;
+			pIdeal[1][0] = 0.0;
+			pIdeal[1][1] = 0.0;
+			pIdeal[1][2] = 0.0;
+			pIdeal[2][0] = 0.0;
+			pIdeal[2][1] = 0.0;
+			pIdeal[2][2] = 0.0;
+
+			pNonIdeal[0][0] = 0.0;
+			pNonIdeal[0][1] = 0.0;
+			pNonIdeal[0][2] = 0.0;
+			pNonIdeal[1][0] = 0.0;
+			pNonIdeal[1][1] = 0.0;
+			pNonIdeal[1][2] = 0.0;
+			pNonIdeal[2][0] = 0.0;
+			pNonIdeal[2][1] = 0.0;
+			pNonIdeal[2][2] = 0.0;
 		}
 
 		//--------------------------------------- g(r) sampling --------------------------------------//
@@ -431,16 +493,16 @@ class DPD {
 				for (auto q = p+1;  q!=particles.end(); ++q) {
 
 					Rij = p->r - q->r;	
-					tempVec.X = Vec3D::roundOff_x(Rij, box);
-					tempVec.Y = Vec3D::roundOff_y(Rij, box);
-					tempVec.Z = Vec3D::roundOff_z(Rij, box);
+					tempVec.X = Vec3D::roundOff_x( Rij, boxEdge[x] );
+					tempVec.Y = Vec3D::roundOff_y( Rij, boxEdge[y] );
+					tempVec.Z = Vec3D::roundOff_z( Rij, boxEdge[z] );
 					minRij.X = Rij.X - tempVec.X*boxEdge[x];
 					minRij.Y = Rij.Y - tempVec.Y*boxEdge[y];
 					minRij.Z = Rij.Z - tempVec.Z*boxEdge[z];
 					r2 = minRij.getLengthSquared();
 					dist = std::sqrt(r2);
 
-					if ( dist < box/2.0 ) { 
+					if ( dist < boxEdge[x] / 2.0 ) { 
 						ig = ceil(dist/gR_radDelta)-1;
 
 						if ( (ig < 0) || (ig >= gR_nElem)) {std::cout << " out of bounds " << std::endl;} 
@@ -523,27 +585,38 @@ class DPD {
 		//--------------------------------------- Parameter file writing--------------------------------------//
 		void paraWrite(std::ofstream& paraInfo){
 
-			paraInfo << "set temperature (kbT)  	" << "\t \t" << std::setw(20) << std::setprecision(15) << kBT << std::endl;
-			// paraInfo << "droplet radius (rad)  	" << "\t \t" << std::setw(20) << std::setprecision(15) << sqrt(radSqr) << std::endl;
-			paraInfo << "box length (box)   	" << "\t \t" << std::setw(20) << std::setprecision(15)<< box << std::endl;
-			paraInfo << "cutoff attr (rcutoff)	" << "\t \t" << std::setw(20) << std::setprecision(15) << rcutoff << std::endl;
-			paraInfo << "cutoff rep (rd_cutoff)	" << "\t \t" << std::setw(20) << std::setprecision(15) << rd_cutoff << std::endl;
-			paraInfo << "dimensions (dim)		" << "\t \t" << std::setw(20) << std::setprecision(15) << dim << std::endl;
-			paraInfo << "density (rho)		" << "\t \t" << std::setw(20) << std::setprecision(15) << rho << std::endl;
-			paraInfo << "timestep (dt)		" << "\t \t" << std::setw(20) << std::setprecision(15) << dt << std::endl;
-			paraInfo << "number of particles (npart)" << "\t \t" << std::setw(20) << std::setprecision(15) << npart << std::endl;
-			paraInfo << "total run time (stepMax)   " << "\t \t" << std::setw(20) << std::setprecision(15) << stepMax << std::endl;
-			paraInfo << "Data frequency (saveCount) " << "\t \t" << std::setw(20) << std::setprecision(15) << saveCount << std::endl;
+			paraInfo << "set temperature (kbT)                      :           " << kBT << std::endl;
+			#if SPHERICAL_DROPLET 
+			paraInfo << "Initial box dimension (dropBox)            :           " << dropBox << std::endl;
+			#elif CYLINDER_DROPLET 
+			paraInfo << "Cylinder radius (cylRad)                   :           " << cylRad << std::endl;
+			paraInfo << "Cylinder height (cylHeight)                :           " << cylHeight << std::endl;
+			paraInfo << "Cylinder center x-coord (cylCenterX)       :           " << cylCenterX << std::endl;
+			paraInfo << "Cylinder center y-coord (cylCenterY)       :           " << cylCenterY << std::endl;
+			#elif PLANAR_SLAB
+			paraInfo << "Width of planar slab (slabWidth)           :           " << slabWidth << std::endl;
+			#endif
+			paraInfo << "box length x (box)                         :           " << boxEdge[x] << std::endl;
+			paraInfo << "box length y (box)                         :           " << boxEdge[y] << std::endl;
+			paraInfo << "box length z (box)                         :           " << boxEdge[z] << std::endl;
+			paraInfo << "cutoff attr (rcutoff)                      :           " << rcutoff << std::endl;
+			paraInfo << "cutoff rep (rd_cutoff)                     :           " << rd_cutoff << std::endl;
+			paraInfo << "dimensions (dim)                           :           " << dim << std::endl;
+			paraInfo << "density (rho)                              :           " << rho << std::endl;
+			paraInfo << "timestep (dt)                              :           " << dt << std::endl;
+			paraInfo << "number of particles (npart)                :           " << npart << std::endl;
+			paraInfo << "total run time (stepMax)                   :           " << stepMax << std::endl;
+			paraInfo << "Data frequency (saveCount)                 :           " << saveCount << std::endl;
 			paraInfo << "---------------------------" << std::endl;
 			paraInfo << "Random & Dissipative Force " << std::endl;
 			paraInfo << "---------------------------" << std::endl;
-			paraInfo << "noise level (sigma)	" << "\t \t" << std::setw(20) << std::setprecision(15) << sigma << std::endl;
-			paraInfo << "friction parameter (gamma) " << "\t \t" << std::setw(20) << std::setprecision(15) << gamma << std::endl;
+			paraInfo << "noise level (sigma)                        :           " << sigma << std::endl;
+			paraInfo << "friction parameter (gamma)                 :           " << gamma << std::endl;
 			paraInfo << "---------------------------" << std::endl;
 			paraInfo << "Conservative Force         " << std::endl;
 			paraInfo << "---------------------------" << std::endl;
-			paraInfo << "Attractive (Aij)		" << "\t \t" << std::setw(20) << std::setprecision(15) << Aij << std::endl;
-			paraInfo << "Repulsive (Bij) 		" << "\t \t" << std::setw(20) << std::setprecision(15) << Bij << std::endl;
+			paraInfo << "Attractive (Aij)                           :           " << Aij << std::endl;
+			paraInfo << "Repulsive (Bij)                            :           " << Bij << std::endl;
 			paraInfo << "---------------------------" << std::endl;
 			paraInfo << "---------------------------" << std::endl;
 			paraInfo << "---------------------------" << std::endl;
@@ -551,26 +624,72 @@ class DPD {
 		}
 
 		//--------------------------------------- Velocity, Momentum and Pressure file writing--------------------------------------//
-		void fileWrite(std::ofstream& enStats, std::ofstream& eosStats, std::ofstream& momStats){
+		void fileWrite( std::ofstream& enStats, std::ofstream& eosStats, std::ofstream& momStats, std::ofstream& pTensStats ){
 
 			if ( step % 10000 == 0){
 				std::cout<< step << " steps out of " << stepMax << " completed " << std::endl;
 			}
 
-			//write output file in the .data format every 10th time step
-			if (++counter>=saveCount) {
-				//reset the counter, write time to terminal
-				counter = 0;
+			//write output file in the .data format
+			if (++counter>=saveCount) {				
 
 				// particle positions in vtk file format
 				vtkFileWritePosVel();
 
-				//writing the energy balance
-				enStats << std::setw(20) << std::setprecision(15) << pot_en << "\t" << std::setw(20) << std::setprecision(15) << kin_en << "\t" << std::setw(20) << std::setprecision(15) << tot_en << std::endl;
-				eosStats << std::setw(20) << std::setprecision(15) << rho << "\t" << std::setw(20) << std::setprecision(15)  << temp << "\t" << std::setw(20) << std::setprecision(15) << pressure << std::endl;
-				momStats << std::setw(20) << std::setprecision(15) << momX << "\t" << std::setw(20) << std::setprecision(15) << momY << "\t" << std::setw(20) << std::setprecision(15) << momZ << std::endl;
-			}
+				// Energy
+				enStats 	<< std::setw(20) << std::setprecision(15) << pot_en << "\t" 
+						<< std::setw(20) << std::setprecision(15) << kin_en << "\t" 
+						<< std::setw(20) << std::setprecision(15) << tot_en << std::endl;
+				
+				// Density, Temperature, Average Pressure
+				eosStats 	<< std::setw(20) << std::setprecision(15) << rho 	<< "\t" 
+						<< std::setw(20) << std::setprecision(15) << temp	<< "\t" 
+						<< std::setw(20) << std::setprecision(15) << pressure 	<< std::endl;
 
+				// Momentum
+				momStats 	<< std::setw(20) << std::setprecision(15) << momX << "\t" 
+						<< std::setw(20) << std::setprecision(15) << momY << "\t" 
+						<< std::setw(20) << std::setprecision(15) << momZ << std::endl;
+			
+				// average and reset the pTensor
+				#include "pTensAverage.h"
+				
+				// Pressure tensor	
+				pTensStats 	<< std::setw(20) << std::setprecision(15) << pTensor[0][0] << "\t" 
+					 	<< std::setw(20) << std::setprecision(15) << pTensor[0][1] << "\t" 
+					 	<< std::setw(20) << std::setprecision(15) << pTensor[0][2] << "\t"
+					 	<< std::setw(20) << std::setprecision(15) << pTensor[1][0] << "\t"
+					 	<< std::setw(20) << std::setprecision(15) << pTensor[1][1] << "\t"
+					 	<< std::setw(20) << std::setprecision(15) << pTensor[1][2] << "\t"
+					 	<< std::setw(20) << std::setprecision(15) << pTensor[2][0] << "\t"
+					 	<< std::setw(20) << std::setprecision(15) << pTensor[2][1] << "\t"
+					 	<< std::setw(20) << std::setprecision(15) << pTensor[2][2] << std::endl;
+
+				#include "pTensReset.h"
+
+				// density profile rhoZ
+				#if PLANAR_SLAB 
+
+				sprintf( filename, "./data/rhoZ_%d.dat", step );  
+				std::ofstream rhoZStats( filename );
+
+				for ( iRhoZ = 0; iRhoZ < rhoZ_bins ; ++iRhoZ )  {
+
+					bin_lower = rhoZ_Zmin + ( iRhoZ ) * rhoZ_Zdelta;
+					bin_upper = rhoZ_Zmin + ( iRhoZ + 1 ) * rhoZ_Zdelta;
+					Zpos = ( bin_lower + bin_upper )*0.5;
+					vol = rhoZ_Zdelta * boxEdge[x] * boxEdge[y];
+					
+					rhoZStats << Zpos << "\t" << vol << "\t" << rhoZ[iRhoZ] << "\t" << counter << std::endl;
+
+					// reset value of rhoZ vector
+					rhoZ[iRhoZ] = 0.0;
+				}
+				#endif	
+
+				//reset the counter, write time to terminal
+				counter = 0;
+			}
 		}
 
 		//--------------------------------------- VTK file writing routine--------------------------------------//
