@@ -16,8 +16,10 @@ boxRecip[z] = 1.0 / boxEdge[z];
 kBT = 1.0;			// DPD fluid temperature 
 Aij = -40.0;			// DPD Warren conservative force -- attractive parameter
 Bij = +40.0;			// DPD Warren conservative force -- repulsive parameter
-sigma = 1.0;			// DPD random force parameter
+#if RANDOM_DISSIPATIVE
+sigma = 3.0;			// DPD random force parameter
 gamma = pow( sigma,2.0 )/( 2.0 * kBT ); // DPD dissipative force parameter
+#endif
 rcutoff = 1.0;			// cut-off distance for pairwise attraction
 rd_cutoff = 0.75;			// cut-off distance for pairwise repulsion
 fifteen_by_twopi_by_rd = 15.0/( 2.0 * M_PI * pow( rd_cutoff,3.0) );	// 15/(2*PI*rd^3) used in Lucy weight function

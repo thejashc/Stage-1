@@ -11,9 +11,10 @@
 #include <random> 
 
 // configuration of particles
+#define RANDOM_DISSIPATIVE 1
 #define SPHERICAL_DROPLET 0
-#define CYLINDER_DROPLET 1
-#define PLANAR_SLAB 0
+#define CYLINDER_DROPLET 0
+#define PLANAR_SLAB 1
 #define CRYSTAL	0
 #define RESTART	0
 
@@ -394,7 +395,11 @@ class DPD {
 				Vec3D w_old = p.w;
 
 				// update velocities (mid-step)
-				p.w += (p.fC)*(dt/p.m);
+				#if RANDOM_DISSIPATIVE
+				p.w += ( p.fC + p.fD + p.fR )*(dt/p.m);
+				#elif 
+				p.w += ( p.fC )*(dt/p.m);
+				#endif 
 
 				// update position (integral time step) using the velocities (mid-step)
 				p.r += p.w*dt;				

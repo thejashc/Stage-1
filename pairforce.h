@@ -1,4 +1,7 @@
 Rij = particles[i].r - ( particles[j].r + dR );	
+#if RANDOM_DISSIPATIVE
+wij = particles[i].w - particles[j].w;
+#endif
 r2 = Rij.getLengthSquared();
 
 if ( r2 <= rc2 ) {
@@ -50,29 +53,31 @@ if ( r2 <= rc2 ) {
 	particles[i].fC += fCij;
 	particles[j].fC -= fCij; 
 
-	/*
+	#if RANDOM_DISSIPATIVE
 	// random force	
-	double uniRand = d(rd); 
-	double thetaij = std::sqrt(12.0)*(uniRand-0.5); 
-	double magRand = sigma*wR*thetaij;
-	fRij.X = magRand*capRij.X;
-	fRij.Y = magRand*capRij.Y;
-	fRij.Z = magRand*capRij.Z;
+	uniRand = d(rd); 
+	thetaij = std::sqrt(12.0)*(uniRand-0.5); 
+	magRand = sigma * wCij * thetaij;
+	
+	fRij.X = magRand * capRij.X;
+	fRij.Y = magRand * capRij.Y;
+	fRij.Z = magRand * capRij.Z;
 
-	Vec3D sumForce = fRij*inv_sqrt_dt;
-	p->fR += sumForce;
-	q->fR += -1.0*sumForce;
+	sumForce = fRij*inv_sqrt_dt;
+	particles[i].fR += sumForce;
+	particles[j].fR -= sumForce;
 
 	// dissipative force -- not calculated here
-	double rDotv = Vec3D::dot( capRij, Vij );
-	double magDiss = -1.0*gamma*wR_pow_2*rDotv;
-	fDij.X = magDiss*capRij.X;
-	fDij.Y = magDiss*capRij.Y;
-	fDij.Z = magDiss*capRij.Z;
+	rDotv = Vec3D::dot( capRij, wij );
+	magDiss = -1.0 * gamma * wCij2 *rDotv;
+	
+	fDij.X = magDiss * capRij.X;
+	fDij.Y = magDiss * capRij.Y;
+	fDij.Z = magDiss * capRij.Z;
 
-	p->fD += fDij;
-	q->fD += -1.0*fDij;
-	 */
+	particles[i].fD += fDij;
+	particles[j].fD -= fDij;
+	#endif
 	
 	// non-ideal comp pressure
 	// double nonIdealcomp = Vec3D::dot(minRij, fCij)*(1.0/(2.0*dim*volume));

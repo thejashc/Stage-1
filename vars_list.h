@@ -6,8 +6,6 @@ double boxEdge[3];			// box length in x,y,z directions
 double boxHalve[3];			// box length in x,y,z directions
 double boxRecip[3];			// box length in x,y,z directions
 double kBT;				// DPD fluid temperature
-double sigma;				// DPD noise level
-double gamma;				// DPD dissipative force parameter
 double Aij;				// DPD Warren conservative force -- attractive parameter
 double Bij;                             // DPD Warren conservative force -- repulsive parameter
 double kappa;				// DPD conservative force -- surface tension force
@@ -141,13 +139,27 @@ double term3;
 
 // Vector 3D variables
 Vec3D fCij;
-Vec3D fRij;
-Vec3D fDij;
 Vec3D capRij;
 Vec3D Rij;
 Vec3D minRij;
 Vec3D tempVec;
 Vec3D dR;
+
+// dissipative and random forces
+#if RANDOM_DISSIPATIVE
+Vec3D fRij;
+Vec3D fDij;
+Vec3D wij;
+Vec3D sumForce;
+
+double sigma;				// DPD noise level
+double gamma;				// DPD dissipative force parameter
+double uniRand;
+double thetaij;
+double magRand;
+double rDotv;
+double magDiss;
+#endif
 
 // file writing parameters
 unsigned int saveCount = 10000;		// number of timestep between saves
