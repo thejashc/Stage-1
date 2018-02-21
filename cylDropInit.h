@@ -1,5 +1,6 @@
-// Droplet Initialization	
-cylHeight = boxEdge[z];	
+// Droplet Initialization
+cylHeight =  boxEdge[z] / 2.0; // cylinder retraction
+// cylHeight =  boxEdge[z]; -- surface tension measurements
 cylCenterX = boxEdge[x] / 2.0;
 cylCenterY = boxEdge[y] / 2.0;
 cylRad = 4.0;
