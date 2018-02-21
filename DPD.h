@@ -13,8 +13,8 @@
 // configuration of particles
 #define RANDOM_DISSIPATIVE 1
 #define SPHERICAL_DROPLET 0
-#define CYLINDER_DROPLET 0
-#define PLANAR_SLAB 1
+#define CYLINDER_DROPLET 1
+#define PLANAR_SLAB 0
 #define CRYSTAL	0
 #define RESTART	0
 
@@ -57,8 +57,14 @@ class DPD {
 			std::ofstream momStats	( "./data/mom_data.dat"	);	// pressure and temperature data
 			std::ofstream writeConfig;
 
+			/*
 			createGridList();
-			dens_calculation();
+			dens_calculation();*/ // everytime force calculation
+
+			createGridList();
+			forceCalc();
+
+			resetVar();
 
 			// writing the parameters to a file
 			std::ofstream paraInfo( "parainfo.txt" );
@@ -68,6 +74,7 @@ class DPD {
 			while (step<stepMax) {
 
 				// force calculation
+				createGridList();
 				forceCalc();
 
 				/*// debug 
@@ -78,12 +85,13 @@ class DPD {
 				integrateEOM();
 
 				// calculate density
-				for (Particle& p : particles) {
-					p.dens = 0.0;
-				}
+				/*
+				// for (Particle& p : particles) {
+				// 	p.dens = 0.0;
+				// }
 				// dens_calculate();
-				createGridList();
-				dens_calculation();
+				//createGridList();
+				// dens_calculation();*/ // Everytime density calculation
 
 				// total energy and g(r) sample calculation
 				// potential energy
@@ -168,9 +176,11 @@ class DPD {
 			#endif
 
 			Vec3D velAvg={0.0, 0.0, 0.0};
-			// Remove excess velocity
+			// Remove excess velocity and set particle density to 0
 			for (Particle& p: particles){
-				velAvg += p.w/particles.size();
+				velAvg 		+= p.w/particles.size();
+				p.dens 		 = 0.0;
+				p.dens_new	 = 0.0;
 			}
 
 			for (Particle& p: particles){
@@ -472,8 +482,8 @@ class DPD {
 			momZ = 0.0;
 
 			for (Particle& p : particles){
-				// p.dens = p.dens_new;
-				// p.dens_new = 0.0;
+				p.dens = p.dens_new;
+				p.dens_new = 0.0;
 				p.rhoBar = 0.0;
 				p.fC.setZero();
 				p.fR.setZero();
@@ -626,11 +636,13 @@ class DPD {
 			paraInfo << "number of particles (npart)                :           " << npart << std::endl;
 			paraInfo << "total run time (stepMax)                   :           " << stepMax << std::endl;
 			paraInfo << "Data frequency (saveCount)                 :           " << saveCount << std::endl;
+			#if RANDOM_DISSIPATIVE
 			paraInfo << "---------------------------" << std::endl;
 			paraInfo << "Random & Dissipative Force " << std::endl;
 			paraInfo << "---------------------------" << std::endl;
 			paraInfo << "noise level (sigma)                        :           " << sigma << std::endl;
 			paraInfo << "friction parameter (gamma)                 :           " << gamma << std::endl;
+			#endif 
 			paraInfo << "---------------------------" << std::endl;
 			paraInfo << "Conservative Force         " << std::endl;
 			paraInfo << "---------------------------" << std::endl;
