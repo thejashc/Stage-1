@@ -4,6 +4,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pylab as pl
 
+# global definition of pi
+PI 		= np.pi
 def figEnv():
     return plt.figure(num=None, figsize=(8, 6), dpi=80, facecolor='w', edgecolor='k')
 
@@ -77,7 +79,7 @@ plt.savefig( './plots/pressure.eps', format='eps', dpi=1200 )
 #------------- DENSITY PROFILE-------------#
 filelist=[]
 
-for i in range(51,162):
+for i in range(51,178):
     filelist.append("./data/rhoZ_%s.dat" %(i * 10000) )
 
 # setting up matrices for averaging
@@ -102,6 +104,31 @@ plt.grid()
 plt.legend()
 plt.savefig( './plots/rhoZ_vs_Z.eps', format='eps', dpi=1200 )
 
+#------------- PRESSURE TENSOR --------------#
+data = np.loadtxt( './data/pTens.dat' )
+
+pxx = data[:,0]
+pyy = data[:,4]
+pzz = data[:,8]
+
+pxxAvg = np.mean( pxx[51:182] )
+pyyAvg = np.mean( pyy[51:182] )
+pzzAvg = np.mean( pzz[51:182] )
+gamma   = ( 100 / ( PI*4.0 ) )*( 2. * pzzAvg - pxxAvg - pyyAvg )
+
+figEnv()
+plt.plot ( pxx, label= '<pxx> = %.5f' %pxxAvg )
+plt.plot ( pyy, label= '<pyy> = %.5f' %pyyAvg )
+plt.plot ( pzz, label= '<pzz> = %.5f' %pzzAvg )
+
+plt.title( r'gamma =%.5f'%gamma )
+#plt.annotate('del P =%.5f'%delP, xy=(100,2.35), xytext=( 100, 2.35))
+plt.xlabel('time (s)')
+plt.ylabel(r'P\alpha \beta ')
+plt.grid()
+plt.legend( loc = 3)
+plt.savefig( './plots/pTens.eps', format='eps', dpi=1200 )
+
 #------- VELOCITY DISTRIBUTION ------#
 data = np.loadtxt( './data/velDist_data.dat' )
 
@@ -118,7 +145,6 @@ normAreaZ 	= data[:,7]
 # Maxwell-Boltzmann distribution
 m		= 1.0
 v2		= np.power( velBin, 2.0)
-PI 		= np.pi
 MB		= np.sqrt( m/(2.0*PI*kbT) ) * np.exp(-(0.5*m*v2) /kbT )
 
 pdfX = velHistX / normAreaX
