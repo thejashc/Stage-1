@@ -69,6 +69,11 @@ double rand_gen_velz;
 	double cylCenterY;
 	double cylHeight;
 	double cylRad;	
+	double xCOM;
+	double yCOM;
+	double zCOM;
+
+	double pCount;
 #elif PLANAR_SLAB
 	double slabWidth;
 #endif
@@ -181,6 +186,20 @@ int iRhoZ;			// index -- bookkeeping
 double Zpos;
 
 char filename[40];		// filename for data writing
+#elif CYLINDER_DROPLET
+double rhor_rmin;
+double rhor_rdelta;
+double rhor_rmax;
+double vol;
+
+int rhor_bins;
+
+std::vector<double> rhor;
+
+int iRhor;
+double radPos;
+
+char filename[40];
 #endif
 // momentum calculation
 long double momX;
