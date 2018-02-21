@@ -79,10 +79,6 @@ if ( r2 <= rc2 ) {
 	particles[j].fD -= fDij;
 	#endif
 	
-	// non-ideal comp pressure
-	// double nonIdealcomp = Vec3D::dot(minRij, fCij)*(1.0/(2.0*dim*volume));
-	// pressure += nonIdealcomp;
-
 	pNonIdeal[0][0] += Rij.X * fCij.X;
 	pNonIdeal[0][1] += Rij.X * fCij.Y;
 	pNonIdeal[0][2] += Rij.X * fCij.Z;
