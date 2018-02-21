@@ -16,7 +16,6 @@ boxRecip[z] = 1.0 / boxEdge[z];
 kBT = 1.0;			// DPD fluid temperature 
 Aij = -40.0;			// DPD Warren conservative force -- attractive parameter
 Bij = +40.0;			// DPD Warren conservative force -- repulsive parameter
-kappa = 8e-4;			// DPD conservative force -- surface tension force
 sigma = 1.0;			// DPD random force parameter
 gamma = pow( sigma,2.0 )/( 2.0 * kBT ); // DPD dissipative force parameter
 rcutoff = 1.0;			// cut-off distance for pairwise attraction
@@ -55,9 +54,14 @@ velHist_tEnd = stepMax;
 
 // density distribution along z
 #if PLANAR_SLAB
-rhoZ_Zmin = 0.00;		// minimum Z
-rhoZ_Zdelta = 0.05;		// resolution of Delta Z 
-rhoZ_Zmax = boxEdge[z];		// maximum Z
-rhoZ_bins  = round( ( rhoZ_Zmax - rhoZ_Zmin ) / rhoZ_Zdelta ); // number of elements
+rhoZ_Zmin 	= 0.00;		// minimum Z
+rhoZ_Zdelta 	= 0.05;		// resolution of Delta Z 
+rhoZ_Zmax 	= boxEdge[z];		// maximum Z
+rhoZ_bins  	= round( ( rhoZ_Zmax - rhoZ_Zmin ) / rhoZ_Zdelta ); // number of elements
+#elif CYLINDER_DROPLET
+rhor_rmin 	= 0.00;
+rhor_rdelta 	= 0.05;
+rhor_rmax 	= boxEdge[x];
+rhor_bins  	= round( ( rhor_rmax - rhor_rmin ) / rhor_rdelta ); // number of elements
 
 #endif
