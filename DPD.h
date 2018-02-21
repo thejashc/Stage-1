@@ -12,8 +12,8 @@
 
 // configuration of particles
 #define SPHERICAL_DROPLET 0
-#define CYLINDER_DROPLET 0
-#define PLANAR_SLAB 1
+#define CYLINDER_DROPLET 1
+#define PLANAR_SLAB 0
 #define CRYSTAL	0
 #define RESTART	0
 
@@ -155,9 +155,14 @@ class DPD {
 			}	
 
 			#if PLANAR_SLAB
-				// Initialize the gR_nCount array
+				// Initialize the rhoZ array
 				for ( i=0; i < rhoZ_bins ; ++i ){
 					rhoZ.push_back(0.0);
+				}	
+			#elif CYLINDER_DROPLET
+				// Initialize the rhor array
+				for ( i=0; i < rhor_bins ; ++i ){
+					rhor.push_back(0.0);
 				}	
 			#endif
 
@@ -411,7 +416,6 @@ class DPD {
 					velHistZ[ivelZ] += 1;
 
 				}
-
 				
 				#if PLANAR_SLAB
 					// calculate density profile
@@ -420,6 +424,14 @@ class DPD {
 					if ( iRhoZ < 0 || iRhoZ > rhoZ_bins  ) { std::cout << " planar slab particle out of bounds" << std::endl; abort(); } 						
 
 					rhoZ[ iRhoZ ] += 1;
+				#elif CYLINDER_DROPLET
+					// calculate radial density profile
+					radPos 	= std::sqrt( pow( p.r.X - xCOM, 2.0 ) + pow( p.r.Y - yCOM, 2.0 ) );
+					iRhor 	= round ( ( radPos - rhor_rmin ) / rhor_rdelta );
+
+					if ( iRhor < 0 || iRhor > rhor_bins  ) { std::cout << " cylindrical particle out of bounds" << std::endl; abort(); } 						
+		
+					rhor[ iRhor ] += 1;
 				#endif
 
 				// calculate the kinetic energy
@@ -431,7 +443,7 @@ class DPD {
 			// temperature calculation	
 			v2 = ( vx2 + vy2 + vz2 ) / ( 3. * npart );
 			kin_en = 0.5 * v2;		// unit mass assumption
-			temp = 2.*kin_en/dof;
+			temp = 2.*kin_en;
 
 			tempSum += temp;
 			tempCount += 1;
@@ -464,6 +476,7 @@ class DPD {
 			}
 
 			// reset ideal and non-ideal component of pressure tensor
+			/*
 			pIdeal[0][0] = 0.0;
 			pIdeal[0][1] = 0.0;
 			pIdeal[0][2] = 0.0;
@@ -483,6 +496,7 @@ class DPD {
 			pNonIdeal[2][0] = 0.0;
 			pNonIdeal[2][1] = 0.0;
 			pNonIdeal[2][2] = 0.0;
+			*/
 		}
 
 		//--------------------------------------- g(r) sampling --------------------------------------//
@@ -653,7 +667,8 @@ class DPD {
 			
 				// average and reset the pTensor
 				#include "pTensAverage.h"
-				
+			
+				/*	
 				// Pressure tensor	
 				pTensStats 	<< std::setw(20) << std::setprecision(15) << pTensor[0][0] << "\t" 
 					 	<< std::setw(20) << std::setprecision(15) << pTensor[0][1] << "\t" 
@@ -664,7 +679,28 @@ class DPD {
 					 	<< std::setw(20) << std::setprecision(15) << pTensor[2][0] << "\t"
 					 	<< std::setw(20) << std::setprecision(15) << pTensor[2][1] << "\t"
 					 	<< std::setw(20) << std::setprecision(15) << pTensor[2][2] << std::endl;
-
+				*/
+		
+				// Pressure tensor	
+				pTensStats 	<<  pIdeal[0][0] << ", " 
+					 	<<  pIdeal[0][1] << ", " 
+					 	<<  pIdeal[0][2] << ", "
+					 	<<  pIdeal[1][0] << ", "
+					 	<<  pIdeal[1][1] << ", "
+					 	<<  pIdeal[1][2] << ", "
+					 	<<  pIdeal[2][0] << ", "
+					 	<<  pIdeal[2][1] << ", "
+					 	<<  pIdeal[2][2] << ", "
+						<<  pNonIdeal[0][0] << ", " 
+					 	<<  pNonIdeal[0][1] << ", " 
+					 	<<  pNonIdeal[0][2] << ", "
+					 	<<  pNonIdeal[1][0] << ", "
+					 	<<  pNonIdeal[1][1] << ", "
+					 	<<  pNonIdeal[1][2] << ", "
+					 	<<  pNonIdeal[2][0] << ", "
+					 	<<  pNonIdeal[2][1] << ", "
+					 	<<  pNonIdeal[2][2] << std::endl;
+			
 				#include "pTensReset.h"
 
 				// density profile rhoZ
@@ -685,7 +721,26 @@ class DPD {
 					// reset value of rhoZ vector
 					rhoZ[iRhoZ] = 0.0;
 				}
+
+				#elif CYLINDER_DROPLET
+
+				sprintf( filename, "./data/rhor_%d.dat", step );  
+				std::ofstream rhorStats( filename );
+
+				for ( iRhor = 0; iRhor < rhor_bins ; ++iRhor )  {
+
+					bin_lower = rhor_rmin + ( iRhor ) * rhor_rdelta;
+					bin_upper = rhor_rmin + ( iRhor + 1 ) * rhor_rdelta;
+					radPos = ( bin_lower + bin_upper )*0.5;
+					vol = M_PI * ( pow( bin_upper, 2.0 ) - pow( bin_lower, 2.0 ) ) * cylHeight;
+					
+					rhorStats << radPos << "\t" << vol << "\t" << rhor[iRhor] << "\t" << counter << std::endl;
+
+					// reset value of rhor vector
+					rhor[iRhor] = 0.0;
+				}
 				#endif	
+
 
 				//reset the counter, write time to terminal
 				counter = 0;
