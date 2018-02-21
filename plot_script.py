@@ -6,8 +6,10 @@ import pylab as pl
 
 # global definition of pi
 PI 		= np.pi
+plt.rcParams.update({'font.size': 12})
+
 def figEnv():
-    return plt.figure(num=None, figsize=(8, 6), dpi=80, facecolor='w', edgecolor='k')
+    return plt.figure(num=None, figsize=(8. , 6.), dpi=80, facecolor='w', edgecolor='k')
 
 #------ ENERGY STATISTICS --------#
 
@@ -24,14 +26,15 @@ keDev 	= ( data[:,1] - keAvg  ) / keAvg
 totDev	= ( data[:,2] - totAvg ) / totAvg
 
 figEnv()
-plt.plot( keDev	, c='r', label='Kinetic Energy' )
-plt.plot( peDev	, c='b', label='Potential Energy' )
-plt.plot( totDev, c='g', label='Total Energy' )
-plt.xlabel( 'Time' )
-plt.ylabel( 'Energy' )
+plt.title('Energy vs time')
+plt.plot( keDev	, label= r'$KE$' )
+plt.plot( peDev	, label= r'$PE$' )
+plt.plot( totDev, label= r'$TE$' )
+plt.xlabel( r'$t$' )
+plt.ylabel( r'$\frac{\Delta E}{\langle E \rangle}$' )
 plt.legend()
 plt.grid()
-plt.savefig( './plots/energy.eps', format='eps', dpi=1200)
+plt.savefig( './plots/energy.svg', format='svg', dpi=1200 )
 #plt.show()
 
 #------ MOMENTUM STATISTICS --------#
@@ -43,15 +46,15 @@ momY = data[:, 1]
 momZ = data[:, 2]
 
 figEnv()
-plt.plot( momX	, c='r', label='$p_{x}$' )
-plt.plot( momY	, c='b', label='$p_{y}$' )
-plt.plot( momZ	, c='g', label='$p_{z}$' )
-plt.xlabel( 'Time' )
-plt.ylabel( 'Momentum' )
+plt.plot( momX, label='$p_{x}$' )
+plt.plot( momY, label='$p_{y}$' )
+plt.plot( momZ, label='$p_{z}$' )
+plt.xlabel( r'$t$' )
+plt.ylabel( r'$p_{\alpha}$' )
 plt.ylim( (-1e-10,1e-10) )
 plt.grid()
 plt.legend()
-plt.savefig( './plots/momentum.eps', format='eps', dpi=1200)
+plt.savefig( './plots/momentum.svg', format='svg', dpi=1200)
 
 #------------- TEMPERATURE AND PRESSURE -------------#
 data = np.loadtxt( './data/eos_data.dat' )
@@ -61,25 +64,17 @@ Temp	= data[:,1]
 Pressure= data[:,2]
 
 figEnv()
-plt.plot( Temp, c='r', label='<T>' )
-plt.xlabel( 'time' )
-plt.ylabel( 'T' )
+plt.plot( Temp, label='<T>' )
+plt.xlabel( '$t$' )
+plt.ylabel( '$T$' )
 plt.grid()
 plt.legend()
-plt.savefig( './plots/temp.eps', format='eps', dpi=1200 )
-
-figEnv()
-plt.plot( Pressure, c='b', label='<P>' )
-plt.xlabel( 'time' )
-plt.ylabel( 'P' )
-plt.grid()
-plt.legend()
-plt.savefig( './plots/pressure.eps', format='eps', dpi=1200 )
+plt.savefig( './plots/temp.svg', format='svg', dpi=1200 )
 
 #------------- DENSITY PROFILE-------------#
 filelist=[]
 
-for i in range(51,178):
+for i in range(10,34):
     filelist.append("./data/rhoZ_%s.dat" %(i * 10000) )
 
 # setting up matrices for averaging
@@ -98,36 +93,37 @@ for fname in filelist:
 	
 rhoZ 		= ( rhoZCount ) / ( counter * vol )
 plt.plot( z, rhoZ )
-plt.xlabel( r"$ z $" )
-plt.ylabel( r"$ \rho $" )
+plt.title ( r'$ \rho(z)\ vs\ z $' ) 
+plt.xlabel( r'$ z $' )
+plt.ylabel( r'$ \rho $' )
 plt.grid()
-plt.legend()
-plt.savefig( './plots/rhoZ_vs_Z.eps', format='eps', dpi=1200 )
+plt.savefig( './plots/rhoZ_vs_Z.svg', format='svg', dpi=1200 )
 
 #------------- PRESSURE TENSOR --------------#
-data = np.loadtxt( './data/pTens.dat' )
+data = np.genfromtxt( './data/pTens.dat', delimiter=',' )
 
-pxx = data[:,0]
-pyy = data[:,4]
-pzz = data[:,8]
-
-pxxAvg = np.mean( pxx[51:182] )
-pyyAvg = np.mean( pyy[51:182] )
-pzzAvg = np.mean( pzz[51:182] )
-gamma   = ( 100 / ( PI*4.0 ) )*( 2. * pzzAvg - pxxAvg - pyyAvg )
-
+pxx = data[:,0] + data[:,9]
+pyy = data[:,4] + data[:,13]
+pzz = data[:,8] + data[:,17]
+#
+pxxAvg = np.mean( pxx[10:34] )
+pyyAvg = np.mean( pyy[10:34] )
+pzzAvg = np.mean( pzz[10:34] )
+gamma   = ( 10.0 / 4.0 )*( 2. * pzzAvg - pxxAvg - pyyAvg )
+#
 figEnv()
-plt.plot ( pxx, label= '<pxx> = %.5f' %pxxAvg )
-plt.plot ( pyy, label= '<pyy> = %.5f' %pyyAvg )
-plt.plot ( pzz, label= '<pzz> = %.5f' %pzzAvg )
+plt.plot ( pxx, label= r'$\langle p_{xx} \rangle = %.5f$' %pxxAvg )
+plt.plot ( pyy, label= r'$\langle p_{yy} \rangle = %.5f$' %pyyAvg )
+plt.plot ( pzz, label= r'$\langle p_{zz} \rangle = %.5f$' %pzzAvg )
 
-plt.title( r'gamma =%.5f'%gamma )
+plt.title( r'$\gamma =%.5f$'%gamma )
 #plt.annotate('del P =%.5f'%delP, xy=(100,2.35), xytext=( 100, 2.35))
-plt.xlabel('time (s)')
-plt.ylabel(r'P\alpha \beta ')
+plt.xlabel(r'$t$')
+plt.ylabel(r'$P_{\alpha \beta}$')
 plt.grid()
-plt.legend( loc = 3)
-plt.savefig( './plots/pTens.eps', format='eps', dpi=1200 )
+plt.legend( loc = 4)
+plt.savefig( './plots/pTens.svg', format='svg', dpi=1800 )
+exit()
 
 #------- VELOCITY DISTRIBUTION ------#
 data = np.loadtxt( './data/velDist_data.dat' )
@@ -161,7 +157,7 @@ plt.xlabel( '$v$' )
 plt.ylabel( 'PDF( $v$ )' )
 plt.grid()
 plt.legend()
-plt.savefig( './plots/velDist.eps', format='eps', dpi=1200)
+plt.savefig( './plots/velDist.svg', format='svg', dpi=1200)
 
 #----------- RADIAL DISTRIBUTION FUNCTION --------#
 data = np.loadtxt( './data/gr_data.dat' )
@@ -186,4 +182,4 @@ plt.xlabel( 'r' )
 plt.ylabel( 'g(r)' )
 plt.grid()
 plt.legend()
-plt.savefig( './plots/gr.eps', format='eps', dpi=1200)
+plt.savefig( './plots/gr.svg', format='svg', dpi=1200)
