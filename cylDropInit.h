@@ -4,6 +4,10 @@ cylCenterX = boxEdge[x] / 2.0;
 cylCenterY = boxEdge[y] / 2.0;
 cylRad = 4.0;
 
+pCount = 0;
+xCOM = 0.0;
+yCOM = 0.0;
+zCOM = 0.0;
 xind_min = 0.00;
 yind_min = 0.00;
 zind_min = 0.00;
@@ -30,6 +34,12 @@ while ( zind < zind_max ){
 				// if ( xind*xind + yind*yind + zind*zind <= radSqr )
 				particles.push_back({1.0,1.0,{xind, yind, zind},{rand_gen_velx, rand_gen_vely, rand_gen_velz}});
 
+				// calculating the center of mass of cylinder
+				xCOM += xind;
+				yCOM += yind;
+				zCOM += zind;
+				pCount += 1;
+
 			}// inside cylinder
 			yind += 0.63*rcutoff;
 		}// yind			
@@ -37,3 +47,8 @@ while ( zind < zind_max ){
 	}
 	zind += 0.63*rcutoff;
 }// zind
+
+// normalizing the center of mass
+xCOM /= pCount;
+yCOM /= pCount;
+zCOM /= pCount;
