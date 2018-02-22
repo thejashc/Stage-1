@@ -22,6 +22,12 @@ while ( xind < xind_max){
 			// initializing particle radius, mass, position and velocity
 			particles.push_back({1.0,1.0,{xind, yind, zind},{rand_gen_velx, rand_gen_vely, rand_gen_velz}});
 
+			// calculating the center of mass of cylinder
+			xCOM += xind;
+			yCOM += yind;
+			zCOM += zind;
+			pCount += 1;
+
 			// update zind
 			zind += 0.63*rcutoff;
 
@@ -30,3 +36,16 @@ while ( xind < xind_max){
 	}// end of yind			
 	xind += 0.63*rcutoff;
 }// end of xind
+
+// normalizing the center of mass
+xCOM /= pCount;
+yCOM /= pCount;
+zCOM /= pCount;
+
+// recenter the particle positions to place at exact COM
+for( i = 0 ; i < pCount ; ++i ){
+
+	particles[i].r.X += - xCOM + ( boxEdge[x] / 2.0 );
+	particles[i].r.Y += - yCOM + ( boxEdge[y] / 2.0 );
+	particles[i].r.Z += - zCOM + ( boxEdge[z] / 2.0 );
+}
