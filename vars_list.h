@@ -74,6 +74,11 @@ double rand_gen_velz;
 	double pCount;
 #elif PLANAR_SLAB
 	double slabWidth;
+	double xCOM;
+	double yCOM;
+	double zCOM;
+
+	double pCount;
 #endif
 
 // Cell list variables
