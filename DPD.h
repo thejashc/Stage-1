@@ -17,6 +17,7 @@
 #define PLANAR_SLAB 0
 #define CRYSTAL	0
 #define RESTART	0
+#define WALL 1
 
 //declare DPD solver
 class DPD {
