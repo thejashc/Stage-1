@@ -50,6 +50,7 @@ if ( r2 <= rc2 ) {
 	particles[i].rhoBar += rhoBartemp;
 	particles[j].rhoBar += rhoBartemp;
 
+
 	particles[i].fC += fCij;
 	particles[j].fC -= fCij; 
 

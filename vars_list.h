@@ -1,5 +1,5 @@
 // particles of class Particle
-std::vector<Particle> particles;     	// vector of particles
+std::vector<Particle> particles;     	// vector of DPD particles
 
 // global parameters
 double boxEdge[3];			// box length in x,y,z directions
@@ -58,6 +58,10 @@ double zind;
 double rand_gen_velx;
 double rand_gen_vely;
 double rand_gen_velz;
+
+unsigned int fluidCount;	// number of fluid particles
+std::vector<int> fluid_index;	// index of fluid type
+std::vector<int> solid_index;	// index of solid type
 
 // geometry initialization
 #if SPHERICAL_DROPLET 
@@ -167,7 +171,7 @@ double magDiss;
 #endif
 
 // file writing parameters
-unsigned int saveCount = 10000;		// number of timestep between saves
+unsigned int saveCount = 500;		// number of timestep between saves
 
 // parameters for post-processing
 // g(r) -- structure function
@@ -217,6 +221,43 @@ int iRhor;
 double radPos;
 
 char filename[40];
+#endif
+
+// defining wall
+#if WALL_ON
+double wallHeight;
+
+double capRad;
+double capRadSqr;
+double capSphXc;
+double capSphYc;
+double capSphZc;
+
+double fSL;
+double w1P;
+double w2P;
+double root2;
+double Asl;
+double Bsl;
+double fWallcutoff;
+
+double rcWcutoff;
+double rdWcutoff;
+double rcW2;
+double rdW2;
+double rcWby2;
+double rdWby2;
+
+Vec3D fCWij;
+Vec3D fCW;
+#if LOWER_WALL_ON
+double zindLW_min;
+double zindLW_max;
+#endif
+#if UPPER_WALL_ON
+double zindUW_min;
+double zindUW_max;
+#endif
 #endif
 // momentum calculation
 long double momX;
