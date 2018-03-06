@@ -1,7 +1,7 @@
 // set global parameters
-boxEdge[x] = 10.0;
-boxEdge[y] = 10.0;
-boxEdge[z] = 10.0;
+boxEdge[x] = 20.0;
+boxEdge[y] = 20.0;
+boxEdge[z] = 20.0;
 
 // Half box size
 boxHalve[x] = boxEdge[x] / 2.0;
@@ -30,7 +30,24 @@ dim = 3;				// 3D system
 
 dt = 0.001;
 step = 1;
-stepMax = 2e6;
+stepMax = 5e4;
+
+#if WALL_ON
+Asl = +0.0;
+Bsl = +20.0;
+fSL = 0.0;
+w1P = 0.0;
+w2P = 0.0;
+root2 = 0.3;
+fWallcutoff = -49.2188;
+
+rcWcutoff = 0.8;
+rdWcutoff = 0.7;
+rcWby2 = rcWcutoff / 2.;
+rdWby2 = rdWcutoff / 2.;
+rcW2 = pow(rcWcutoff, 2. );	// square of wall cutoff distance -- attractive
+rdW2 = pow(rdWcutoff, 2. );	// square of wall cutoff distance -- repulsive
+#endif
 
 // post-processing
 // g(r) calculation
