@@ -20,7 +20,7 @@ while ( xind < xind_max){
 			rand_gen_velz = ((double) rand() / (RAND_MAX));
 
 			// initializing particle radius, mass, position and velocity
-			particles.push_back({1.0,1.0,{xind, yind, zind},{rand_gen_velx, rand_gen_vely, rand_gen_velz}});
+			particles.push_back({1.0,1.0,{xind, yind, zind},{rand_gen_velx, rand_gen_vely, rand_gen_velz},1});
 
 			// calculating the center of mass of cylinder
 			xCOM += xind;

@@ -19,9 +19,9 @@ while ( xind < xind_max){
 			rand_gen_vely = ((double) rand() / (RAND_MAX));
 			rand_gen_velz = ((double) rand() / (RAND_MAX));
 
-			// initializing particle radius, mass, position and velocity
-			// if ( xind*xind + yind*yind + zind*zind <= radSqr )
-			particles.push_back({1.0,1.0,{xind, yind, zind},{rand_gen_velx, rand_gen_vely, rand_gen_velz}});
+			// initializing particle radius, mass, position and velocity and type
+			//if ( xind*xind + yind*yind + zind*zind <= radSqr )
+			particles.push_back({0.5,1.0,{xind, yind, zind},{rand_gen_velx, rand_gen_vely, rand_gen_velz},1});
 
 			// update zind
 			zind += 0.63*rcutoff;
