@@ -2,6 +2,8 @@
 std::vector<Particle> particles;     	// vector of DPD particles
 
 // global parameters
+double initRho;				// initial placement density of atoms
+double aCube;				// length of a side of cube corresponding to prescribed density
 double boxEdge[3];			// box length in x,y,z directions
 double boxHalve[3];			// box length in x,y,z directions
 double boxRecip[3];			// box length in x,y,z directions
@@ -69,8 +71,8 @@ std::vector<int> solid_index;	// index of solid type
 #elif CYLINDER_DROPLET 
 	double cylCenterX;
 	double cylCenterY;
-	double cylHeight;
 	double cylRad;	
+	double cylHeight;
 	double xCOM;
 	double yCOM;
 	double zCOM;
@@ -171,7 +173,7 @@ double magDiss;
 #endif
 
 // file writing parameters
-unsigned int saveCount = 500;		// number of timestep between saves
+unsigned int saveCount = 5000;		// number of timestep between saves
 
 // parameters for post-processing
 // g(r) -- structure function
@@ -226,6 +228,7 @@ char filename[40];
 // defining wall
 #if WALL_ON
 double wallHeight;
+double initWallRho;
 
 double capRad;
 double capRadSqr;
@@ -315,3 +318,7 @@ std::default_random_engine rd;
 // usage d{mean, std}
 // std::normal_distribution<double> d{0,1};
 std::uniform_real_distribution<double> d{0.0,1.0};
+
+// File streams
+std::string buffer;
+std::string emptyLine;

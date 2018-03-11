@@ -5,17 +5,20 @@
 #include <iostream>
 #include <iomanip>
 #include <fstream>
+#include <string>
+#include <cstring>
 #include <cstdlib>
 #include "Particle.h"
+#include <unistd.h>
 #include <ctime>
 #include <random> 
 
 // configuration of particles
 #define RANDOM_DISSIPATIVE 1
 #define SPHERICAL_DROPLET 0
-#define SPHERICAL_CAP 1
+#define SPHERICAL_CAP 0
 #define CYLINDER_DROPLET 0
-#define PLANAR_SLAB 0
+#define PLANAR_SLAB 1
 #define CRYSTAL	0
 #define RESTART	0
 #define WALL_ON 1
@@ -33,11 +36,12 @@ class DPD {
 		//solve contains the time stepping algorithm and the output routines 
 		void solve () {
 
+			std::cout << " Proccess ID : " << getpid() << std::endl;
 			// initialize position, velocity, hoc, ll
 			init();
-			vtkFileWritePosVel();
 
 			// parameters declaration
+			step = 1;
 			temp = 0.0;
 			tempSum = 0.0;
 			tempAv = 0.0;
@@ -69,12 +73,22 @@ class DPD {
 			forceCalc();
 			
 			resetVar();
-
-			// writing the parameters to a file
-			std::ofstream paraInfo( "parainfo.txt" );
+			
+			// write parameters and initial configuration
+			vtkFileWritePosVel();
+			std::ofstream paraInfo( "param.out" );
 			paraWrite(paraInfo);
 			paraInfo.close();
-			
+
+			#if WALL_ON
+			if ( rd_cutoff > rcWcutoff ){
+				std::cout << " The cutoff for density calculation of fluid near wall needs to be checked " << std::endl; 
+				abort();
+			}
+			#endif
+
+			std::cout << " ********************* STARTING SIMULATION ************************* " << std::endl;	
+
 			while (step<stepMax) {
 
 				// force calculation
@@ -82,9 +96,8 @@ class DPD {
 				forceCalc();
 
 				// debug 
-				// for (Particle&p : particles)
-				//	  std::cout << "position: " <<  p.r << ", type: " << p.type << ", wall force: " << p.fCW << std::endl;
-
+				//for (i = fluid_index[0] ; i <= fluid_index[fluidCount-1] ; ++i)
+				//	  std::cout << "position: " <<  particles[i].r << ", type: " << particles[i].type << ", wall force: " << particles[i].fCW << std::endl;
 
 				// Integrate equations of motion (including pbc)
 				integrateEOM();
@@ -132,6 +145,8 @@ class DPD {
 			enStats.close();
 			eosStats.close();
 			momStats.close();
+			
+			std::cout << " ********************* ENDING SIMULATION ************************* " << std::endl;	
 
 		} //void solve()
 
@@ -146,11 +161,13 @@ class DPD {
 
 			#if WALL_ON
 				#include "defineWall.h"
-				
+
 				#if SPHERICAL_CAP
 					#include "sphericalCap.h"			
 				#elif CYLINDER_DROPLET
 					#include "cylDropInit.h"
+				#elif PLANAR_SLAB
+					#include "planarSlabInit.h" 
 				#endif
 			#else
 				#if SPHERICAL_DROPLET 
@@ -401,15 +418,20 @@ class DPD {
 								j = grid[mi[x]][mi[y]][mi[z]][jj];
 								// std::cout << "j1 "<<  mi[x] << " " << mi[y] << " " << mi[z] << " " << jj << " " << j << std::endl;
 
-								if ( particles[i].type == 1 ) // calculate force for liquid particles
-								{
-									if ( particles[j].type == 1 ){
-											#include "pairforceLL.h"
-									}
-									else{
-											#include "pairforceSL.h"
-									}
-								}
+
+								#if WALL_ON
+								if ( particles[i].type == 1 && particles[j].type == 1 ){
+										#include "pairforceLL.h"
+								} // liquid liquid interaction
+								else if ( particles[i].type == 0 && particles[j].type == 0 ){
+										#include "pairforceSS.h"
+								} // solid solid interaction
+								else{
+										#include "pairforceSL1.h"
+								} // solid liquid interaction
+								#else
+									#include "pairforceLL.h"
+								#endif
 							} // jj
 
 							// particle j in neighbour cell to i
@@ -426,15 +448,20 @@ class DPD {
 									j = grid[mj[x]][mj[y]][mj[z]][jj];
 									// std::cout << "j2 " << m << " " << mj[x] << " " << mj[y] << " " << mj[z] << " " << jj << " " << j << std::endl;
 
-									if ( particles[i].type == 1 ) // calculate force for liquid particles
-									{
-										if ( particles[j].type == 1 ){
+
+									#if WALL_ON
+									if ( particles[i].type == 1 && particles[j].type == 1 ){
 											#include "pairforceLL.h"
-										}
-										else{
-											#include "pairforceSL.h"
-										}
-									}
+									} // liquid liquid interaction
+									else if ( particles[i].type == 0 && particles[j].type == 0 ){
+										#include "pairforceSS.h"
+									}// solid solid interaction
+									else{
+										#include "pairforceSL1.h"
+									} // solid liquid interaction
+									#else 
+										#include "pairforceLL.h"
+									#endif
 								} // jj
 							} // m
 						} // ii
@@ -453,7 +480,7 @@ class DPD {
 					#else	
 						particles[i].w += ( particles[i].fC + particles[i].fD + particles[i].fR )*(dt/particles[i].m);
 					#endif
-				#elif 
+				#else 
 					#if WALL_ON
 						particles[i].w += ( particles[i].fC + particles[i].fCW )*(dt/particles[i].m);
 					#else
@@ -466,6 +493,9 @@ class DPD {
 
 				// calculate velocity (integral time step)
 				particles[i].v = 0.5*( w_old + particles[i].w );
+
+				if ( particles[i].r.Z < 1.89 || particles[i].r.Z > 8. )
+					std::cout << " Particle " << i << " is outside " << particles[i].r << " at step " << step << std::endl;
 
 				// implement periodic boundary condition 
 				#include "pbc.h"
@@ -485,9 +515,9 @@ class DPD {
 				// calculate density profile
 				iRhoZ = ceil ( ( particles[i].r.getComponent(z) - rhoZ_Zmin ) / rhoZ_Zdelta ) - 1;		
 
-				if ( iRhoZ < 0 || iRhoZ > rhoZ_bins  ) { std::cout << " planar slab particle out of bounds" << std::endl; abort(); } 						
-
+				if ( iRhoZ < 0 || iRhoZ > rhoZ_bins  ) { std::cout << " rhoZ calculation -- planar slab particle out of bounds" << std::endl; abort(); } 						
 				rhoZ[ iRhoZ ] += 1;
+
 				#elif CYLINDER_DROPLET
 				// calculate radial density profile
 				radPos 	= std::sqrt( pow( particles[i].r.X - xCOM, 2.0 ) + pow( particles[i].r.Y - yCOM, 2.0 ) );
@@ -531,7 +561,7 @@ class DPD {
 			momZ = 0.0;
 	
 			// std::cout << " fi[0], fi[fluidCount - 1], fluidCount " << fluid_index[0] << " " << fluid_index[1] << " " << fluidCount << std::endl;	
-			for ( i = fluid_index[0] ; i <= fluid_index[fluidCount - 1] ; ++i )
+			for ( i = 0; i < npart ; ++i )
 			{
 				particles[i].dens = particles[i].dens_new;
 				particles[i].dens_new = 0.0;
@@ -540,10 +570,16 @@ class DPD {
 				particles[i].fR.setZero();
 				particles[i].fD.setZero();
 
+				/*
 				#if WALL_ON
 				particles[i].fCW.setZero();
+				fSL = 0.;
+				w1P = 0.;
+				w2P = 0.;
 				#endif 
-			}
+				*/ //perfunctory
+
+			} // set density equal to zero for solid type particles
 
 			// reset ideal and non-ideal component of pressure tensor
 			/*
@@ -669,52 +705,68 @@ class DPD {
 		//--------------------------------------- Parameter file writing--------------------------------------//
 		void paraWrite(std::ofstream& paraInfo){
 
-			paraInfo << "set temperature (kbT)                      :           " << kBT << std::endl;
+			paraInfo << "---------------------------" << std::endl;
+			paraInfo << "Simulation Box Parameters" << std::endl;
+			paraInfo << "---------------------------" << std::endl;
+			paraInfo << "Set temperature (kbT)                      :           " << kBT << std::endl;
+			paraInfo << "Box length x (box)                         :           " << boxEdge[x] << std::endl;
+			paraInfo << "Box length y (box)                         :           " << boxEdge[y] << std::endl;
+			paraInfo << "Box length z (box)                         :           " << boxEdge[z] << std::endl;
+			paraInfo << "Initial fluid density (initRho)            :           " << initRho << std::endl;
+			paraInfo << "Cutoff attr (rcutoff)                      :           " << rcutoff << std::endl;
+			paraInfo << "Cutoff rep (rd_cutoff)                     :           " << rd_cutoff << std::endl;
+			paraInfo << "Dimensions (dim)                           :           " << dim << std::endl;
+			paraInfo << "Density (rho)                              :           " << rho << std::endl;
+			paraInfo << "Timestep (dt)                              :           " << dt << std::endl;
+			paraInfo << "Number of fluid particles (fluidCount)     :           " << fluidCount << std::endl;
+		
+			paraInfo << "---------------------------" << std::endl;
+			paraInfo << "Run & Data saving" << std::endl;
+			paraInfo << "---------------------------" << std::endl;
+			paraInfo << "Total run time (stepMax)                   :           " << stepMax << std::endl;
+			paraInfo << "Data frequency (saveCount)                 :           " << saveCount << std::endl;
+			
 			#if SPHERICAL_DROPLET 
+			paraInfo << "---------------------------" << std::endl;
+			paraInfo << "Spherical Drop Parameters" << std::endl;
+			paraInfo << "---------------------------" << std::endl;
 			paraInfo << "Initial box dimension (dropBox)            :           " << dropBox << std::endl;
 			#elif CYLINDER_DROPLET 
+			paraInfo << "---------------------------" << std::endl;
+			paraInfo << "Cylinder Parameters" << std::endl;
+			paraInfo << "---------------------------" << std::endl;
 			paraInfo << "Cylinder radius (cylRad)                   :           " << cylRad << std::endl;
-			paraInfo << "Cylinder height (cylHeight)                :           " << cylHeight << std::endl;
+			paraInfo << "Cylinder Height (cylHeight)                :           " << cylHeight << std::endl;
 			paraInfo << "Cylinder center x-coord (cylCenterX)       :           " << cylCenterX << std::endl;
 			paraInfo << "Cylinder center y-coord (cylCenterY)       :           " << cylCenterY << std::endl;
 			#elif PLANAR_SLAB
+			paraInfo << "---------------------------" << std::endl;
+			paraInfo << "Planar Slab Parameters" << std::endl;
+			paraInfo << "---------------------------" << std::endl;
+			#if !(WALL_ON)
 			paraInfo << "Width of planar slab (slabWidth)           :           " << slabWidth << std::endl;
 			#endif
-			
-			paraInfo << "box length x (box)                         :           " << boxEdge[x] << std::endl;
-			paraInfo << "box length y (box)                         :           " << boxEdge[y] << std::endl;
-			paraInfo << "box length z (box)                         :           " << boxEdge[z] << std::endl;
-			paraInfo << "cutoff attr (rcutoff)                      :           " << rcutoff << std::endl;
-			paraInfo << "cutoff rep (rd_cutoff)                     :           " << rd_cutoff << std::endl;
-			paraInfo << "dimensions (dim)                           :           " << dim << std::endl;
-			paraInfo << "density (rho)                              :           " << rho << std::endl;
-			paraInfo << "timestep (dt)                              :           " << dt << std::endl;
-			paraInfo << "number of fluid particles (fluidCount)     :           " << fluidCount << std::endl;
-			
-			#if WALL_ON
-			paraInfo << "number of solid particles                  :           " << npart - fluidCount << std::endl;
 			#endif
 			
-			paraInfo << "total run time (stepMax)                   :           " << stepMax << std::endl;
-			paraInfo << "Data frequency (saveCount)                 :           " << saveCount << std::endl;
 			
 			#if RANDOM_DISSIPATIVE
 			paraInfo << "---------------------------" << std::endl;
 			paraInfo << "Random & Dissipative Force " << std::endl;
 			paraInfo << "---------------------------" << std::endl;
-			paraInfo << "noise level (sigma)                        :           " << sigma << std::endl;
-			paraInfo << "friction parameter (gamma)                 :           " << gamma << std::endl;
+			paraInfo << "Noise level (sigma)                        :           " << sigma << std::endl;
+			paraInfo << "Friction parameter (gamma)                 :           " << gamma << std::endl;
 			#endif 
 			
 			#if WALL_ON
 			paraInfo << "---------------------------" << std::endl;
-			paraInfo << "Wall Force parameters      " << std::endl;
+			paraInfo << "Wall parameters      " << std::endl;
 			paraInfo << "---------------------------" << std::endl;
+			paraInfo << "Number of solid particles                  :           " << npart - fluidCount << std::endl;
+			paraInfo << "Wall density (initWallRho)                 :           " << initWallRho << std::endl;
 			paraInfo << "Wall Repulsion   (Asl)                     :           " << Asl << std::endl;
 			paraInfo << "Wall Attraction  (Bsl)                     :           " << Bsl << std::endl;
 			paraInfo << "Wall Attraction cutoff (rcWallcutoff )     :           " << rcWcutoff << std::endl;
 			paraInfo << "Wall Repulsion  cutoff (rdWall_cutoff )    :           " << rdWcutoff << std::endl;
-			paraInfo << "Constant wall cutoff force (fWallcutoff)   :           " << fWallcutoff << std::endl;
 			#endif 
 			
 			paraInfo << "---------------------------" << std::endl;
