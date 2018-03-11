@@ -6,6 +6,8 @@ xind_max = boxEdge[x];
 yind_max = boxEdge[y];
 zind_max = boxEdge[z];
 
+aCube = pow( 1. / initRho, 1./3. );
+
 xind = xind_min;
 // Particle position intialization in a crystal structure 
 while ( xind < xind_max){
@@ -22,10 +24,10 @@ while ( xind < xind_max){
 			particles.push_back({1.0,1.0,{xind, yind, zind},{rand_gen_velx, rand_gen_vely, rand_gen_velz}, 1});
 
 			// update zind
-			zind += 1.00*rcutoff;
+			zind += aCube*rcutoff;
 
 		}// end of zind
-		yind += 1.00*rcutoff;
+		yind += aCube*rcutoff;
 	}// end of yind			
-	xind += 1.00*rcutoff;
+	xind += aCube*rcutoff;
 }// end of xind
