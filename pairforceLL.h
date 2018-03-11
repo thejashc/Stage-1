@@ -20,13 +20,13 @@ if ( r2 <= rc2 ) {
 
 	//------ SOFT PAIR POTENTIAL -----//
 	/*
-	fCij.X = Bij*wCij*capRij.X;
-	fCij.Y = Bij*wCij*capRij.Y;
-	fCij.Z = Bij*wCij*capRij.Z;*/
+	fCij.X = Bll*wCij*capRij.X;
+	fCij.Y = Bll*wCij*capRij.Y;
+	fCij.Z = Bll*wCij*capRij.Z;*/
 
 	//------- SOFT PAIR POTENTIAL ENERGY--------//
 	/*
-	pair_pot_en = (Bij/2.0)*wCij_pow_2;
+	pair_pot_en = (Bll/2.0)*wCij_pow_2;
 	pot_en += pair_pot_en;*/
 
 	//------- WARREN POTENTIAL --------//
@@ -34,7 +34,7 @@ if ( r2 <= rc2 ) {
 	if ( r2 <= rd2 ){
 
 		wDij = ( 1.0 - dist/rd_cutoff );
-		term2 = Bij * ( particles[i].dens + particles[j].dens ) * wDij;
+		term2 = Bll * ( particles[i].dens + particles[j].dens ) * wDij;
 
 		wDij2 = wDij * wDij; 
 		rho_temp = fifteen_by_twopi_by_rd * wDij2;
@@ -43,7 +43,7 @@ if ( r2 <= rc2 ) {
 		particles[j].dens_new += rho_temp;
 	}
 
-	term1 = Aij * wCij;
+	term1 = All * wCij;
 	term3 = term1 + term2; 
 	fCij.X = term3 * capRij.X; 
 	fCij.Y = term3 * capRij.Y; 
