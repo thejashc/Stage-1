@@ -1,10 +1,10 @@
 boxEdgeX  	40.0		# box dimensions
 boxEdgeY  	10.0
 boxEdgeZ  	10.0
-initRho		6.51
+initRho		5.00
 
-Aij   		-50.0		# liquid liquid interaction parameters
-Bij   		+40.0		
+All   		-50.0		# liquid liquid interaction parameters
+Bll   		+40.0		
 rcutoff   	1.0		
 rd_cutoff   	0.75
 

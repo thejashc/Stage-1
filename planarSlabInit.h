@@ -6,9 +6,8 @@ xind_max = ( boxEdge[x] / 2.)  + ( slabWidth / 2. ) ;
 yind_max = boxEdge[y];
 zind_max = boxEdge[z] - wallHeight - 1.00;
 
-zind = zind_min;
-
 aCube = pow( 1. / initRho, 1./3. );
+zind = zind_min;
 while ( zind < zind_max ){
 	xind = xind_min;
 	// Particle position intialization in a crystal structure 
@@ -69,12 +68,12 @@ while ( xind < xind_max){
 			pCount += 1;
 
 			// update zind
-			zind += 0.63*rcutoff;
+			zind += aCube*rcutoff;
 
 		}// end of zind
-		yind += 0.63*rcutoff;
+		yind += aCube*rcutoff;
 	}// end of yind			
-	xind += 0.63*rcutoff;
+	xind += aCube*rcutoff;
 }// end of xind
 
 // normalizing the center of mass

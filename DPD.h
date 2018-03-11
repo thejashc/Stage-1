@@ -55,8 +55,8 @@ class DPD {
 			half_dt_sqr = half_dt*dt;				// 0.5*dt*dt to be used in the integrateEOM()
 			rd4 = pow(rd_cutoff, 4.0);				// fourth power of rd_cutoff
 			piThirty = M_PI/30.0;					// Pi/30.0 
-			k1 = piThirty*Aij;					// constant k1
-			k2 = piThirty*rd4*Bij;					// constant k2
+			k1 = piThirty*All;					// constant k1
+			k2 = piThirty*rd4*Bll;					// constant k2
 
 			counter = 0;						// initialize time, counter for file writing
 			std::ofstream enStats 	( "./data/en_data.dat"	);	// Kinetic, Potential and total energy
@@ -71,8 +71,9 @@ class DPD {
 
 			createGridList();
 			forceCalc();
-			
+	
 			resetVar();
+
 			
 			// write parameters and initial configuration
 			vtkFileWritePosVel();
@@ -95,9 +96,8 @@ class DPD {
 				createGridList();
 				forceCalc();
 
-				// debug 
-				//for (i = fluid_index[0] ; i <= fluid_index[fluidCount-1] ; ++i)
-				//	  std::cout << "position: " <<  particles[i].r << ", type: " << particles[i].type << ", wall force: " << particles[i].fCW << std::endl;
+				// for (i = fluid_index[0] ; i <= fluid_index[fluidCount-1] ; ++i)
+				//	  std::cout << "i= " << i << ", position: " <<  particles[i].r << ", type: " << particles[i].type << ", wall force: " << particles[i].fCW << std::endl;
 
 				// Integrate equations of motion (including pbc)
 				integrateEOM();
@@ -427,7 +427,7 @@ class DPD {
 										#include "pairforceSS.h"
 								} // solid solid interaction
 								else{
-										#include "pairforceSL1.h"
+										#include "pairforceSL.h"
 								} // solid liquid interaction
 								#else
 									#include "pairforceLL.h"
@@ -457,7 +457,7 @@ class DPD {
 										#include "pairforceSS.h"
 									}// solid solid interaction
 									else{
-										#include "pairforceSL1.h"
+										#include "pairforceSL.h"
 									} // solid liquid interaction
 									#else 
 										#include "pairforceLL.h"
@@ -570,14 +570,9 @@ class DPD {
 				particles[i].fR.setZero();
 				particles[i].fD.setZero();
 
-				/*
 				#if WALL_ON
 				particles[i].fCW.setZero();
-				fSL = 0.;
-				w1P = 0.;
-				w2P = 0.;
 				#endif 
-				*/ //perfunctory
 
 			} // set density equal to zero for solid type particles
 
@@ -748,7 +743,6 @@ class DPD {
 			#endif
 			#endif
 			
-			
 			#if RANDOM_DISSIPATIVE
 			paraInfo << "---------------------------" << std::endl;
 			paraInfo << "Random & Dissipative Force " << std::endl;
@@ -763,8 +757,8 @@ class DPD {
 			paraInfo << "---------------------------" << std::endl;
 			paraInfo << "Number of solid particles                  :           " << npart - fluidCount << std::endl;
 			paraInfo << "Wall density (initWallRho)                 :           " << initWallRho << std::endl;
-			paraInfo << "Wall Repulsion   (Asl)                     :           " << Asl << std::endl;
-			paraInfo << "Wall Attraction  (Bsl)                     :           " << Bsl << std::endl;
+			paraInfo << "Solid-Liquid Attraction Strength   (Asl)   :           " << Asl << std::endl;
+			paraInfo << "Solid-Liquid Repulsion  Strength   (Bsl)   :           " << Bsl << std::endl;
 			paraInfo << "Wall Attraction cutoff (rcWallcutoff )     :           " << rcWcutoff << std::endl;
 			paraInfo << "Wall Repulsion  cutoff (rdWall_cutoff )    :           " << rdWcutoff << std::endl;
 			#endif 
@@ -772,8 +766,8 @@ class DPD {
 			paraInfo << "---------------------------" << std::endl;
 			paraInfo << "Conservative Force         " << std::endl;
 			paraInfo << "---------------------------" << std::endl;
-			paraInfo << "Attractive (Aij)                           :           " << Aij << std::endl;
-			paraInfo << "Repulsive (Bij)                            :           " << Bij << std::endl;
+			paraInfo << "Liquid-Liquid Attraction Strength (All)    :           " << All << std::endl;
+			paraInfo << "Liquid-Liquid Repulsion Strength (Bll)     :           " << Bll << std::endl;
 			paraInfo << "---------------------------" << std::endl;
 			paraInfo << "---------------------------" << std::endl;
 			paraInfo << "---------------------------" << std::endl;

@@ -13,8 +13,8 @@ readParam >> buffer >> initRho;		readParam.ignore(256,'\n');
 // readParam >> buffer >> emptyLine;	readParam.ignore(256,'\n');
 
 std::cout << "Reading Liquid Liquid Interaction Parameters" << std::endl;
-readParam >> buffer >> Aij;		readParam.ignore(256,'\n');
-readParam >> buffer >> Bij;		readParam.ignore(256,'\n');
+readParam >> buffer >> All;		readParam.ignore(256,'\n');
+readParam >> buffer >> Bll;		readParam.ignore(256,'\n');
 readParam >> buffer >> rcutoff;		readParam.ignore(256,'\n');
 readParam >> buffer >> rd_cutoff;	readParam.ignore(256,'\n');
 
@@ -118,12 +118,20 @@ boxRecip[z] = 1.0 / boxEdge[z];
 gamma = pow( sigma,2.0 )/( 2.0 * kBT ); // DPD dissipative force parameter
 #endif
 
+// Cutoff distances for liquid-liquid and solid-liquid interactions
 fifteen_by_twopi_by_rd = 15.0/( 2.0 * M_PI * pow( rd_cutoff,3.0) );	// 15/(2*PI*rd^3) used in Lucy weight function
 fifteen_by_twopi_by_rc = 15.0/( 2.0 * M_PI * pow( rcutoff,3.0 ) );	// 15/(2*PI*rc^3) used in Lucy weight function
 rc2 = pow( rcutoff , 2);	// square of cut-off distance
 rd2 = pow( rd_cutoff,2);	// square of cut-off distance
 
-// post-processing
+#if WALL_ON
+rcW2 = pow( rcWcutoff , 2.);	// square of cut-off distance for solid liquid interactions -- attractive
+rdW2 = pow( rdWcutoff , 2.);	// square of cut-off distance for solid-liquid interactions -- repulsive
+#endif
+
+//*****************************************************************************************//
+//****************************** POST- PROCESSING *****************************************//
+//*****************************************************************************************//
 // g(r) calculation
 gR_radMax = boxEdge[x] / 2.0;		// maximum radius for g(r)
 gR_nElem  = round( ( gR_radMax - gR_radMin )/ gR_radDelta); // number of elements

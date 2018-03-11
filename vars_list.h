@@ -8,8 +8,8 @@ double boxEdge[3];			// box length in x,y,z directions
 double boxHalve[3];			// box length in x,y,z directions
 double boxRecip[3];			// box length in x,y,z directions
 double kBT;				// DPD fluid temperature
-double Aij;				// DPD Warren conservative force -- attractive parameter
-double Bij;                             // DPD Warren conservative force -- repulsive parameter
+double All;				// DPD Warren conservative force -- attractive parameter
+double Bll;                             // DPD Warren conservative force -- repulsive parameter
 double kappa;				// DPD conservative force -- surface tension force
 double rcutoff;				// cut-off distance -- attractive force
 double rd_cutoff;			// cut-off distance -- repulsive force
@@ -173,7 +173,7 @@ double magDiss;
 #endif
 
 // file writing parameters
-unsigned int saveCount = 5000;		// number of timestep between saves
+unsigned int saveCount = 500;		// number of timestep between saves
 
 // parameters for post-processing
 // g(r) -- structure function
