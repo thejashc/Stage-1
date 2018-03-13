@@ -60,6 +60,7 @@ readParam >> buffer >> dim;		readParam.ignore(256,'\n');
 std::cout << "Reading Time Parameters" << std::endl;
 readParam >> buffer >> dt;		readParam.ignore(256,'\n');
 readParam >> buffer >> stepMax;		readParam.ignore(256,'\n');
+readParam >> buffer >> saveCount;	readParam.ignore(256,'\n');
 
 //readParam >> buffer >> emptyLine;	readParam.ignore(256,'\n');
 
@@ -84,7 +85,13 @@ std::cout << "Reading Planar Slab Parameters" << std::endl;
 readParam >> buffer >> slabWidth;	readParam.ignore(256,'\n');
 readParam >> buffer >> rhoZ_Zmin;	readParam.ignore(256,'\n');
 readParam >> buffer >> rhoZ_Zdelta;	readParam.ignore(256,'\n');
+#if WALL_ON
+	readParam >> buffer >> segPlane_zDelta;	readParam.ignore(256,'\n');
+#endif
 #else
+#if WALL_ON
+readParam.ignore(256, '\n');		
+#endif
 readParam.ignore(256, '\n');		// skip 4 lines -- one + three line
 readParam.ignore(256, '\n');		
 readParam.ignore(256, '\n');
@@ -146,6 +153,12 @@ velHist_tEnd = stepMax;
 #if PLANAR_SLAB
 rhoZ_Zmax 	= boxEdge[z];		// maximum Z
 rhoZ_bins  	= round( ( rhoZ_Zmax - rhoZ_Zmin ) / rhoZ_Zdelta ); // number of elements
+#if WALL_ON
+segPlane_zMin = wallHeight;
+segPlane_zMax = boxEdge[z] - wallHeight; 
+
+segPlane_bins  = round( ( segPlane_zMax - segPlane_zMin )/ segPlane_zDelta); // number of elements
+#endif
 #elif CYLINDER_DROPLET
 rhor_rmax 	= boxEdge[x];
 rhor_bins  	= round( ( rhor_rmax - rhor_rmin ) / rhor_rdelta ); // number of elements

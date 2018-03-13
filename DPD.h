@@ -59,10 +59,10 @@ class DPD {
 			k2 = piThirty*rd4*Bll;					// constant k2
 
 			counter = 0;						// initialize time, counter for file writing
-			std::ofstream enStats 	( "./data/en_data.dat"	);	// Kinetic, Potential and total energy
-			std::ofstream eosStats	( "./data/eos_data.dat"	);	// Mean Pressure and temperature data
-			std::ofstream pTensStats( "./data/pTens.dat"	);	// Pressure tensor data
-			std::ofstream momStats	( "./data/mom_data.dat"	);	// pressure and temperature data
+			std::ofstream enStats 		( "./data/en_data.dat"	);	// Kinetic, Potential and total energy
+			std::ofstream eosStats		( "./data/eos_data.dat"	);	// Mean Pressure and temperature data
+			std::ofstream pTensStats	( "./data/pTens.dat"	);	// Pressure tensor data
+			std::ofstream momStats		( "./data/mom_data.dat"	);	// pressure and temperature data
 			std::ofstream writeConfig;
 
 			/*
@@ -74,7 +74,6 @@ class DPD {
 	
 			resetVar();
 
-			
 			// write parameters and initial configuration
 			vtkFileWritePosVel();
 			std::ofstream paraInfo( "param.out" );
@@ -120,6 +119,7 @@ class DPD {
 				if ( (step > gR_tStart) && (step % gR_tDelta == 0) ) grSample();
 
 				// filewriting 
+				counter += 1;
 				fileWrite(enStats, eosStats, momStats, pTensStats);
 				// std::cout << "filewrite done" << std::endl;
 
@@ -200,6 +200,17 @@ class DPD {
 				for ( i=0; i < rhoZ_bins ; ++i ){
 					rhoZ.push_back(0.0);
 				}	
+
+				#if WALL_ON
+				// Initialize the rhoZ array
+				for ( i=0; i < segPlane_bins ; ++i ){
+
+					segPlane_xCOM.push_back(0.0);
+					segPlane_zCOM.push_back(0.0);
+					segPlane_count.push_back(0);
+				}	
+				#endif
+
 			#elif CYLINDER_DROPLET
 				// Initialize the rhor array
 				for ( i=0; i < rhor_bins ; ++i ){
@@ -518,6 +529,16 @@ class DPD {
 				if ( iRhoZ < 0 || iRhoZ > rhoZ_bins  ) { std::cout << " rhoZ calculation -- planar slab particle out of bounds" << std::endl; abort(); } 						
 				rhoZ[ iRhoZ ] += 1;
 
+					#if WALL_ON
+					if ( step > 2e4 ){	
+
+						// finding the center-of-mass of the slab
+						xCOM += particles[i].r.X;
+						yCOM += particles[i].r.Y;
+						zCOM += particles[i].r.Z;
+					}
+					#endif
+				
 				#elif CYLINDER_DROPLET
 				// calculate radial density profile
 				radPos 	= std::sqrt( pow( particles[i].r.X - xCOM, 2.0 ) + pow( particles[i].r.Y - yCOM, 2.0 ) );
@@ -544,6 +565,14 @@ class DPD {
 
 			// calculation of  pressure tensor 
 			#include "pTensCalc.h"
+
+			// calculating center of mass for the slab
+			#if WALL_ON && PLANAR_SLAB
+			if ( step > 2e4 ){
+				#include "liquidvaporProfileCalculate.h"
+			}
+			#endif
+
 		} // run over all fluid particles
 		//--------------------------------------- Resetting variables--------------------------------------//
 		void resetVar(){
@@ -782,7 +811,7 @@ class DPD {
 			}
 
 			//write output file in the .data format
-			if (++counter>=saveCount) {				
+			if (counter>=saveCount) {				
 
 				// particle positions in vtk file format
 				vtkFileWritePosVel();
@@ -858,6 +887,27 @@ class DPD {
 					// reset value of rhoZ vector
 					rhoZ[iRhoZ] = 0.0;
 				}
+
+					#if WALL_ON
+					if ( step > 2e4 ) {
+						sprintf( filename, "./data/segPlane_%d.dat", step );  
+						std::ofstream segPlaneStats( filename );
+					
+						// writing the center of mass		
+						for ( segPlane_ind = 0; segPlane_ind < segPlane_bins; ++segPlane_ind ){
+							segPlane_xCOM[segPlane_ind] /= segPlane_count[segPlane_ind];
+							segPlane_zCOM[segPlane_ind] /= segPlane_count[segPlane_ind];
+
+							segPlaneStats << segPlane_xCOM[segPlane_ind] << "\t" << segPlane_zCOM[segPlane_ind] << std::endl;
+
+							// reset values
+							segPlane_count[segPlane_ind] = 0;
+							segPlane_xCOM[segPlane_ind] = 0.0;
+							segPlane_zCOM[segPlane_ind] = 0.0;
+						}
+
+					}
+					#endif
 
 				#elif CYLINDER_DROPLET
 

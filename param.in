@@ -21,7 +21,8 @@ sigma   	3.0		# dissipation coeffecient
 dim   		3		# dimensions
 
 dt   		0.001		# time parameters	
-stepMax   	200	
+stepMax   	200000	
+saveCount	5000
 
 gR_radMin   	0.0		# g(r) calculation
 gR_radDelta   	0.01	
@@ -29,14 +30,15 @@ gR_tStart   	50000
 gR_tDelta   	100	
 
 velHist_velMin   -25.0		 # velocity distribution function
-velHist_velDelta  0.005
-velHist_velMax    25.0	
+velHist_velDelta 0.005
+velHist_velMax   25.0	
 velHist_tStart   50000
 velHist_tDelta   100
 
 slabWidth	  20.0		# density distribution parameters
 rhoZ_Zmin 	  0.00		
 rhoZ_Zdelta 	  0.05	
+segPlane_zDelta   0.05
 
 cylRad		  7.5		# reading cylindrical droplet parameters
 cylHeight	  10.0

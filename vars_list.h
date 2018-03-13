@@ -173,7 +173,7 @@ double magDiss;
 #endif
 
 // file writing parameters
-unsigned int saveCount = 500;		// number of timestep between saves
+unsigned int saveCount;		// number of timestep between saves
 
 // parameters for post-processing
 // g(r) -- structure function
@@ -209,6 +209,18 @@ int iRhoZ;			// index -- bookkeeping
 double Zpos;
 
 char filename[40];		// filename for data writing
+#if WALL_ON
+double segPlane_zMin;
+double segPlane_zMax;
+double segPlane_zDelta;
+int segPlane_bins;
+int segPlane_ind;
+
+std::vector<double> segPlane_xCOM;
+std::vector<double> segPlane_zCOM;
+std::vector<int> segPlane_count;
+
+#endif
 #elif CYLINDER_DROPLET
 double rhor_rmin;
 double rhor_rdelta;
@@ -253,6 +265,8 @@ double rdWby2;
 
 Vec3D fCWij;
 Vec3D fCW;
+
+
 #if LOWER_WALL_ON
 double zindLW_min;
 double zindLW_max;
