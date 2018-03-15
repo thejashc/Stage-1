@@ -18,7 +18,7 @@ int main () {
 
 	// std::cout << "Total time for "<< coll2p.stepMax << " steps is: "<< difftime(tend, tstart) <<" second(s)."<< std::endl;
 	std::fstream paraInfo;
-  	paraInfo.open ("parainfo.txt", std::fstream::in | std::fstream::out | std::fstream::app);
+  	paraInfo.open ("param.out", std::fstream::in | std::fstream::out | std::fstream::app);
 	paraInfo << "Total Simulation time	" << "\t \t" <<  difftime(tend, tstart) << " seconds" << std::endl;
 	paraInfo.close();
 

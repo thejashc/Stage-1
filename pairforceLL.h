@@ -15,7 +15,7 @@ if ( r2 <= rc2 ) {
 	term3 = 0.0;
 
 	if ( particles[i].type != particles[j].type ){
-		std::cout << " not a  liquid liquid interaction between i, j:  " << i << " " << j << std::endl; abort();
+		simProg << " not a  liquid liquid interaction between i, j:  " << i << " " << j << std::endl; abort();
 	}
 
 	//------ SOFT PAIR POTENTIAL -----//

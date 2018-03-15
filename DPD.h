@@ -21,9 +21,13 @@
 #define PLANAR_SLAB 1
 #define CRYSTAL	0
 #define RESTART	0
+
+// WALL flags
 #define WALL_ON 1
 #define LOWER_WALL_ON 1
 #define UPPER_WALL_ON 1
+#define FCC_WALL 0
+#define ROUGH_WALL 1
 
 //declare DPD solver
 class DPD {
@@ -36,7 +40,8 @@ class DPD {
 		//solve contains the time stepping algorithm and the output routines 
 		void solve () {
 
-			std::cout << " Proccess ID : " << getpid() << std::endl;
+			simProg.open ( "./simProg.txt", std::ios::out );
+			simProg << " Proccess ID : " << getpid() << std::endl;
 			// initialize position, velocity, hoc, ll
 			init();
 
@@ -63,7 +68,6 @@ class DPD {
 			std::ofstream eosStats		( "./data/eos_data.dat"	);	// Mean Pressure and temperature data
 			std::ofstream pTensStats	( "./data/pTens.dat"	);	// Pressure tensor data
 			std::ofstream momStats		( "./data/mom_data.dat"	);	// pressure and temperature data
-			std::ofstream writeConfig;
 
 			/*
 			createGridList();
@@ -82,12 +86,12 @@ class DPD {
 
 			#if WALL_ON
 			if ( rd_cutoff > rcWcutoff ){
-				std::cout << " The cutoff for density calculation of fluid near wall needs to be checked " << std::endl; 
+				simProg<< " The cutoff for density calculation of fluid near wall needs to be checked " << std::endl; 
 				abort();
 			}
 			#endif
 
-			std::cout << " ********************* STARTING SIMULATION ************************* " << std::endl;	
+			simProg << " ********************* STARTING SIMULATION ************************* " << std::endl;	
 
 			while (step<stepMax) {
 
@@ -96,7 +100,8 @@ class DPD {
 				forceCalc();
 
 				// for (i = fluid_index[0] ; i <= fluid_index[fluidCount-1] ; ++i)
-				//	  std::cout << "i= " << i << ", position: " <<  particles[i].r << ", type: " << particles[i].type << ", wall force: " << particles[i].fCW << std::endl;
+				//	  simProg << "i= " << i << ", position: " <<  particles[i].r << ", type: " << particles[i].type << ", wall force: " << particles[i].fCW << std::endl;
+
 
 				// Integrate equations of motion (including pbc)
 				integrateEOM();
@@ -121,7 +126,7 @@ class DPD {
 				// filewriting 
 				counter += 1;
 				fileWrite(enStats, eosStats, momStats, pTensStats);
-				// std::cout << "filewrite done" << std::endl;
+				// simProg << "filewrite done" << std::endl;
 
 				// reset variables to zero
 				resetVar();
@@ -130,14 +135,17 @@ class DPD {
 				step += 1;
 
 				// for (Particle& p : particles)
-				//	std::cout << "Position: " << p.r << ", Density: " << p.dens <<", conservative force: " << p.fC << std::endl;
+				//	simProg << "Position: " << p.r << ", Density: " << p.dens <<", conservative force: " << p.fC << std::endl;
 
 			}//end time loop
 
+			#if RESTART
 			// write position velocity stats 
+			std::ofstream writeConfig;
 			writeConfig.open ( "./restart/posvelrestartfile.dat", std::ios::binary | std::ios::out );	// example binary file
 			finalposvelWrite( writeConfig );	
 			writeConfig.close();
+			#endif
 
 			// post-processing
 			grCalc();	 
@@ -146,7 +154,8 @@ class DPD {
 			eosStats.close();
 			momStats.close();
 			
-			std::cout << " ********************* ENDING SIMULATION ************************* " << std::endl;	
+			simProg << " ********************* ENDING SIMULATION ************************* " << std::endl;	
+			simProg.close();
 
 		} //void solve()
 
@@ -236,9 +245,9 @@ class DPD {
 			{
 				NrCells[i] = int( boxEdge[i] / rcutoff ); // cellnr runs from 0 to NrCells-1
 				scale[i] = NrCells[i] * boxRecip[i] ;
-				if ( NrCells[i] < 3 ) { std::cout << "*** NrCells[" << i << "] = " << NrCells[i] << std::endl ; abort(); }
+				if ( NrCells[i] < 3 ) { simProg << "*** NrCells[" << i << "] = " << NrCells[i] << std::endl ; abort(); }
 
-				// std::cout << "NrCells[" << i << "] = " << NrCells[i] << std::endl;
+				// simProg << "NrCells[" << i << "] = " << NrCells[i] << std::endl;
 			}
 
 			// initializing mini[3], maxi[3]
@@ -343,7 +352,7 @@ class DPD {
 							for ( jj = ii + 1 ; jj <= grid[mi[x]][mi[y]][mi[z]][0] ; ++jj )
 							{
 								j = grid[mi[x]][mi[y]][mi[z]][jj];
-								// std::cout << "j1 "<<  mi[x] << " " << mi[y] << " " << mi[z] << " " << jj << " " << j << std::endl;
+								// simProg << "j1 "<<  mi[x] << " " << mi[y] << " " << mi[z] << " " << jj << " " << j << std::endl;
 
 								#include "dens_calculate.h"
 
@@ -361,7 +370,7 @@ class DPD {
 								for ( jj = 1 ; jj <= grid[mj[x]][mj[y]][mj[z]][0] ; ++jj )
 								{
 									j = grid[mj[x]][mj[y]][mj[z]][jj];
-									// std::cout << "j2 " << m << " " << mj[x] << " " << mj[y] << " " << mj[z] << " " << jj << " " << j << std::endl;
+									// simProg << "j2 " << m << " " << mj[x] << " " << mj[y] << " " << mj[z] << " " << jj << " " << j << std::endl;
 
 									#include "dens_calculate.h"
 
@@ -388,23 +397,23 @@ class DPD {
 				mi[x] = int( particles[i].r.getComponent(x) * scale[x] );
 				mi[y] = int( particles[i].r.getComponent(y) * scale[y] );
 				mi[z] = int( particles[i].r.getComponent(z) * scale[z] );
-				// std::cout << "position of particle " << i << " =" << particles[i].r;
-				// std::cout << ", mi[x], mi[y], mi[z] =  " << mi[x] << ", " << mi[y] << ", " << mi[z] << std::endl;
+				// simProg << "position of particle " << i << " =" << particles[i].r;
+				// simProg << ", mi[x], mi[y], mi[z] =  " << mi[x] << ", " << mi[y] << ", " << mi[z] << std::endl;
 				if ( mi[x] < mini[x] || mi[x] > maxi[x]   // debug
 						|| mi[y] < mini[y] || mi[y] > maxi[y] 
 						|| mi[z] < mini[z] || mi[z] > maxi[z] )
 				{ 
-					std::cout << "*** particle " << i << " outside box in step: " << step << std::endl;
-					std::cout << "*** position: " << particles[i].r << std::endl;
-					std::cout << mini[x] << " < " << mi[x] << " < " << maxi[x] << std::endl;
-					std::cout << mini[y] << " < " << mi[y] << " < " << maxi[y] << std::endl;
-					std::cout << mini[z] << " < " << mi[z] << " < " << maxi[z] << std::endl;
+					simProg << "*** particle " << i << " outside box in step: " << step << std::endl;
+					simProg << "*** position: " << particles[i].r << std::endl;
+					simProg << mini[x] << " < " << mi[x] << " < " << maxi[x] << std::endl;
+					simProg << mini[y] << " < " << mi[y] << " < " << maxi[y] << std::endl;
+					simProg << mini[z] << " < " << mi[z] << " < " << maxi[z] << std::endl;
 					abort();
 				}
 				if ( grid[mi[x]][mi[y]][mi[z]][0] == MaxPerCell )
 				{ 
-					std::cout << "*** cell overfull" << std::endl;
-					std::cout << mi[x] << "  " << mi[y] << "  " << mi[z] << std::endl;
+					simProg << "*** cell overfull" << std::endl;
+					simProg << mi[x] << "  " << mi[y] << "  " << mi[z] << std::endl;
 					abort();
 				}
 				grid[mi[x]][mi[y]][mi[z]][0] ++ ;
@@ -427,7 +436,7 @@ class DPD {
 							for ( jj = ii + 1 ; jj <= grid[mi[x]][mi[y]][mi[z]][0] ; ++jj )
 							{
 								j = grid[mi[x]][mi[y]][mi[z]][jj];
-								// std::cout << "j1 "<<  mi[x] << " " << mi[y] << " " << mi[z] << " " << jj << " " << j << std::endl;
+								// simProg << "j1 "<<  mi[x] << " " << mi[y] << " " << mi[z] << " " << jj << " " << j << std::endl;
 
 
 								#if WALL_ON
@@ -435,7 +444,7 @@ class DPD {
 										#include "pairforceLL.h"
 								} // liquid liquid interaction
 								else if ( particles[i].type == 0 && particles[j].type == 0 ){
-										#include "pairforceSS.h"
+										 #include "pairforceSS.h"
 								} // solid solid interaction
 								else{
 										#include "pairforceSL.h"
@@ -457,7 +466,7 @@ class DPD {
 								for ( jj = 1 ; jj <= grid[mj[x]][mj[y]][mj[z]][0] ; ++jj )
 								{
 									j = grid[mj[x]][mj[y]][mj[z]][jj];
-									// std::cout << "j2 " << m << " " << mj[x] << " " << mj[y] << " " << mj[z] << " " << jj << " " << j << std::endl;
+									// simProg << "j2 " << m << " " << mj[x] << " " << mj[y] << " " << mj[z] << " " << jj << " " << j << std::endl;
 
 
 									#if WALL_ON
@@ -465,7 +474,7 @@ class DPD {
 											#include "pairforceLL.h"
 									} // liquid liquid interaction
 									else if ( particles[i].type == 0 && particles[j].type == 0 ){
-										#include "pairforceSS.h"
+											#include "pairforceSS.h"
 									}// solid solid interaction
 									else{
 										#include "pairforceSL.h"
@@ -505,8 +514,10 @@ class DPD {
 				// calculate velocity (integral time step)
 				particles[i].v = 0.5*( w_old + particles[i].w );
 
+				#if WALL_ON
 				if ( particles[i].r.Z < 1.89 || particles[i].r.Z > 8. )
-					std::cout << " Particle " << i << " is outside " << particles[i].r << " at step " << step << std::endl;
+					simProg << " Particle " << i << " is outside " << particles[i].r << " at step " << step << std::endl;
+				#endif
 
 				// implement periodic boundary condition 
 				#include "pbc.h"
@@ -526,7 +537,7 @@ class DPD {
 				// calculate density profile
 				iRhoZ = ceil ( ( particles[i].r.getComponent(z) - rhoZ_Zmin ) / rhoZ_Zdelta ) - 1;		
 
-				if ( iRhoZ < 0 || iRhoZ > rhoZ_bins  ) { std::cout << " rhoZ calculation -- planar slab particle out of bounds" << std::endl; abort(); } 						
+				if ( iRhoZ < 0 || iRhoZ > rhoZ_bins  ) { simProg << " rhoZ calculation -- planar slab particle out of bounds" << std::endl; abort(); } 						
 				rhoZ[ iRhoZ ] += 1;
 
 					#if WALL_ON
@@ -544,7 +555,7 @@ class DPD {
 				radPos 	= std::sqrt( pow( particles[i].r.X - xCOM, 2.0 ) + pow( particles[i].r.Y - yCOM, 2.0 ) );
 				iRhor 	= round ( ( radPos - rhor_rmin ) / rhor_rdelta );
 
-				if ( iRhor < 0 || iRhor > rhor_bins  ) { std::cout << " cylindrical particle out of bounds" << std::endl; abort(); } 						
+				if ( iRhor < 0 || iRhor > rhor_bins  ) { simProg << " cylindrical particle out of bounds" << std::endl; abort(); } 						
 
 				rhor[ iRhor ] += 1;
 				#endif
@@ -589,11 +600,11 @@ class DPD {
 			momY = 0.0;
 			momZ = 0.0;
 	
-			// std::cout << " fi[0], fi[fluidCount - 1], fluidCount " << fluid_index[0] << " " << fluid_index[1] << " " << fluidCount << std::endl;	
+			// simProg << " fi[0], fi[fluidCount - 1], fluidCount " << fluid_index[0] << " " << fluid_index[1] << " " << fluidCount << std::endl;	
 			for ( i = 0; i < npart ; ++i )
 			{
 				particles[i].dens = particles[i].dens_new;
-				particles[i].dens_new = 0.0;
+				particles[i].dens_new = 0.;
 				particles[i].rhoBar = 0.0;
 				particles[i].fC.setZero();
 				particles[i].fR.setZero();
@@ -649,7 +660,7 @@ class DPD {
 					if ( dist < boxEdge[x] / 2.0 ) { 
 						ig = ceil(dist/gR_radDelta)-1;
 
-						if ( (ig < 0) || (ig >= gR_nElem)) {std::cout << " out of bounds " << std::endl;} 
+						if ( (ig < 0) || (ig >= gR_nElem)) {simProg << " out of bounds " << std::endl;} 
 
 						gR_nCount[ig] += 2.0;	
 					}
@@ -678,9 +689,9 @@ class DPD {
 				grWrite << ri << "\t" << ro << "\t" << rad << "\t" << gR_nCount[i] << "\t" << npart << "\t" << gR_tSamples << "\t" << rho << std::endl;
 			}
 
-			std::cout << " the total number of samples is: " << gR_tSamples	<< std::endl;
-			std::cout << " the homogeneous density is: " << rho << std::endl;
-			std::cout << " the number of particles is: " << npart << std::endl;
+			simProg << " the total number of samples is: " << gR_tSamples	<< std::endl;
+			simProg << " the homogeneous density is: " << rho << std::endl;
+			simProg << " the number of particles is: " << npart << std::endl;
 
 			// file close	
 			grWrite.close();
@@ -732,7 +743,6 @@ class DPD {
 			paraInfo << "---------------------------" << std::endl;
 			paraInfo << "Simulation Box Parameters" << std::endl;
 			paraInfo << "---------------------------" << std::endl;
-			paraInfo << "Set temperature (kbT)                      :           " << kBT << std::endl;
 			paraInfo << "Box length x (box)                         :           " << boxEdge[x] << std::endl;
 			paraInfo << "Box length y (box)                         :           " << boxEdge[y] << std::endl;
 			paraInfo << "Box length z (box)                         :           " << boxEdge[z] << std::endl;
@@ -776,6 +786,7 @@ class DPD {
 			paraInfo << "---------------------------" << std::endl;
 			paraInfo << "Random & Dissipative Force " << std::endl;
 			paraInfo << "---------------------------" << std::endl;
+			paraInfo << "Set temperature (kbT)                      :           " << kBT << std::endl;
 			paraInfo << "Noise level (sigma)                        :           " << sigma << std::endl;
 			paraInfo << "Friction parameter (gamma)                 :           " << gamma << std::endl;
 			#endif 
@@ -807,7 +818,7 @@ class DPD {
 		void fileWrite( std::ofstream& enStats, std::ofstream& eosStats, std::ofstream& momStats, std::ofstream& pTensStats ){
 
 			if ( step % 10000 == 0){
-				std::cout<< step << " steps out of " << stepMax << " completed " << std::endl;
+				simProg << step << " steps out of " << stepMax << " completed " << std::endl;
 			}
 
 			//write output file in the .data format

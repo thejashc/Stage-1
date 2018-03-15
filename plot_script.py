@@ -15,11 +15,11 @@ def figEnv():
 #------- INTERFACIAL PROFILE & CONTACT ANGLE -------#
 filelist=[]
 
-for i in np.arange(50,200,5):
+for i in np.arange(40, 95, 5):
     filelist.append("./data/segPlane_%s.dat" %(i * 1000) )
 
-refFile = np.loadtxt('./data/segPlane_50000.dat')
-ind = np.arange(10,111,1)
+refFile = np.loadtxt('./data/segPlane_25000.dat')
+ind = np.arange(3,118,1)
 xRef = refFile[ind, 0]
 zRef = refFile[ind, 1]
 
@@ -34,8 +34,8 @@ counter = 0
 for fname in filelist:
 	data = np.loadtxt(fname)
 	
-	x= data[ind, 0] * 5000
-	z= data[ind, 1] * 5000
+	x= data[ind, 0]
+	z= data[ind, 1]
 	x= x[~np.isnan(x)]
 	z= z[~np.isnan(z)]
 
@@ -47,25 +47,25 @@ xCOM = xCOM/counter
 zCOM = zCOM/counter
 
 # fitting fourth-order polynomial
-xp = np.linspace(31.0, 31.4, 100 )
-p4 = np.poly1d( np.polyfit( xCOM[0:10],zCOM[0:10], 4) )
-p4d = np.polyder( p4 ) 
+#xp = np.linspace(31.0, 31.4, 100 )
+#p4 = np.poly1d( np.polyfit( xCOM[0:10],zCOM[0:10], 4) )
+#p4d = np.polyder( p4 ) 
 
-plt.figure()
-plt.plot( xCOM, zCOM, '.-', xp, p4(xp), '.' )
-plt.grid()
-plt.xlabel( r'$x$' )
-plt.ylabel( r'$z$' )
-plt.title( 'Interface profile' )
-plt.show()
-
-CA = 180. -  np.arctan( p4d(xp ) )*( 180. / PI ) 
-plt.figure()
-plt.plot( xp, CA, '.' )
-plt.grid()
-plt.xlabel( r'$x$' )
-plt.ylabel( r'$\theta$' )
-plt.show()
+#plt.figure()
+#plt.plot( xCOM, zCOM, '.-', xp, p4(xp), '.' )
+#plt.grid()
+#plt.xlabel( r'$x$' )
+#plt.ylabel( r'$z$' )
+#plt.title( 'Interface profile' )
+#plt.show()
+#
+#CA = 180. -  np.arctan( p4d(xp ) )*( 180. / PI ) 
+#plt.figure()
+#plt.plot( xp, CA, '.' )
+#plt.grid()
+#plt.xlabel( r'$x$' )
+#plt.ylabel( r'$\theta$' )
+#plt.show()
 
 ##------ ENERGY STATISTICS --------#
 #
@@ -128,33 +128,33 @@ plt.show()
 #plt.savefig( './plots/temp.svg', format='svg', dpi=1200 )
 #
 ##------------- DENSITY PROFILE-------------#
-#filelist=[]
-#
-#for i in range(10,34):
-#    filelist.append("./data/rhoZ_%s.dat" %(i * 10000) )
-#
-## setting up matrices for averaging
-#data = np.loadtxt( "./data/rhoZ_10000.dat" )
-#z 		= data[:,0]
-#vol		= data[:,1]
-#m	 	= len(z) 
-#rhoZCount 	= np.zeros(m)
-#counter 	= np.zeros(m)
-#
-#figEnv()
-#for fname in filelist:
-#	data = np.loadtxt( fname )
-#	rhoZCount 	= rhoZCount + data[:,2]
-#	counter 	= counter + data[:,3]
-#	
-#rhoZ 		= ( rhoZCount ) / ( counter * vol )
-#plt.plot( z, rhoZ )
-#plt.title ( r'$ \rho(z)\ vs\ z $' ) 
-#plt.xlabel( r'$ z $' )
-#plt.ylabel( r'$ \rho $' )
-#plt.grid()
-#plt.savefig( './plots/rhoZ_vs_Z.svg', format='svg', dpi=1200 )
-#
+filelist=[]
+
+for i in np.arange(40,80,5):
+    filelist.append("./data/rhoZ_%s.dat" %(i * 1000) )
+
+# setting up matrices for averaging
+data = np.loadtxt( "./data/rhoZ_10000.dat" )
+z 		= data[:,0]
+vol		= data[:,1]
+m	 	= len(z) 
+rhoZCount 	= np.zeros(m)
+counter 	= np.zeros(m)
+
+for fname in filelist:
+	data = np.loadtxt( fname )
+	rhoZCount 	= rhoZCount + data[:,2]
+	counter 	= counter + data[:,3]
+
+figEnv()	
+rhoZ 		= ( rhoZCount ) / ( counter * vol )
+plt.plot( z, rhoZ )
+plt.title ( r'$ \rho(z)\ vs\ z $' ) 
+plt.xlabel( r'$ z $' )
+plt.ylabel( r'$ \rho $' )
+plt.grid()
+plt.savefig( './plots/rhoZ_vs_Z.eps', format='eps', dpi=1200 )
+
 ##------------- PRESSURE TENSOR --------------#
 #data = np.genfromtxt( './data/pTens.dat', delimiter=',' )
 #
@@ -239,3 +239,15 @@ plt.show()
 #plt.grid()
 #plt.legend()
 #plt.savefig( './plots/gr.svg', format='svg', dpi=1200)
+
+#--------------------- Profile -----------------------#
+data = np.genfromtxt('./data/data1_25000.vtu', skip_header=10856, skip_footer=33270 )
+
+X = data[:,0]
+Y = data[:,1]
+Z = data[:,2]
+
+figEnv()
+plt.scatter( X, Z )
+plt.plot( xCOM, zCOM, 'r.' )
+plt.show()

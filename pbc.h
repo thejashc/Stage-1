@@ -4,8 +4,8 @@
 
 	if ( abs(mx) > 1 || abs(my) > 1 )     // unacceptably large displacement
 	{
-		std::cout << "*** particle " << i << " has escaped" << std::endl;
-		std::cout << mx << "  " << my << std::endl;
+		simProg << "*** particle " << i << " has escaped" << std::endl;
+		simProg << mx << "  " << my << std::endl;
 		abort();
 	} // abs(mx)
 
@@ -19,8 +19,8 @@
 
 	if ( abs(mx) > 1 || abs(my) > 1 || abs(mz) > 1 )     // unacceptably large displacement
 	{
-		std::cout << "*** particle " << i << " has escaped" << std::endl;
-		std::cout << mx << "  " << my << "  " << mz << std::endl;
+		simProg << "*** particle " << i << " has escaped" << std::endl;
+		simProg << mx << "  " << my << "  " << mz << std::endl;
 		abort();
 	} // abs(mx)
 

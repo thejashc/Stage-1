@@ -11,7 +11,7 @@ if ( r2 <= rcW2 ) {
 	term3 = 0.0;
 
 	if ( particles[i].type == particles[j].type ){
-		std::cout << " not a solid liquid interaction between i, j:  " << i << " " << j << std::endl; abort();
+		simProg << " not a solid liquid interaction between i, j:  " << i << " " << j << std::endl; abort();
 	}
 
 	if ( r2 <= rdW2 ){

@@ -336,3 +336,5 @@ std::uniform_real_distribution<double> d{0.0,1.0};
 // File streams
 std::string buffer;
 std::string emptyLine;
+	
+std::ofstream simProg;

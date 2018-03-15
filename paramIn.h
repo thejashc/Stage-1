@@ -1,10 +1,10 @@
-std::cout << " ********************* READING PARAMETERS ************************* " << std::endl;	
+simProg << " ********************* READING PARAMETERS ************************* " << std::endl;	
 
 std::string const in_fld = "param.in";
 std::ifstream readParam (in_fld.c_str());
-if ( ! readParam  ) { std::cout << "*** input file is empty" << std::endl; abort(); }
+if ( ! readParam  ) { simProg << "*** input file is empty" << std::endl; abort(); }
 
-std::cout << "Reading Box Dimensions" << std::endl;
+simProg << "Reading Box Dimensions" << std::endl;
 readParam >> buffer >> boxEdge[x];	readParam.ignore(256,'\n');
 readParam >> buffer >> boxEdge[y];	readParam.ignore(256,'\n');
 readParam >> buffer >> boxEdge[z];	readParam.ignore(256,'\n');
@@ -12,7 +12,7 @@ readParam >> buffer >> initRho;		readParam.ignore(256,'\n');
 
 // readParam >> buffer >> emptyLine;	readParam.ignore(256,'\n');
 
-std::cout << "Reading Liquid Liquid Interaction Parameters" << std::endl;
+simProg << "Reading Liquid Liquid Interaction Parameters" << std::endl;
 readParam >> buffer >> All;		readParam.ignore(256,'\n');
 readParam >> buffer >> Bll;		readParam.ignore(256,'\n');
 readParam >> buffer >> rcutoff;		readParam.ignore(256,'\n');
@@ -21,13 +21,13 @@ readParam >> buffer >> rd_cutoff;	readParam.ignore(256,'\n');
 // readParam >> buffer >> emptyLine;	readParam.ignore(256,'\n');
 #if WALL_ON
 
-std::cout << "Reading Solid Liquid Interaction Parameters" << std::endl;
+simProg << "Reading Solid Liquid Interaction Parameters" << std::endl;
 readParam >> buffer >> Asl;		readParam.ignore(256,'\n');
 readParam >> buffer >> Bsl;		readParam.ignore(256,'\n');
 readParam >> buffer >> rcWcutoff;	readParam.ignore(256,'\n');
 readParam >> buffer >> rdWcutoff;	readParam.ignore(256,'\n');
 
-std::cout << "Reading Solid geometrical Parameters" << std::endl;
+simProg << "Reading Solid geometrical Parameters" << std::endl;
 readParam >> buffer >> wallHeight;	readParam.ignore(256,'\n');
 readParam >> buffer >> initWallRho;	readParam.ignore(256,'\n');
 
@@ -45,11 +45,10 @@ readParam.ignore(256, '\n');
 //readParam >> buffer >> emptyLine;	readParam.ignore(256,'\n');
 
 #if RANDOM_DISSIPATIVE
-std::cout << "Reading Random and Dissipative Parameters" << std::endl;
+simProg << "Reading Random and Dissipative Parameters" << std::endl;
 readParam >> buffer >> kBT;		readParam.ignore(256,'\n');
 readParam >> buffer >> sigma;		readParam.ignore(256,'\n');
 #else
-readParam.ignore(256, '\n');		// skip 3 lines - one + two
 readParam.ignore(256, '\n');		
 readParam.ignore(256, '\n');
 #endif
@@ -57,14 +56,14 @@ readParam >> buffer >> dim;		readParam.ignore(256,'\n');
 
 //readParam >> buffer >> emptyLine;	readParam.ignore(256,'\n');
 
-std::cout << "Reading Time Parameters" << std::endl;
+simProg << "Reading Time Parameters" << std::endl;
 readParam >> buffer >> dt;		readParam.ignore(256,'\n');
 readParam >> buffer >> stepMax;		readParam.ignore(256,'\n');
 readParam >> buffer >> saveCount;	readParam.ignore(256,'\n');
 
 //readParam >> buffer >> emptyLine;	readParam.ignore(256,'\n');
 
-std::cout << "Reading Structure Factor Parameters" << std::endl;
+simProg << "Reading Structure Factor Parameters" << std::endl;
 readParam >> buffer >> gR_radMin;	readParam.ignore(256,'\n');
 readParam >> buffer >> gR_radDelta;	readParam.ignore(256,'\n');
 readParam >> buffer >> gR_tStart;	readParam.ignore(256,'\n');
@@ -72,7 +71,7 @@ readParam >> buffer >> gR_tDelta;	readParam.ignore(256,'\n');
 
 //readParam >> buffer >> emptyLine;	readParam.ignore(256,'\n');
 
-std::cout << "Reading Velocity Distribution Parameters" << std::endl;
+simProg << "Reading Velocity Distribution Parameters" << std::endl;
 readParam >> buffer >> velHist_velMin;		readParam.ignore(256,'\n');
 readParam >> buffer >> velHist_velDelta;	readParam.ignore(256,'\n');
 readParam >> buffer >> velHist_velMax;		readParam.ignore(256,'\n');
@@ -81,7 +80,7 @@ readParam >> buffer >> velHist_tDelta;		readParam.ignore(256,'\n');
 
 //readParam >> buffer >> emptyLine;	readParam.ignore(256,'\n');
 #if PLANAR_SLAB
-std::cout << "Reading Planar Slab Parameters" << std::endl;
+simProg << "Reading Planar Slab Parameters" << std::endl;
 readParam >> buffer >> slabWidth;	readParam.ignore(256,'\n');
 readParam >> buffer >> rhoZ_Zmin;	readParam.ignore(256,'\n');
 readParam >> buffer >> rhoZ_Zdelta;	readParam.ignore(256,'\n');
@@ -99,7 +98,7 @@ readParam.ignore(256, '\n');
 #endif
 
 #if CYLINDER_DROPLET
-std::cout << "Reading Cylindrical Slab Parameters" << std::endl;
+simProg << "Reading Cylindrical Slab Parameters" << std::endl;
 readParam >> buffer >> cylRad;		readParam.ignore(256,'\n');
 readParam >> buffer >> cylHeight;	readParam.ignore(256,'\n');
 readParam >> buffer >> rhor_rmin;	readParam.ignore(256,'\n');
