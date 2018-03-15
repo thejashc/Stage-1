@@ -1,3 +1,4 @@
+#if FCC_WALL
 // Set max and min dimensions of planar slab
 xind_min = 0.00;
 xind_max = boxEdge[x];
@@ -12,7 +13,6 @@ zindUW_min = boxEdge[z] - wallHeight;
 zindUW_max = boxEdge[z]; 
 #endif 
 
-//#include "restartWallconfig.h"	// random wall
 
 xind = xind_min;
 aCube = pow( 1. / initWallRho, 1./3. );
@@ -60,3 +60,9 @@ while ( xind < xind_max){
 	xind += aCube*rcutoff;
 }// end of xind
 #endif 
+#elif ROUGH_WALL
+
+// rough wall
+#include "restartWallconfig.h"	
+
+#endif
