@@ -31,7 +31,7 @@ if ( r2 <= rcW2 ) {
 	fCWij.X = term3 * capRij.X; 
 	fCWij.Y = term3 * capRij.Y; 
 	fCWij.Z = term3 * capRij.Z; 
-	
+
 	particles[i].fCW += fCWij;
 	particles[j].fCW -= fCWij; 
 
