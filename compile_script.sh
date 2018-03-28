@@ -9,7 +9,7 @@ rm -f *.o
 rm -f a.out
 rm -f *.exe
 rm -f *.dat
-rm -f ./data/*.vtu
+rm -f ./data/*.xyz
 rm -f ./data/*.dat
 rm -f ./plots/*.eps
 
