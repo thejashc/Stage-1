@@ -12,6 +12,9 @@
 	particles[i].r.X -= mx * boxEdge[x];    // apply periodic boundary conditions
 	particles[i].r.Y -= my * boxEdge[y];
 
+	if ( ( particles[i].r.Z < wallLowPos - 2*wallPenetration ) || ( particles[i].r.Z > wallTopPos + 2*wallPenetration ) )
+		simProg << " Particle [" << i << "] infiltrating the wall: " << particles[i].r << std::endl;
+
 	#else	// pbc only in x, y and z
 	mx = (int) round( ( particles[i].r.X - boxHalve[x] ) * boxRecip[x] );
 	my = (int) round( ( particles[i].r.Y - boxHalve[y] ) * boxRecip[y] );

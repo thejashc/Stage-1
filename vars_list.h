@@ -216,6 +216,15 @@ double segPlane_zDelta;
 int segPlane_bins;
 int segPlane_ind;
 
+double Brep;
+double wallLowPos;
+double wallTopPos;
+double wallLowDist;
+double wallTopDist;
+double wallPenetration;
+
+unsigned int solidCount;
+
 std::vector<double> segPlane_xCOM;
 std::vector<double> segPlane_zCOM;
 std::vector<int> segPlane_count;
@@ -266,6 +275,20 @@ double rdWby2;
 Vec3D fCWij;
 Vec3D fCW;
 
+std::vector<std::vector<int>> nZ;
+int nZ_indz;
+int nZ_indx;
+double nZ_zbinWidth;
+double nZ_xbinWidth;
+int nZ_xbins;
+int nZ_zbins;
+
+double nZ_xMin;
+double nZ_xMax;
+double nZ_zMin;
+double nZ_zMax;
+
+double nZ_tStart;
 
 #if LOWER_WALL_ON
 double zindLW_min;

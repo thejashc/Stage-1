@@ -62,10 +62,10 @@ yCOM = 0.0;
 zCOM = 0.0;
 xind_min = 0.00;
 yind_min = 0.00;
-zind_min = 0.00; 
+zind_min = ( boxEdge[z] / 2. ) - ( cylHeight / 2. ); 
 xind_max = boxEdge[x];
 yind_max = boxEdge[y];
-zind_max = cylHeight;
+zind_max = ( boxEdge[z] / 2. ) + ( cylHeight / 2. );
 
 zind = zind_min;
 aCube = pow( 1. / initRho, 1./3. );

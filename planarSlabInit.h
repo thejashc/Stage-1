@@ -1,10 +1,10 @@
 #if WALL_ON
 xind_min = ( boxEdge[x] / 2.)  - ( slabWidth / 2. ) ;
 yind_min = 0.0;
-zind_min = wallHeight + 1.00;
+zind_min = wallHeight;
 xind_max = ( boxEdge[x] / 2.)  + ( slabWidth / 2. ) ;
 yind_max = boxEdge[y];
-zind_max = boxEdge[z] - wallHeight - 1.00;
+zind_max = boxEdge[z] - wallHeight;
 
 aCube = pow( 1. / initRho, 1./3. );
 zind = zind_min;

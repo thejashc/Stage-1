@@ -23,7 +23,7 @@
 #define RESTART	0
 
 // WALL flags
-#define WALL_ON 1
+#define WALL_ON 0
 #define LOWER_WALL_ON 1
 #define UPPER_WALL_ON 1
 #define FCC_WALL 0
@@ -69,10 +69,6 @@ class DPD {
 			std::ofstream pTensStats	( "./data/pTens.dat"	);	// Pressure tensor data
 			std::ofstream momStats		( "./data/mom_data.dat"	);	// pressure and temperature data
 
-			/*
-			createGridList();
-			dens_calculation();*/ // everytime force calculation
-
 			createGridList();
 			forceCalc();
 	
@@ -99,21 +95,8 @@ class DPD {
 				createGridList();
 				forceCalc();
 
-				// for (i = fluid_index[0] ; i <= fluid_index[fluidCount-1] ; ++i)
-				//	  simProg << "i= " << i << ", position: " <<  particles[i].r << ", type: " << particles[i].type << ", wall force: " << particles[i].fCW << std::endl;
-
-
 				// Integrate equations of motion (including pbc)
 				integrateEOM();
-
-				// calculate density
-				/*
-				// for (Particle& p : particles) {
-				// 	p.dens = 0.0;
-				// }
-				// dens_calculate();
-				//createGridList();
-				// dens_calculation();*/ // Everytime density calculation
 
 				// total energy and g(r) sample calculation
 				// potential energy
@@ -126,7 +109,6 @@ class DPD {
 				// filewriting 
 				counter += 1;
 				fileWrite(enStats, eosStats, momStats, pTensStats);
-				// simProg << "filewrite done" << std::endl;
 
 				// reset variables to zero
 				resetVar();
@@ -211,14 +193,28 @@ class DPD {
 				}	
 
 				#if WALL_ON
-				// Initialize the rhoZ array
+				/*
+				// Initialize the segPlane array
 				for ( i=0; i < segPlane_bins ; ++i ){
 
 					segPlane_xCOM.push_back(0.0);
 					segPlane_zCOM.push_back(0.0);
 					segPlane_count.push_back(0);
-				}	
+				}
+				*/
+
+				// Intialize nZ array
+				/*
+				nZ.resize( nZ_zbins );
+				for ( i = 0; i < nZ_zbins ; ++i )
+					nZ[i].resize( nZ_xbins );
+
+				for ( i = 0; i < nZ_zbins ; ++i )
+					for ( j = 0; j < nZ_xbins; ++j )
+							nZ[i][j] = 0;
+				*/
 				#endif
+				
 
 			#elif CYLINDER_DROPLET
 				// Initialize the rhor array
@@ -323,13 +319,20 @@ class DPD {
 
 			// find indices of all liquid particles
 			fluidCount = 0;
+			#if WALL_ON
+			solidCount = 0;
+			#endif
 			for ( i = 0; i < particles.size(); ++i ){
 				if ( particles[i].type == 1 ){
 					fluid_index.push_back(i);
 					fluidCount++;
 				}
-				else
+				#if WALL_ON
+				else{
 					solid_index.push_back(i);
+					solidCount++;
+				}
+				#endif
 
 			}
 
@@ -378,7 +381,6 @@ class DPD {
 							} // m
 
 						} // ii
-
 
 		}// dens_calculation
 
@@ -438,7 +440,6 @@ class DPD {
 								j = grid[mi[x]][mi[y]][mi[z]][jj];
 								// simProg << "j1 "<<  mi[x] << " " << mi[y] << " " << mi[z] << " " << jj << " " << j << std::endl;
 
-
 								#if WALL_ON
 								if ( particles[i].type == 1 && particles[j].type == 1 ){
 										#include "pairforceLL.h"
@@ -493,16 +494,32 @@ class DPD {
 				// store velocity (mid-step)
 				Vec3D w_old = particles[i].w;
 
+				#if WALL_ON
+				// additional force from soft potential to avoid particles from entering into wall
+				wallLowDist = particles[i].r.Z - ( wallLowPos + wallPenetration );
+				wallTopDist = particles[i].r.Z - ( wallTopPos - wallPenetration );
+
+				if ( wallLowDist < 0. )
+					particles[i].fext.Z = -Brep * wallLowDist;		// Lower wall -- act on particles below threshold: wallHeight + tolerance
+				else if ( wallTopDist > 0. )
+					particles[i].fext.Z = -Brep * wallTopDist;		// Upper wall -- act on particles above threshold: wallHeight - tolerance
+
+				// no external force in X and Y directions
+				particles[i].fext.X = 0.; 
+				particles[i].fext.Y = 0.;
+
+				#endif				
+
 				// update velocities (mid-step)
 				#if RANDOM_DISSIPATIVE
 					#if WALL_ON
-						particles[i].w += ( particles[i].fC + particles[i].fCW +  particles[i].fD + particles[i].fR )*(dt/particles[i].m);
+						particles[i].w += ( particles[i].fC + particles[i].fCW +  particles[i].fD + particles[i].fR + particles[i].fext )*(dt/particles[i].m);
 					#else	
 						particles[i].w += ( particles[i].fC + particles[i].fD + particles[i].fR )*(dt/particles[i].m);
 					#endif
 				#else 
 					#if WALL_ON
-						particles[i].w += ( particles[i].fC + particles[i].fCW )*(dt/particles[i].m);
+						particles[i].w += ( particles[i].fC + particles[i].fCW + particles[i].fext )*(dt/particles[i].m);
 					#else
 						particles[i].w += ( particles[i].fC )*(dt/particles[i].m);
 					#endif
@@ -514,10 +531,6 @@ class DPD {
 				// calculate velocity (integral time step)
 				particles[i].v = 0.5*( w_old + particles[i].w );
 
-				#if WALL_ON
-				if ( particles[i].r.Z < 1.89 || particles[i].r.Z > 8. )
-					simProg << " Particle " << i << " is outside " << particles[i].r << " at step " << step << std::endl;
-				#endif
 
 				// implement periodic boundary condition 
 				#include "pbc.h"
@@ -540,15 +553,19 @@ class DPD {
 				if ( iRhoZ < 0 || iRhoZ > rhoZ_bins  ) { simProg << " rhoZ calculation -- planar slab particle out of bounds" << std::endl; abort(); } 						
 				rhoZ[ iRhoZ ] += 1;
 
+					/*
 					#if WALL_ON
-					if ( step > 2e4 ){	
-
-						// finding the center-of-mass of the slab
+					if ( step > nZ_tStart ){
+						
+						// finding COM for fluid particles
 						xCOM += particles[i].r.X;
 						yCOM += particles[i].r.Y;
 						zCOM += particles[i].r.Z;
+
+						#include "liquidvaporProfileCalculate.h"
 					}
 					#endif
+					*/
 				
 				#elif CYLINDER_DROPLET
 				// calculate radial density profile
@@ -578,11 +595,13 @@ class DPD {
 			#include "pTensCalc.h"
 
 			// calculating center of mass for the slab
+			/*
 			#if WALL_ON && PLANAR_SLAB
-			if ( step > 2e4 ){
+			if ( step > nZ_tStart ){
 				#include "liquidvaporProfileCalculate.h"
 			}
 			#endif
+			*/
 
 		} // run over all fluid particles
 		//--------------------------------------- Resetting variables--------------------------------------//
@@ -607,10 +626,14 @@ class DPD {
 				particles[i].dens_new = 0.;
 				particles[i].rhoBar = 0.0;
 				particles[i].fC.setZero();
+		
+				#if RANDOM_DISSIPATIVE 
 				particles[i].fR.setZero();
 				particles[i].fD.setZero();
+				#endif
 
 				#if WALL_ON
+				particles[i].fext.setZero();
 				particles[i].fCW.setZero();
 				#endif 
 
@@ -799,6 +822,8 @@ class DPD {
 			paraInfo << "Wall density (initWallRho)                 :           " << initWallRho << std::endl;
 			paraInfo << "Solid-Liquid Attraction Strength   (Asl)   :           " << Asl << std::endl;
 			paraInfo << "Solid-Liquid Repulsion  Strength   (Bsl)   :           " << Bsl << std::endl;
+			paraInfo << "Soft Repulsive force Strength   (Brep)     :           " << Brep << std::endl;
+			paraInfo << "Penetration tolerance (wallPenetration)    :           " << wallPenetration << std::endl;
 			paraInfo << "Wall Attraction cutoff (rcWallcutoff )     :           " << rcWcutoff << std::endl;
 			paraInfo << "Wall Repulsion  cutoff (rdWall_cutoff )    :           " << rdWcutoff << std::endl;
 			#endif 
@@ -900,7 +925,9 @@ class DPD {
 				}
 
 					#if WALL_ON
-					if ( step > 2e4 ) {
+					/*
+					// COM calculation
+					if ( step > nZ_tStart ) {
 						sprintf( filename, "./data/segPlane_%d.dat", step );  
 						std::ofstream segPlaneStats( filename );
 					
@@ -918,30 +945,45 @@ class DPD {
 						}
 
 					}
+					*/
+
+					/*
+					if ( step > nZ_tStart){
+						sprintf( filename, "./data/nzStats_%d.dat", step );  
+						std::ofstream nZStats( filename );
+
+						for ( nZ_indz = 0; nZ_indz < nZ_zbins; ++nZ_indz ){
+							for ( nZ_indx = 0; nZ_indx < nZ_xbins; ++nZ_indx ){
+
+								nZStats << ( nZ[nZ_indz][nZ_indx] / counter ) << "\t";
+							}
+							nZStats << "\n" << std::endl;
+						}
+					}
+					*/
 					#endif
 
-				#elif CYLINDER_DROPLET
+					#elif CYLINDER_DROPLET
 
-				sprintf( filename, "./data/rhor_%d.dat", step );  
-				std::ofstream rhorStats( filename );
+					sprintf( filename, "./data/rhor_%d.dat", step );  
+					std::ofstream rhorStats( filename );
 
-				for ( iRhor = 0; iRhor < rhor_bins ; ++iRhor )  {
+					for ( iRhor = 0; iRhor < rhor_bins ; ++iRhor )  {
 
-					bin_lower = rhor_rmin + ( iRhor ) * rhor_rdelta;
-					bin_upper = rhor_rmin + ( iRhor + 1 ) * rhor_rdelta;
-					radPos = ( bin_lower + bin_upper )*0.5;
-					vol = M_PI * ( pow( bin_upper, 2.0 ) - pow( bin_lower, 2.0 ) ) * cylHeight;
+						bin_lower = rhor_rmin + ( iRhor ) * rhor_rdelta;
+						bin_upper = rhor_rmin + ( iRhor + 1 ) * rhor_rdelta;
+						radPos = ( bin_lower + bin_upper )*0.5;
+						vol = M_PI * ( pow( bin_upper, 2.0 ) - pow( bin_lower, 2.0 ) ) * cylHeight;
 
-					rhorStats << radPos << "\t" << vol << "\t" << rhor[iRhor] << "\t" << counter << std::endl;
+						rhorStats << radPos << "\t" << vol << "\t" << rhor[iRhor] << "\t" << counter << std::endl;
 
-					// reset value of rhor vector
-					rhor[iRhor] = 0.0;
-				}
-				#endif	
+						// reset value of rhor vector
+						rhor[iRhor] = 0.0;
+					}
+					#endif	
 
-
-				//reset the counter, write time to terminal
-				counter = 0;
+					//reset the counter, write time to terminal
+					counter = 0;
 			}
 		}
 
@@ -950,8 +992,10 @@ class DPD {
 
 			char filename[40];
 
-			sprintf( filename, "./data/data1_%d.vtu", step);  
+			// sprintf( filename, "./data/data1_%d.vtu", step);  
+			sprintf( filename, "./data/XYZ%d.xyz", step);  
 			std::ofstream file(filename);
+			/*
 			file << "<?xml version=\"1.0\"?>" << std::endl;
 			file << "<VTKFile type=\"UnstructuredGrid\" version=\"0.1\" byte_order=\"LittleEndian\">" << std::endl;
 			file << "<UnstructuredGrid>";
@@ -959,24 +1003,20 @@ class DPD {
 			file << "<Points>" << std::endl;
 			// position data -- particles 
 			file << "<DataArray type=\"Float32\" Name=\"Position\" NumberOfComponents=\"3\" format=\"ascii\">"<< std::endl;
-			for (Particle& p: particles)
-			{
-				file << p.r << std::endl;
+			*/
+			file << particles.size() << std::endl;
+			file << "#X Y Z co-ordinates" << std::endl;
 
-			}
+			for ( i = fluid_index[0] ; i <= fluid_index[fluidCount-1] ; ++i )
+				file << "H" <<"\t" << particles[i].r << std::endl;
+
+			#if WALL_ON	
+			for ( i = solid_index[0] ; i <= solid_index[solidCount-1] ; ++i )
+				file << "O" <<"\t" << particles[i].r << std::endl;
+			#endif
+			/*
 			file << "</DataArray>"<<std::endl;
 			file << "</Points>" << std::endl;	
-
-			// particle species
-			/*
-			   file << "<DataArray type=\"UInt8\" Name=\"Colors\" NumberOfComponents=\"3\" format=\"ascii\">"<< std::endl;
-			   for (Particle& p: particles)
-			   {
-			   file << "255" << ", 0" << ", 0" << std::endl;
-
-			   }
-			   file << "</DataArray>"<<std::endl;
-			 */
 
 			// velocity data
 			file << "<PointData Vectors=\"vector\">"<< std::endl;	
@@ -1009,7 +1049,7 @@ class DPD {
 			file << "</Piece>" << std::endl;
 			file << "</UnstructuredGrid>" << std::endl;
 			file << "</VTKFile>" << std::endl;
-
+			*/
 			file.close();
 
 		}

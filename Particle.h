@@ -15,9 +15,13 @@ public:
 	
 	Vec3D v;  // integer-step velocity
 	Vec3D fC;  // force
+
 	Vec3D fD;  // dissipative force
 	Vec3D fR;  // random force
+
 	Vec3D fCW; // wall force
+	Vec3D fext; // wall force due to soft external potential
+
 	double dens; // calculating the local density at a particle
 	double dens_new; // calculating the local density at a particle
 	double rhoBar;	 // calculating self energy per particle

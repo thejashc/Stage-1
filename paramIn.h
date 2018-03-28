@@ -24,6 +24,8 @@ readParam >> buffer >> rd_cutoff;	readParam.ignore(256,'\n');
 simProg << "Reading Solid Liquid Interaction Parameters" << std::endl;
 readParam >> buffer >> Asl;		readParam.ignore(256,'\n');
 readParam >> buffer >> Bsl;		readParam.ignore(256,'\n');
+readParam >> buffer >> Brep;		readParam.ignore(256,'\n');
+readParam >> buffer >> wallPenetration;	readParam.ignore(256,'\n');
 readParam >> buffer >> rcWcutoff;	readParam.ignore(256,'\n');
 readParam >> buffer >> rdWcutoff;	readParam.ignore(256,'\n');
 
@@ -31,8 +33,10 @@ simProg << "Reading Solid geometrical Parameters" << std::endl;
 readParam >> buffer >> wallHeight;	readParam.ignore(256,'\n');
 readParam >> buffer >> initWallRho;	readParam.ignore(256,'\n');
 
-#else
-readParam.ignore(256, '\n');		// skip 8 lines 
+#else					
+readParam.ignore(256, '\n');		// skip 10 lines 
+readParam.ignore(256, '\n');		
+readParam.ignore(256, '\n');		
 readParam.ignore(256, '\n');		
 readParam.ignore(256, '\n');
 readParam.ignore(256, '\n');
@@ -95,6 +99,7 @@ readParam.ignore(256, '\n');		// skip 4 lines -- one + three line
 readParam.ignore(256, '\n');		
 readParam.ignore(256, '\n');
 readParam.ignore(256, '\n');
+readParam.ignore(256, '\n');
 #endif
 
 #if CYLINDER_DROPLET
@@ -105,6 +110,8 @@ readParam >> buffer >> rhor_rmin;	readParam.ignore(256,'\n');
 readParam >> buffer >> rhor_rdelta;	readParam.ignore(256,'\n');
 #else
 readParam.ignore(256, '\n');		// skip two lines
+readParam.ignore(256, '\n');
+readParam.ignore(256, '\n');
 readParam.ignore(256, '\n');
 #endif 
 
@@ -133,6 +140,9 @@ rd2 = pow( rd_cutoff,2);	// square of cut-off distance
 #if WALL_ON
 rcW2 = pow( rcWcutoff , 2.);	// square of cut-off distance for solid liquid interactions -- attractive
 rdW2 = pow( rdWcutoff , 2.);	// square of cut-off distance for solid-liquid interactions -- repulsive
+
+wallLowPos = wallHeight;
+wallTopPos = boxEdge[z] - wallHeight;
 #endif
 
 //*****************************************************************************************//
@@ -153,10 +163,27 @@ velHist_tEnd = stepMax;
 rhoZ_Zmax 	= boxEdge[z];		// maximum Z
 rhoZ_bins  	= round( ( rhoZ_Zmax - rhoZ_Zmin ) / rhoZ_Zdelta ); // number of elements
 #if WALL_ON
+/*
+// COM approach
 segPlane_zMin = wallHeight;
 segPlane_zMax = boxEdge[z] - wallHeight; 
 
 segPlane_bins  = round( ( segPlane_zMax - segPlane_zMin )/ segPlane_zDelta); // number of elements
+*/
+// binning approach
+nZ_tStart = 5e3;
+
+nZ_xbinWidth = 0.1;
+nZ_zbinWidth = 0.05; 
+nZ_xMin = 0.;
+nZ_xMax = boxEdge[x];
+
+nZ_zMin = 0;
+nZ_zMax = boxEdge[z];
+
+nZ_xbins = round( ( nZ_xMax - nZ_xMin ) / nZ_xbinWidth );
+nZ_zbins = round( ( nZ_zMax - nZ_zMin)  / nZ_zbinWidth );
+
 #endif
 #elif CYLINDER_DROPLET
 rhor_rmax 	= boxEdge[x];
