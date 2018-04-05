@@ -15,7 +15,7 @@ for ( j = 1 ; j <= npart ; ++ j ){
 	readConfig.read ( ( char * ) &rand_gen_velz, sizeof ( double ) );
 
 	if ( zind <= wallHeight || zind >= boxEdge[z] - wallHeight )
-		particles.push_back( {1.0 ,1.0 , {xind, yind, zind} ,{rand_gen_velx, rand_gen_vely, rand_gen_velz} } );
+		particles.push_back( { 1.0 ,1.0 , {xind, yind, zind} ,{rand_gen_velx, rand_gen_vely, rand_gen_velz} } );
 	// std::cout << xind << " " << yind << " " << zind << " " << rand_gen_velx << " " << rand_gen_vely << " " << rand_gen_velz << std::endl;
 }
 
