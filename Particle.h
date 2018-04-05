@@ -21,10 +21,15 @@ public:
 
 	Vec3D fCW; // wall force
 	Vec3D fext; // wall force due to soft external potential
+	Vec3D fBody; // wall force due to soft external potential
+	Vec3D fHarmonic; // spring force on the wall particles
 
 	double dens; // calculating the local density at a particle
 	double dens_new; // calculating the local density at a particle
 	double rhoBar;	 // calculating self energy per particle
+		
+	Vec3D r0;  // initial position for wall particles
+	Vec3D w_old;  // mid-step velocity
 
 };
 
