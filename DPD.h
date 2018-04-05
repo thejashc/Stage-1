@@ -76,6 +76,7 @@ class DPD {
 			std::ofstream momStats		( "./data/mom_data.dat"	);	// pressure and temperature data
 
 			createGridList();
+            dens_calculation();
 			forceCalc();
 	
 			resetVar();
@@ -99,6 +100,7 @@ class DPD {
 
 				// force calculation
 				createGridList();
+                // dens_calculation();
 				forceCalc();
 
 				// Integrate equations of motion (including pbc)
@@ -238,7 +240,6 @@ class DPD {
 			for (Particle& p: particles){
 				p.w -= velAvg;
 			}
-
 
 			// initializing NrCells[3], scale	
 			for ( i = 0 ; i < 3 ; i++ )
@@ -617,7 +618,7 @@ class DPD {
 
 				#include "fHarmonic.h"
 
-				particles[i].w += ( particles[i].fCW + particles[i].fC + particles[i].fHarmonic ) * ( dt/ particles[i].m );	// only conservative forces
+				particles[i].w += ( particles[i].fCW + particles[i].fC + particles[i].fHarmonic +  particles[i].fD + particles[i].fR ) * ( dt/ particles[i].m );	// only conservative forces
 
 				particles[i].r += particles[i].w * dt;
 
@@ -632,7 +633,6 @@ class DPD {
                 vx2 += particles[i].v.X * particles[i].v.X;
                 vy2 += particles[i].v.Y * particles[i].v.Y;
                 vz2 += particles[i].v.Z * particles[i].v.Z;
-
 			}
 			
             // temperature calculation	
@@ -674,6 +674,7 @@ class DPD {
 			{
 				particles[i].dens = particles[i].dens_new;
 				particles[i].dens_new = 0.;
+                // particles[i].dens = 0.0;
 				particles[i].rhoBar = 0.0;
 				particles[i].fC.setZero();
 		
