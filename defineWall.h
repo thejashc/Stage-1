@@ -13,7 +13,6 @@ zindUW_min = boxEdge[z] - wallHeight;
 zindUW_max = boxEdge[z]; 
 #endif 
 
-
 xind = xind_min;
 aCube = pow( 1. / initWallRho, 1./3. );
 // Particle position in lower wall
