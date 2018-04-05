@@ -1,4 +1,7 @@
 Rij = particles[i].r - ( particles[j].r + dR );	
+#if RANDOM_DISSIPATIVE
+wij = particles[i].w - particles[j].w;
+#endif
 r2 = Rij.getLengthSquared();
 
 if ( r2 <= rc2 ) {
@@ -20,7 +23,7 @@ if ( r2 <= rc2 ) {
 		wDij = ( 1.0 - dist/rd_cutoff );
 		term2 = Bss * ( particles[i].dens + particles[j].dens ) * wDij;		// Here Bll is the same as Bss
 
-		wDij2 = wDij * wDij; 
+	    wDij2 = wDij * wDij; 
 		rho_temp = fifteen_by_twopi_by_rd * wDij2;
 
 		particles[i].dens_new += rho_temp;
@@ -35,5 +38,31 @@ if ( r2 <= rc2 ) {
 	
 	particles[i].fC += fCij;
 	particles[j].fC -= fCij; 
+
+	#if RANDOM_DISSIPATIVE
+	// random force	
+	uniRand = d(rd); 
+	thetaij = std::sqrt(12.0)*( uniRand-0.5 ); 
+	magRand = sigma * wCij * thetaij;
+	
+	fRij.X = magRand * capRij.X;
+	fRij.Y = magRand * capRij.Y;
+	fRij.Z = magRand * capRij.Z;
+
+	sumForce = fRij*inv_sqrt_dt;
+	particles[i].fR += sumForce;
+	particles[j].fR -= sumForce;
+
+	// dissipative force
+	rDotv = Vec3D::dot( capRij, wij );
+	magDiss = -1.0 * gamma * wCij2 *rDotv;
+	
+	fDij.X = magDiss * capRij.X;
+	fDij.Y = magDiss * capRij.Y;
+	fDij.Z = magDiss * capRij.Z;
+
+	particles[i].fD += fDij;
+	particles[j].fD -= fDij;
+	#endif
 
 } // rcutoff
