@@ -222,6 +222,9 @@ double wallTopPos;
 double wallLowDist;
 double wallTopDist;
 double wallPenetration;
+double fBodyX;
+double kWall;
+double wallTemp;
 
 unsigned int solidCount;
 
@@ -261,6 +264,8 @@ double fSL;
 double w1P;
 double w2P;
 double root2;
+double Ass;
+double Bss;
 double Asl;
 double Bsl;
 double fWallcutoff;
