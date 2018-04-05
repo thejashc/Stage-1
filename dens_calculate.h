@@ -6,7 +6,7 @@ capRij = Rij/dist;
 if ( r2 <= rc2 ){
 
 	wCij = ( 1.0 - dist/rcutoff);
-	wCij2 = wCij * wCij;
+    wCij2 = wCij * wCij;
 
 	if ( r2 <= rd2 ){
 		wDij = ( 1.0 - dist/rd_cutoff );
