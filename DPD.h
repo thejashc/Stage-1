@@ -23,11 +23,14 @@
 #define RESTART	0
 
 // WALL flags
-#define WALL_ON 0
+#define WALL_ON 1
 #define LOWER_WALL_ON 1
 #define UPPER_WALL_ON 1
 #define FCC_WALL 0
 #define ROUGH_WALL 1
+
+// POISEUILLE flow
+#define BODY_FORCE 0		// activated only with WALL_ON
 
 //declare DPD solver
 class DPD {
@@ -49,6 +52,9 @@ class DPD {
 			step = 1;
 			temp = 0.0;
 			tempSum = 0.0;
+            #if WALL_ON
+            wallTemp = 0.;
+            #endif
 			tempAv = 0.0;
 			tempCount = 0;
 			volume = boxEdge[x] * boxEdge[y] * boxEdge[z];		// system volume
@@ -208,8 +214,6 @@ class DPD {
 				nZ.resize( nZ_zbins );
 				for ( i = 0; i < nZ_zbins ; ++i )
 					nZ[i].resize( nZ_xbins );
-
-				for ( i = 0; i < nZ_zbins ; ++i )
 					for ( j = 0; j < nZ_xbins; ++j )
 							nZ[i][j] = 0;
 				*/
@@ -333,8 +337,20 @@ class DPD {
 					solidCount++;
 				}
 				#endif
-
 			}
+
+			#if WALL_ON
+			for ( i = solid_index[0] ; i <= solid_index[solidCount-1] ; ++i )
+				particles[i].r0 = particles[i].r;
+
+			#if BODY_FORCE
+			for ( i = fluid_index[0] ; i <= fluid_index[fluidCount - 1] ; ++i ){
+				particles[i].fBody.X = fBodyX;
+				particles[i].fBody.Y = 0.;
+				particles[i].fBody.Z = 0.;
+			}
+			#endif
+			#endif
 
 		}//init
 
@@ -469,7 +485,6 @@ class DPD {
 									j = grid[mj[x]][mj[y]][mj[z]][jj];
 									// simProg << "j2 " << m << " " << mj[x] << " " << mj[y] << " " << mj[z] << " " << jj << " " << j << std::endl;
 
-
 									#if WALL_ON
 									if ( particles[i].type == 1 && particles[j].type == 1 ){
 											#include "pairforceLL.h"
@@ -490,106 +505,141 @@ class DPD {
 
 		//--------------------------------------- Integrate Equations of motion --------------------------------------//
 		void integrateEOM(){
-			for ( i = fluid_index[0] ; i <= fluid_index[fluidCount-1] ; ++i ) {
-				// store velocity (mid-step)
-				Vec3D w_old = particles[i].w;
+//			for ( i = fluid_index[0] ; i <= fluid_index[fluidCount-1] ; ++i ) {
+//				// store velocity (mid-step)
+//				particles[i].w_old = particles[i].w;
+//
+//				#if WALL_ON
+//				// additional force from soft potential to avoid particles from entering into wall
+//				wallLowDist = particles[i].r.Z - ( wallLowPos + wallPenetration );
+//				wallTopDist = particles[i].r.Z - ( wallTopPos - wallPenetration );
+//
+//				if ( wallLowDist < 0. )
+//					particles[i].fext.Z = -Brep * wallLowDist;		// Lower wall -- act on particles below threshold: wallHeight + tolerance
+//				else if ( wallTopDist > 0. )
+//					particles[i].fext.Z = -Brep * wallTopDist;		// Upper wall -- act on particles above threshold: wallHeight - tolerance
+//
+//				// no external force in X and Y directions
+//				particles[i].fext.X = 0.; 
+//				particles[i].fext.Y = 0.;
+//
+//				#endif				
+//
+//				// update velocities (mid-step)
+//				#if RANDOM_DISSIPATIVE
+//					#if WALL_ON
+//						#if BODY_FORCE
+//							particles[i].w += ( particles[i].fC + particles[i].fCW +  particles[i].fD + particles[i].fR + particles[i].fext + particles[i].fBody )*(dt/particles[i].m);
+//						#else
+//							particles[i].w += ( particles[i].fC + particles[i].fCW +  particles[i].fD + particles[i].fR + particles[i].fext )*(dt/particles[i].m);
+//						#endif
+//					#else	
+//						particles[i].w += ( particles[i].fC + particles[i].fD + particles[i].fR )*(dt/particles[i].m);
+//					#endif
+//				#else 
+//					#if WALL_ON
+//						particles[i].w += ( particles[i].fC + particles[i].fCW + particles[i].fext )*(dt/particles[i].m);
+//					#else
+//						particles[i].w += ( particles[i].fC )*(dt/particles[i].m);
+//					#endif
+//				#endif 
+//
+//				// update position (integral time step) using the velocities (mid-step)
+//				particles[i].r += particles[i].w*dt;				
+//
+//				// calculate velocity (integral time step)
+//				particles[i].v = 0.5*( particles[i].w_old + particles[i].w );
+//
+//				// implement periodic boundary condition 
+//				#include "pbc.h"
+//
+//				// distribute velocities into velocity bins
+//				if ( (step > velHist_tStart) && (step % velHist_tDelta == 0) ) {
+//					ivelX = ceil( ( velHist_velMax - particles[i].v.X )/ velHist_velDelta ); 
+//					ivelY = ceil( ( velHist_velMax - particles[i].v.Y )/ velHist_velDelta ); 
+//					ivelZ = ceil( ( velHist_velMax - particles[i].v.Z )/ velHist_velDelta ); 
+//
+//					velHistX[ivelX] += 1;
+//					velHistY[ivelY] += 1;
+//					velHistZ[ivelZ] += 1;
+//				}
+//
+//				#if PLANAR_SLAB
+//				// calculate density profile
+//				iRhoZ = ceil ( ( particles[i].r.getComponent(z) - rhoZ_Zmin ) / rhoZ_Zdelta ) - 1;		
+//
+//				if ( iRhoZ < 0 || iRhoZ > rhoZ_bins  ) { simProg << " rhoZ calculation -- planar slab particle out of bounds" << std::endl; abort(); } 						
+//				rhoZ[ iRhoZ ] += 1;
+//
+//					/*
+//					#if WALL_ON
+//					if ( step > nZ_tStart ){
+//						
+//						// finding COM for fluid particles
+//						xCOM += particles[i].r.X;
+//						yCOM += particles[i].r.Y;
+//						zCOM += particles[i].r.Z;
+//
+//						#include "liquidvaporProfileCalculate.h"
+//					}
+//					#endif
+//					*/
+//				
+//				#elif CYLINDER_DROPLET
+//				// calculate radial density profile
+//				radPos 	= std::sqrt( pow( particles[i].r.X - xCOM, 2.0 ) + pow( particles[i].r.Y - yCOM, 2.0 ) );
+//				iRhor 	= round ( ( radPos - rhor_rmin ) / rhor_rdelta );
+//
+//				if ( iRhor < 0 || iRhor > rhor_bins  ) { simProg << " cylindrical particle out of bounds" << std::endl; abort(); } 						
+//
+//				rhor[ iRhor ] += 1;
+//				#endif
+//
+//				// calculate the kinetic energy
+//				vx2 += particles[i].v.X * particles[i].v.X;
+//				vy2 += particles[i].v.Y * particles[i].v.Y;
+//				vz2 += particles[i].v.Z * particles[i].v.Z;
+//			}
 
-				#if WALL_ON
-				// additional force from soft potential to avoid particles from entering into wall
-				wallLowDist = particles[i].r.Z - ( wallLowPos + wallPenetration );
-				wallTopDist = particles[i].r.Z - ( wallTopPos - wallPenetration );
+//			// temperature calculation	
+//			v2 = ( vx2 + vy2 + vz2 ) / ( 3. * fluidCount );
+//			kin_en = 0.5 * v2;		// unit mass assumption
+//			temp = 2.*kin_en;
+//
+//			tempSum += temp;
+//			tempCount += 1;
 
-				if ( wallLowDist < 0. )
-					particles[i].fext.Z = -Brep * wallLowDist;		// Lower wall -- act on particles below threshold: wallHeight + tolerance
-				else if ( wallTopDist > 0. )
-					particles[i].fext.Z = -Brep * wallTopDist;		// Upper wall -- act on particles above threshold: wallHeight - tolerance
+			// integrate equations of motion for wall -- using leap-frog algorithm
+			#if WALL_ON
+			for ( i = solid_index[0] ; i <= solid_index[solidCount-1] ; ++i ) {
+				
+				particles[i].w_old = particles[i].w;		
 
-				// no external force in X and Y directions
-				particles[i].fext.X = 0.; 
-				particles[i].fext.Y = 0.;
+				#include "fHarmonic.h"
 
-				#endif				
+				particles[i].w += ( particles[i].fCW + particles[i].fC + particles[i].fHarmonic ) * ( dt/ particles[i].m );	// only conservative forces
 
-				// update velocities (mid-step)
-				#if RANDOM_DISSIPATIVE
-					#if WALL_ON
-						particles[i].w += ( particles[i].fC + particles[i].fCW +  particles[i].fD + particles[i].fR + particles[i].fext )*(dt/particles[i].m);
-					#else	
-						particles[i].w += ( particles[i].fC + particles[i].fD + particles[i].fR )*(dt/particles[i].m);
-					#endif
-				#else 
-					#if WALL_ON
-						particles[i].w += ( particles[i].fC + particles[i].fCW + particles[i].fext )*(dt/particles[i].m);
-					#else
-						particles[i].w += ( particles[i].fC )*(dt/particles[i].m);
-					#endif
-				#endif 
+				particles[i].r += particles[i].w * dt;
 
-				// update position (integral time step) using the velocities (mid-step)
-				particles[i].r += particles[i].w*dt;				
+				particles[i].v = 0.5*( particles[i].w + particles[i].w_old );
 
-				// calculate velocity (integral time step)
-				particles[i].v = 0.5*( w_old + particles[i].w );
-
-
-				// implement periodic boundary condition 
+				//std::cout << " i= " << i << ", r0 = " << particles[i].r0 << ", r = " << particles[i].r << ", dist = " << dist << std::endl;  	
+				
+				// implement periodic boundary condition -- replace with special boundary conditions for the wall
 				#include "pbc.h"
 
-				// distribute velocities into velocity bins
-				if ( (step > velHist_tStart) && (step % velHist_tDelta == 0) ) {
-					ivelX = ceil( ( velHist_velMax - particles[i].v.X )/ velHist_velDelta ); 
-					ivelY = ceil( ( velHist_velMax - particles[i].v.Y )/ velHist_velDelta ); 
-					ivelZ = ceil( ( velHist_velMax - particles[i].v.Z )/ velHist_velDelta ); 
+                // calculate the kinetic energy
+                vx2 += particles[i].v.X * particles[i].v.X;
+                vy2 += particles[i].v.Y * particles[i].v.Y;
+                vz2 += particles[i].v.Z * particles[i].v.Z;
 
-					velHistX[ivelX] += 1;
-					velHistY[ivelY] += 1;
-					velHistZ[ivelZ] += 1;
-				}
-
-				#if PLANAR_SLAB
-				// calculate density profile
-				iRhoZ = ceil ( ( particles[i].r.getComponent(z) - rhoZ_Zmin ) / rhoZ_Zdelta ) - 1;		
-
-				if ( iRhoZ < 0 || iRhoZ > rhoZ_bins  ) { simProg << " rhoZ calculation -- planar slab particle out of bounds" << std::endl; abort(); } 						
-				rhoZ[ iRhoZ ] += 1;
-
-					/*
-					#if WALL_ON
-					if ( step > nZ_tStart ){
-						
-						// finding COM for fluid particles
-						xCOM += particles[i].r.X;
-						yCOM += particles[i].r.Y;
-						zCOM += particles[i].r.Z;
-
-						#include "liquidvaporProfileCalculate.h"
-					}
-					#endif
-					*/
-				
-				#elif CYLINDER_DROPLET
-				// calculate radial density profile
-				radPos 	= std::sqrt( pow( particles[i].r.X - xCOM, 2.0 ) + pow( particles[i].r.Y - yCOM, 2.0 ) );
-				iRhor 	= round ( ( radPos - rhor_rmin ) / rhor_rdelta );
-
-				if ( iRhor < 0 || iRhor > rhor_bins  ) { simProg << " cylindrical particle out of bounds" << std::endl; abort(); } 						
-
-				rhor[ iRhor ] += 1;
-				#endif
-
-				// calculate the kinetic energy
-				vx2 += particles[i].v.X * particles[i].v.X;
-				vy2 += particles[i].v.Y * particles[i].v.Y;
-				vz2 += particles[i].v.Z * particles[i].v.Z;
 			}
-
-			// temperature calculation	
-			v2 = ( vx2 + vy2 + vz2 ) / ( 3. * npart );
+			
+            // temperature calculation	
+			v2 = ( vx2 + vy2 + vz2 ) / ( 3. * solidCount );
 			kin_en = 0.5 * v2;		// unit mass assumption
-			temp = 2.*kin_en;
-
-			tempSum += temp;
-			tempCount += 1;
+			wallTemp = 2.*kin_en;
+			#endif
 
 			// calculation of  pressure tensor 
 			#include "pTensCalc.h"
@@ -635,6 +685,7 @@ class DPD {
 				#if WALL_ON
 				particles[i].fext.setZero();
 				particles[i].fCW.setZero();
+				particles[i].fHarmonic.setZero();
 				#endif 
 
 			} // set density equal to zero for solid type particles
@@ -665,30 +716,30 @@ class DPD {
 
 		//--------------------------------------- g(r) sampling --------------------------------------//
 		void grSample(){
-
-			//loop over all contacts p=1..N-1, q=p+1..N to evaluate forces
-			for ( i = fluid_index[0]; i <= fluid_index[fluidCount - 2] ; ++i ){
-				for ( j = i + 1; j <= fluid_index[fluidCount - 1] ; ++j ){
-
-					Rij = particles[i].r - particles[j].r;	
-					tempVec.X = Vec3D::roundOff_x( Rij, boxEdge[x] );
-					tempVec.Y = Vec3D::roundOff_y( Rij, boxEdge[y] );
-					tempVec.Z = Vec3D::roundOff_z( Rij, boxEdge[z] );
-					minRij.X = Rij.X - tempVec.X*boxEdge[x];
-					minRij.Y = Rij.Y - tempVec.Y*boxEdge[y];
-					minRij.Z = Rij.Z - tempVec.Z*boxEdge[z];
-					r2 = minRij.getLengthSquared();
-					dist = std::sqrt(r2);
-
-					if ( dist < boxEdge[x] / 2.0 ) { 
-						ig = ceil(dist/gR_radDelta)-1;
-
-						if ( (ig < 0) || (ig >= gR_nElem)) {simProg << " out of bounds " << std::endl;} 
-
-						gR_nCount[ig] += 2.0;	
-					}
-				}
-			}
+//
+//			//loop over all contacts p=1..N-1, q=p+1..N to evaluate forces
+//			for ( i = fluid_index[0]; i <= fluid_index[fluidCount - 2] ; ++i ){
+//				for ( j = i + 1; j <= fluid_index[fluidCount - 1] ; ++j ){
+//
+//					Rij = particles[i].r - particles[j].r;	
+//					tempVec.X = Vec3D::roundOff_x( Rij, boxEdge[x] );
+//					tempVec.Y = Vec3D::roundOff_y( Rij, boxEdge[y] );
+//					tempVec.Z = Vec3D::roundOff_z( Rij, boxEdge[z] );
+//					minRij.X = Rij.X - tempVec.X*boxEdge[x];
+//					minRij.Y = Rij.Y - tempVec.Y*boxEdge[y];
+//					minRij.Z = Rij.Z - tempVec.Z*boxEdge[z];
+//					r2 = minRij.getLengthSquared();
+//					dist = std::sqrt(r2);
+//
+//					if ( dist < boxEdge[x] / 2.0 ) { 
+//						ig = ceil(dist/gR_radDelta)-1;
+//
+//						if ( (ig < 0) || (ig >= gR_nElem)) {simProg << " out of bounds " << std::endl;} 
+//
+//						gR_nCount[ig] += 2.0;	
+//					}
+//				}
+//			}
 		}
 
 		//--------------------------------------- g(r) calculation --------------------------------------//
@@ -766,9 +817,9 @@ class DPD {
 			paraInfo << "---------------------------" << std::endl;
 			paraInfo << "Simulation Box Parameters" << std::endl;
 			paraInfo << "---------------------------" << std::endl;
-			paraInfo << "Box length x (box)                         :           " << boxEdge[x] << std::endl;
-			paraInfo << "Box length y (box)                         :           " << boxEdge[y] << std::endl;
-			paraInfo << "Box length z (box)                         :           " << boxEdge[z] << std::endl;
+			paraInfo << "Box length x (boxEdge[x])                  :           " << boxEdge[x] << std::endl;
+			paraInfo << "Box length y (boxEdge[y])                  :           " << boxEdge[y] << std::endl;
+			paraInfo << "Box length z (boxEdge[z])                  :           " << boxEdge[z] << std::endl;
 			paraInfo << "Initial fluid density (initRho)            :           " << initRho << std::endl;
 			paraInfo << "Cutoff attr (rcutoff)                      :           " << rcutoff << std::endl;
 			paraInfo << "Cutoff rep (rd_cutoff)                     :           " << rd_cutoff << std::endl;
@@ -820,12 +871,18 @@ class DPD {
 			paraInfo << "---------------------------" << std::endl;
 			paraInfo << "Number of solid particles                  :           " << npart - fluidCount << std::endl;
 			paraInfo << "Wall density (initWallRho)                 :           " << initWallRho << std::endl;
+			paraInfo << "Solid-Solid Attraction Strength   (Ass)    :           " << Ass << std::endl;
+			paraInfo << "Solid-Solid Repulsion  Strength   (Bss)    :           " << Bss << std::endl;
 			paraInfo << "Solid-Liquid Attraction Strength   (Asl)   :           " << Asl << std::endl;
 			paraInfo << "Solid-Liquid Repulsion  Strength   (Bsl)   :           " << Bsl << std::endl;
 			paraInfo << "Soft Repulsive force Strength   (Brep)     :           " << Brep << std::endl;
 			paraInfo << "Penetration tolerance (wallPenetration)    :           " << wallPenetration << std::endl;
 			paraInfo << "Wall Attraction cutoff (rcWallcutoff )     :           " << rcWcutoff << std::endl;
 			paraInfo << "Wall Repulsion  cutoff (rdWall_cutoff )    :           " << rdWcutoff << std::endl;
+			paraInfo << "Spring constant for wall ( kWall )         :           " << kWall << std::endl;
+			#if BODY_FORCE
+			paraInfo << "Particle x body force ( fBodyX )           :           " << fBodyX << std::endl;
+			#endif
 			#endif 
 			
 			paraInfo << "---------------------------" << std::endl;
@@ -854,18 +911,21 @@ class DPD {
 
 				// Energy
 				enStats 	<< std::setw(20) << std::setprecision(15) << pot_en << "\t" 
-					<< std::setw(20) << std::setprecision(15) << kin_en << "\t" 
-					<< std::setw(20) << std::setprecision(15) << tot_en << std::endl;
+					        << std::setw(20) << std::setprecision(15) << kin_en << "\t" 
+				        	<< std::setw(20) << std::setprecision(15) << tot_en << std::endl;
 
 				// Density, Temperature, Average Pressure
 				eosStats 	<< std::setw(20) << std::setprecision(15) << rho 	<< "\t" 
-					<< std::setw(20) << std::setprecision(15) << temp	<< "\t" 
-					<< std::setw(20) << std::setprecision(15) << pressure 	<< std::endl;
+					        << std::setw(20) << std::setprecision(15) << temp	<< "\t" 
+                            #if WALL_ON
+					        << std::setw(20) << std::setprecision(15) << wallTemp	<< "\t" 
+                            #endif
+				        	<< std::setw(20) << std::setprecision(15) << pressure 	<< std::endl;
 
 				// Momentum
 				momStats 	<< std::setw(20) << std::setprecision(15) << momX << "\t" 
-					<< std::setw(20) << std::setprecision(15) << momY << "\t" 
-					<< std::setw(20) << std::setprecision(15) << momZ << std::endl;
+				        	<< std::setw(20) << std::setprecision(15) << momY << "\t" 
+				        	<< std::setw(20) << std::setprecision(15) << momZ << std::endl;
 
 				// average and reset the pTensor
 				#include "pTensAverage.h"
@@ -885,23 +945,23 @@ class DPD {
 
 				// Pressure tensor	
 				pTensStats 	<<  pIdeal[0][0] << ", " 
-					<<  pIdeal[0][1] << ", " 
-					<<  pIdeal[0][2] << ", "
-					<<  pIdeal[1][0] << ", "
-					<<  pIdeal[1][1] << ", "
-					<<  pIdeal[1][2] << ", "
-					<<  pIdeal[2][0] << ", "
-					<<  pIdeal[2][1] << ", "
-					<<  pIdeal[2][2] << ", "
-					<<  pNonIdeal[0][0] << ", " 
-					<<  pNonIdeal[0][1] << ", " 
-					<<  pNonIdeal[0][2] << ", "
-					<<  pNonIdeal[1][0] << ", "
-					<<  pNonIdeal[1][1] << ", "
-					<<  pNonIdeal[1][2] << ", "
-					<<  pNonIdeal[2][0] << ", "
-					<<  pNonIdeal[2][1] << ", "
-					<<  pNonIdeal[2][2] << std::endl;
+					        <<  pIdeal[0][1] << ", " 
+	        				<<  pIdeal[0][2] << ", "
+		        			<<  pIdeal[1][0] << ", "
+			        		<<  pIdeal[1][1] << ", "
+				        	<<  pIdeal[1][2] << ", "
+				        	<<  pIdeal[2][0] << ", "
+	        				<<  pIdeal[2][1] << ", "
+		        			<<  pIdeal[2][2] << ", "
+			        		<<  pNonIdeal[0][0] << ", " 
+				        	<<  pNonIdeal[0][1] << ", " 
+        					<<  pNonIdeal[0][2] << ", "
+	        				<<  pNonIdeal[1][0] << ", "
+		        			<<  pNonIdeal[1][1] << ", "
+		        			<<  pNonIdeal[1][2] << ", "
+			        		<<  pNonIdeal[2][0] << ", "
+		        			<<  pNonIdeal[2][1] << ", "
+			        		<<  pNonIdeal[2][2] << std::endl;
 
 				#include "pTensReset.h"
 
@@ -991,10 +1051,14 @@ class DPD {
 		void vtkFileWritePosVel(){
 
 			char filename[40];
+			char filename1[40];
 
 			// sprintf( filename, "./data/data1_%d.vtu", step);  
 			sprintf( filename, "./data/XYZ%d.xyz", step);  
+			sprintf( filename1, "./data/velocity%d.dat", step);  
+			
 			std::ofstream file(filename);
+			std::ofstream file1(filename1);
 			/*
 			file << "<?xml version=\"1.0\"?>" << std::endl;
 			file << "<VTKFile type=\"UnstructuredGrid\" version=\"0.1\" byte_order=\"LittleEndian\">" << std::endl;
@@ -1007,8 +1071,10 @@ class DPD {
 			file << particles.size() << std::endl;
 			file << "#X Y Z co-ordinates" << std::endl;
 
-			for ( i = fluid_index[0] ; i <= fluid_index[fluidCount-1] ; ++i )
-				file << "H" <<"\t" << particles[i].r << std::endl;
+			//for ( i = fluid_index[0] ; i <= fluid_index[fluidCount-1] ; ++i ) {
+			//	file << "H" <<"\t" << particles[i].r << std::endl;
+			//	file1 << particles[i].v << std::endl;
+			//}
 
 			#if WALL_ON	
 			for ( i = solid_index[0] ; i <= solid_index[solidCount-1] ; ++i )
