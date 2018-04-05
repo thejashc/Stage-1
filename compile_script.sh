@@ -12,6 +12,7 @@ rm -f *.dat
 rm -f ./data/*.xyz
 rm -f ./data/*.dat
 rm -f ./plots/*.eps
+rm -f param.out
 
 # cpp compilation 
 g++ -o DPD.exe  -std=c++11 -ggdb3 Vec3D.cc DPD_main.cpp 
