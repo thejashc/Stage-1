@@ -36,6 +36,9 @@
 #define STYLE_VMD 0
 #define STYLE_MERCURY_DPM 1
 
+// LEES - EDWARDS BOUNDARY CONDITION
+#define LEES_EDWARDS_BC 0
+
 //declare DPD solver
 class DPD {
 	public:
