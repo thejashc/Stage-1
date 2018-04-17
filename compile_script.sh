@@ -6,7 +6,6 @@ reset
 # remove object files
 rm -f *.txt
 rm -f *.o
-rm -f a.out
 rm -f *.exe
 rm -f *.dat
 rm -f ./data/*.xyz

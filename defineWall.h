@@ -1,8 +1,8 @@
 #if FCC_WALL
 // Set max and min dimensions of planar slab
-xind_min = 0.00;
+xind_min = 0.01;	// avoid boundary edge -- non-moving case
 xind_max = boxEdge[x];
-yind_min = 0.00;
+yind_min = 0.01;	// avoid boundary edge -- non-moving case
 yind_max = boxEdge[y];
 #if LOWER_WALL_ON 
 zindLW_min = 0.00; 
@@ -26,7 +26,7 @@ while ( xind < xind_max){
 			// initializing particle (1) radius, 
 			//			 (2) mass, 
 			//			 (3) position 
-			//                       (4) mid step velocity 
+			//           (4) mid step velocity 
 			//			 (5) particle type
 			particles.push_back({1.0,1.0,{xind, yind, zind},{0., 0., 0.}, 0});
 
