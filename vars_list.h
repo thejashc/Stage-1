@@ -108,20 +108,59 @@ int mx;
 int my;
 int mz;
 
-int dm[13][3] = {	
-	{  0,  0,  1 },
-	{  1,  0, -1 },
-	{  1,  0,  0 },
-	{  1,  0,  1 },
-	{ -1,  1, -1 },
-	{ -1,  1,  0 },
-	{ -1,  1,  1 },
-	{  0,  1, -1 },
-	{  0,  1,  0 },
+#if LEES_EDWARDS_BC
+int dm_LEbc[16][3] = {	
+	{  0,  0,  1 },			
+	{  1,  0, -1 },                 
+	{  1,  0,  0 },                 
+	{  1,  0,  1 },                 
+                                        
+	{  0,  1, -1 },                 // Cells in the xy plane in ( z - 1 )
+	{  0,  1, -1 },                                                      
+	{  0,  1, -1 },                                                      
+	{  0,  1, -1 },                                                      
+                                                                             
+	{  0,  1,  0 },                 // Cells in the xy plane in ( z + 0 )                                     
+	{  0,  1,  0 },                 
+	{  0,  1,  0 },                                                      
+	{  0,  1,  0 },                                                      
+                                                                             
+	{  0,  1,  1 },                 // Cells in the xy plane in ( z + 1 )                                     
+	{  0,  1,  1 },                                                      
 	{  0,  1,  1 },
-	{  1,  1, -1 },
-	{  1,  1,  0 },
-	{  1,  1,  1 } 
+	{  0,  1,  1 }                  
+};
+
+double gammaDot;
+double strain;
+
+int dmCell1;
+int dmCell2;
+int dmCell3;
+int dmCell4;
+
+double zeroTol = 1e-7;
+Vec3D velCorr;
+double strainRate;
+#endif
+
+int dm[13][3] = {	
+	{  0,  0,  1 },			
+	{  1,  0, -1 },                 
+	{  1,  0,  0 },                 
+	{  1,  0,  1 },                 
+                                        
+	{ -1,  1, -1 },                 // Cells in the xy plane in ( z - 1 )
+	{  0,  1, -1 },                                                      
+	{  1,  1, -1 },                                                      
+                                                                             
+	{ -1,  1,  0 },                 // Cells in the xy plane in ( z + 0 )                                     
+	{  0,  1,  0 },                 
+	{  1,  1,  0 },                                                      
+                                                                             
+	{ -1,  1,  1 },                 // Cells in the xy plane in ( z + 1 )                                     
+	{  0,  1,  1 },                                                      
+	{  1,  1,  1 }                  
 };
 
 std::vector< std::vector < std::vector< std::vector<int> > > > grid;	// define grid as vectors

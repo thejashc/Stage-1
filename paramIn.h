@@ -129,6 +129,11 @@ readParam.ignore(256, '\n');
 readParam.ignore(256, '\n');
 readParam.ignore(256, '\n');
 #endif 
+readParam >> emptyLine;			readParam.ignore(256,'\n');		// L54
+#if LEES_EDWARDS_BC
+simProg << "Reading homogeneous-shear parameters (Lees-Edwards)" << std::endl;
+readParam >> buffer >> gammaDot;	readParam.ignore(256,'\n');		// L55
+#endif
 
 readParam.close();
 
@@ -203,4 +208,8 @@ nZ_zbins = round( ( nZ_zMax - nZ_zMin)  / nZ_zbinWidth );
 #elif CYLINDER_DROPLET
 rhor_rmax 	= boxEdge[x];
 rhor_bins  	= round( ( rhor_rmax - rhor_rmin ) / rhor_rdelta ); // number of elements
+#endif
+
+#if LEES_EDWARDS_BC
+strainRate = gammaDot * boxEdge[y];
 #endif

@@ -18,26 +18,26 @@
 #define SPHERICAL_DROPLET 0
 #define SPHERICAL_CAP 0
 #define CYLINDER_DROPLET 0
-#define PLANAR_SLAB 1
-#define CRYSTAL	0
-#define RESTART	1
+#define PLANAR_SLAB 0
+#define CRYSTAL	1
+#define RESTART	0
 
 // WALL flags
-#define WALL_ON 1
+#define WALL_ON 0
 #define LOWER_WALL_ON 1
 #define UPPER_WALL_ON 1
 #define FCC_WALL 1
 #define ROUGH_WALL 0
 
 // POISEUILLE flow
-#define BODY_FORCE 1		// activated only with WALL_ON
+#define BODY_FORCE 0		// activated only with WALL_ON
 
 // FILE_WRITE
-#define STYLE_VMD 0
-#define STYLE_MERCURY_DPM 1
+#define STYLE_VMD 1
+#define STYLE_MERCURY_DPM 0
 
-// LEES - EDWARDS BOUNDARY CONDITION
-#define LEES_EDWARDS_BC 0
+// LEES-EDWARDS BOUNDARY CONDITION
+#define LEES_EDWARDS_BC 1
 
 //declare DPD solver
 class DPD {
@@ -83,7 +83,7 @@ class DPD {
 			std::ofstream momStats		( "./data/mom_data.dat"	);	// pressure and temperature data
 
 			createGridList();
-            dens_calculation();
+            		dens_calculation();
 			forceCalc();
 	
 			resetVar();
@@ -107,7 +107,7 @@ class DPD {
 
 				// force calculation
 				createGridList();
-                // dens_calculation();
+                		// dens_calculation();
 				forceCalc();
 
 				// Integrate equations of motion (including pbc)
@@ -130,6 +130,8 @@ class DPD {
 
 				// increment time step
 				step += 1;
+
+				// std::cout << step << std::endl;
 
 				// for (Particle& p : particles)
 				//	simProg << "Position: " << p.r << ", Density: " << p.dens <<", conservative force: " << p.fC << std::endl;
@@ -275,11 +277,11 @@ class DPD {
 
 			for ( j = 0 ; j < 3 ; j++ )
 			{
-				periodN[0][j] = NrCells[j] - 1;          // left neighbour of leftmost cell
+				periodN[0][j] = NrCells[j] - 1;    // left neighbour of leftmost cell
 				periodR[0][j] = -boxEdge[j];       // correction to add to particle j in rij = ri - rj
 				for ( i = 1 ;  i < NrCells[j] + 1 ; i++ )
 				{ 
-					periodN[i][j] = i - 1; // same cell
+					periodN[i][j] = i - 1; 	   // same cell
 					periodR[i][j] = 0.;
 				} // i
 				periodN[NrCells[j] + 1][j] = 0;          // right neigbour of rightmost cell
@@ -353,25 +355,26 @@ class DPD {
 			// Remove excess velocity and set particle density to 0
 			for ( i=fluid_index[0] ; i <= fluid_index[fluidCount - 1] ; ++i ){
 				velAvg 		+= particles[i].w/fluidCount;
-				particles[i].dens 		 = 0.0;
+				particles[i].dens 	 = 0.0;
 				particles[i].dens_new	 = 0.0;
+				particles[i].fC.setZero();
 			}
 
 			for ( i=fluid_index[0] ; i <= fluid_index[fluidCount - 1] ; ++i )
 				particles[i].w -= velAvg;
 
-            #if WALL_ON
+			#if WALL_ON
 			velAvg={0.0, 0.0, 0.0};
 			// Remove excess velocity and set particle density to 0
 			for ( i = solid_index[0] ; i <= solid_index[solidCount - 1] ; ++i ){
 				velAvg 		+= particles[i].w/fluidCount;
-				particles[i].dens 		 = 0.0;
+				particles[i].dens 	 = 0.0;
 				particles[i].dens_new	 = 0.0;
 			}
 
 			for ( i = solid_index[0] ; i <= solid_index[solidCount - 1] ; ++i )
 				particles[i].w -= velAvg;
-            #endif
+			#endif
 
 		}//init
 
@@ -424,7 +427,6 @@ class DPD {
 		//--------------------------------------- Grid List creation--------------------------------------//
 		void createGridList(){
 
-
 			// initialize grid to 0
 			for ( mi[x] = 0 ; mi[x] < NrCells[x] ; mi[x]++ )
 				for ( mi[y] = 0 ; mi[y] < NrCells[y] ; mi[y]++ )
@@ -433,14 +435,16 @@ class DPD {
 
 			for (i = 0; i < npart; ++i)
 			{ 
+
 				mi[x] = int( particles[i].r.getComponent(x) * scale[x] );
 				mi[y] = int( particles[i].r.getComponent(y) * scale[y] );
 				mi[z] = int( particles[i].r.getComponent(z) * scale[z] );
+
 				// simProg << "position of particle " << i << " =" << particles[i].r;
 				// simProg << ", mi[x], mi[y], mi[z] =  " << mi[x] << ", " << mi[y] << ", " << mi[z] << std::endl;
-				if ( mi[x] < mini[x] || mi[x] > maxi[x]   // debug
-						|| mi[y] < mini[y] || mi[y] > maxi[y] 
-						|| mi[z] < mini[z] || mi[z] > maxi[z] )
+				if ( mi[x] < mini[x] || mi[x] > maxi[x] ||  // debug
+			             mi[y] < mini[y] || mi[y] > maxi[y] ||
+				     mi[z] < mini[z] || mi[z] > maxi[z] )
 				{ 
 					simProg << "*** particle " << i << " outside box in step: " << step << std::endl;
 					simProg << "*** position: " << particles[i].r << std::endl;
@@ -472,6 +476,8 @@ class DPD {
 
 							// particle j in same cell as i
 							dR.setZero();
+							velCorr.setZero();
+
 							for ( jj = ii + 1 ; jj <= grid[mi[x]][mi[y]][mi[z]][0] ; ++jj )
 							{
 								j = grid[mi[x]][mi[y]][mi[z]][jj];
@@ -490,17 +496,107 @@ class DPD {
 								#else
 									#include "pairforceLL.h"
 								#endif
+
+								// simProg << "i, mi[x], mi[y], mi[z] = " <<  i << " " << mi[x] << " " << mi[y] << " " <<  mi[z] ;
+								// simProg << ", j, mj[x], mj[y], mj[z] = " << j << " " << mj[x] << " " << mj[y] << " " <<  mj[z] ;
+								// simProg << "i, pos= " <<  i << " " << particles[i].r;
+								// simProg << ",j, pos= " << j << " " << particles[j].r;
+								// simProg << ", fCij = " << fCij  << ", fC = " << particles[i].fC << std::endl; 
+
 							} // jj
 
+							// particle j in neighbour cell to i
+							#if LEES_EDWARDS_BC
+							strain = std::fmod( strainRate * dt * ( step - 1 ) , boxEdge[x] );	// strain in units of boxEdge[x]
+							// strain = std::fmod( 2.75 , boxEdge[x] );	// strain in units of boxEdge[x]
+
+							if ( ( mi[y] == NrCells[y] - 1 ) && ( strain >= zeroTol ) ){	// calculating neighbor-cells for cells with mi[y] = NrCells[y] - 1 ( top-layer cells )
+								
+								/* BUG:When top and bottom box overlap, it still searches for 4 neighbors */
+								// std::cout << "strain = " << strain << std::endl;
+								
+								dmCell1 = ceil( strain ) + 1;					
+								dmCell2 = dmCell1 - 1;
+								dmCell3 = dmCell2 - 1;
+								dmCell4 = dmCell3 - 1;
+
+								// std::cout << "dmCell1, dmCell2, dmCell3, dmCell4 = " << dmCell1 << ", " << dmCell2 << ", " << dmCell3 << "," << dmCell4 << std::endl;
+								#include "dm_LEbc_init.h"
+
+								// std::cout << "dm_LEbc initialized for cell mi[x], mi[y], mi[z]" << mi[x] << ", "<< mi[y] << ", " << mi[z] << std::endl;
+								// std::cout << "Cell mi[x], mi[y], mi[z]" << mi[x] << ", "<< mi[y] << ", " << mi[z] << std::endl;
+
+								for ( m = 0 ; m < 16 ; m++ )
+								{
+									int i1 = moduloAB( mi[x] - dm_LEbc[m][x] + 1, NrCells[x] );	// correction for cell in direction of shear ( x )
+									int i2 = mi[y] + dm_LEbc[m][y] + 1;
+									int i3 = mi[z] + dm_LEbc[m][z] + 1;
+									// std::cout << i1  <<", " << i2 <<", " << i3 << std::endl;
+
+									mj[x]        = periodN[ i1 ][ x ];
+									mj[y]	     = periodN[ i2 ][ y ];
+									mj[z]	     = periodN[ i3 ][ z ];
+
+									dR.X	     = strain * ( dm_LEbc[m][y] == 1 );			// correction for particle-position: should correct only for +1 change in y 
+									dR.Y	     = 0.; 
+									dR.Z	     = 0.;
+
+									/* BUG: velCorr was a bug. Now corrected */
+									velCorr.X    = strainRate * ( dm_LEbc[m][y] == 1 );             // correction for particle-velocity: should correct only for +1 change in y
+									velCorr.Y    = 0.;
+									velCorr.Z    = 0.;
+
+									// std::cout <<  m << " " << mj[x] << " " << mj[y] << " " << mj[z] << " " << dR.X << " " << dR.Y << " " << dR.Z << std::endl;
+									for ( jj = 1 ; jj <= grid[mj[x]][mj[y]][mj[z]][0] ; ++jj )
+									{
+										j = grid[mj[x]][mj[y]][mj[z]][jj];
+										// simProg << "j2 " << m << " " << mj[x] << " " << mj[y] << " " << mj[z] << " " << jj << " " << j << std::endl;
+
+										#include "pairforceLL.h"
+
+									} // jj
+
+								} // m
+
+							} // ( mi[y] == NrCells[y] - 1 )
+							else {
+								for ( m = 0 ; m < 13 ; m++ )
+								{
+									mj[x]        = periodN[ mi[x] + dm[m][x] + 1 ][x];
+									mj[y]	     = periodN[ mi[y] + dm[m][y] + 1 ][y];
+									mj[z]	     = periodN[ mi[z] + dm[m][z] + 1 ][z];
+
+									/*
+									dR.X         = periodR[ mi[x] + dm[m][x] + 1 ][x]; // correction for position
+									dR.Y	     = periodR[ mi[y] + dm[m][y] + 1 ][y];
+									dR.Z	     = periodR[ mi[z] + dm[m][z] + 1 ][z];*/
+
+									dR.setZero();
+									velCorr.setZero();
+
+									for ( jj = 1 ; jj <= grid[mj[x]][mj[y]][mj[z]][0] ; ++jj )
+									{
+										j = grid[mj[x]][mj[y]][mj[z]][jj];
+										// simProg << "j2 " << m << " " << mj[x] << " " << mj[y] << " " << mj[z] << " " << jj << " " << j << std::endl;
+
+											#include "pairforceLL.h"
+									} // jj
+								} // m
+							
+							}	
+
+							#else
 							// particle j in neighbour cell to i
 							for ( m = 0 ; m < 13 ; m++ )
 							{
 								mj[x]	     = periodN[ mi[x] + dm[m][x] + 1 ][x];
 								mj[y]	     = periodN[ mi[y] + dm[m][y] + 1 ][y];
 								mj[z]	     = periodN[ mi[z] + dm[m][z] + 1 ][z];
+								
 								dR.X	     = periodR[ mi[x] + dm[m][x] + 1 ][x];
 								dR.Y	     = periodR[ mi[y] + dm[m][y] + 1 ][y];
 								dR.Z	     = periodR[ mi[z] + dm[m][z] + 1 ][z];
+
 								for ( jj = 1 ; jj <= grid[mj[x]][mj[y]][mj[z]][0] ; ++jj )
 								{
 									j = grid[mj[x]][mj[y]][mj[z]][jj];
@@ -521,6 +617,8 @@ class DPD {
 									#endif
 								} // jj
 							} // m
+							#endif
+
 						} // ii
 		}
 
@@ -545,7 +643,7 @@ class DPD {
 				// no external force in X and Y directions
 				particles[i].fext.X = 0.; 
 				particles[i].fext.Y = 0.;
-				#endif				
+				#endif // WALL_ON
 
 				// update velocities (mid-step)
 				#if RANDOM_DISSIPATIVE
@@ -555,19 +653,20 @@ class DPD {
 						#else
 							particles[i].w += ( particles[i].fC + particles[i].fCW +  particles[i].fD + particles[i].fR + particles[i].fext )*(dt/particles[i].m);
 						#endif
-					#else	
+					#else 	
 						particles[i].w += ( particles[i].fC + particles[i].fD + particles[i].fR )*(dt/particles[i].m);
-					#endif
+					#endif // WALL_ON
 				#else 
 					#if WALL_ON
 						particles[i].w += ( particles[i].fC + particles[i].fCW + particles[i].fext )*(dt/particles[i].m);
 					#else
 						particles[i].w += ( particles[i].fC )*(dt/particles[i].m);
 					#endif
-				#endif 
+				#endif // RANDOM_DISSIPATIVE
 
 				// update position (integral time step) using the velocities (mid-step)
 				particles[i].r += particles[i].w*dt;				
+				// simProg << i << " " << particles[i].r << std::endl;
 
 				// calculate velocity (integral time step)
 				particles[i].v = 0.5*( particles[i].w_old + particles[i].w );
@@ -700,7 +799,7 @@ class DPD {
 			{
 				particles[i].dens = particles[i].dens_new;
 				particles[i].dens_new = 0.;
-                // particles[i].dens = 0.0;
+				// particles[i].dens = 0.0;
 				particles[i].rhoBar = 0.0;
 				particles[i].fC.setZero();
 		
@@ -920,6 +1019,18 @@ class DPD {
 			paraInfo << "---------------------------" << std::endl;
 			paraInfo << "---------------------------" << std::endl;
 			paraInfo << "---------------------------" << std::endl;
+
+			#if LEES_EDWARDS_BC
+			paraInfo << "---------------------------" << std::endl;
+			paraInfo << "Lees-Edwards BC            " << std::endl;
+			paraInfo << "---------------------------" << std::endl;
+			paraInfo << "Homogeneous shear-rate (gammaDot)          :            " << gammaDot << std::endl;
+			paraInfo << "Strain-rate (strainRate)                   :            " << strainRate << std::endl;
+			paraInfo << "---------------------------" << std::endl;
+			paraInfo << "---------------------------" << std::endl;
+			paraInfo << "---------------------------" << std::endl;
+			#endif
+			
 
 		}
 
@@ -1191,6 +1302,16 @@ class DPD {
 				//myFile.write( &newline, sizeof( newline ) );
 			}
 
+		}
+
+		//------------------------------ Mod function ------------------------------//
+		int moduloAB( int A, int B){ 
+		
+			int result = std::fmod( A, B);
+
+			result = ( result < 0 ) ? ( result + B ) : result; 
+
+			return( result );
 		}
 };
 

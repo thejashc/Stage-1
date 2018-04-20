@@ -1,6 +1,6 @@
-boxEdgeX            40.0		# box dimensions
-boxEdgeY            10.0
-boxEdgeZ            10.0
+boxEdgeX            6.0		# box dimensions
+boxEdgeY            6.0
+boxEdgeZ            6.0
 initRho             6.51
 #
 All                 -15.0		# liquid-liquid interaction parameters
@@ -19,24 +19,24 @@ wallPenetration     0.25
 rcWcutoff           1.0	 
 rdWcutoff           0.75
 #
-wallHeight          2.0		# wall geometrical parameters
+wallHeight          2.0			# wall geometrical parameters
 initWallRho         6.51
 fBodyX              +10.0
 #
 kBT                 1.0 		# temperature	
-sigma               3.0		# dissipation coeffecient
-dim                 3		# dimensions
+sigma               3.0			# dissipation coeffecient
+dim                 3			# dimensions
 #
 dt                  0.001		# time parameters	
 stepMax             500000	
 saveCount           1000
 #
-gR_radMin           0.0		# g(r) calculation
+gR_radMin           0.0			# g(r) calculation
 gR_radDelta         0.01	
 gR_tStart           50000		
 gR_tDelta           100	
 #
-velHist_velMin       -25.0		 # velocity distribution function
+velHist_velMin       -25.0		# velocity distribution function
 velHist_velDelta     0.005
 velHist_velMax       25.0	
 velHist_tStart       50000
@@ -47,7 +47,9 @@ rhoZ_Zmin           0.00
 rhoZ_Zdelta         0.05	
 segPlane_zDelta     0.05
 #
-cylRad              7.5		# reading cylindrical droplet parameters
+cylRad              7.5			# reading cylindrical droplet parameters
 cylHeight           10.0
 rhor_rmin           0.00
 rhor_rdelta         0.05
+#
+gammaDot            0.1			# homogeneous shear-rate 
