@@ -13,12 +13,23 @@ def figEnv():
     return plt.figure(num=None, figsize=(8. , 6.), dpi=80, facecolor='w', edgecolor='k')
 
 # KNOBS
-ENERGY      = 1
-MOMENTUM    = 1
-TEMPERATURE = 1
-VEL_PROFILE = 1
-GR          = 0 
-VEL_DIST    = 0
+ENERGY		    = 0
+MOMENTUM	    = 0
+TEMPERATURE	    = 1
+VEL_PROFILE	    = 1
+GR		    = 0 
+VEL_DIST	    = 0
+PRESSURE_TENSOR     = 1
+
+# parameters
+nFluid 		= 2744
+yMin 		= 0.
+yMax 		= 8.
+ybinWidth 	= 0.2
+
+startFileNum  	= 100000
+endFileNum    	= 400000
+deltaFileNum  	= 1000
 
 #------ ENERGY STATISTICS --------#
 if ( ENERGY == 1 ):
@@ -202,15 +213,7 @@ if ( GR == 1 ):
 
 # ----------------- VELOCITY PROFILE -----------------#
 if ( VEL_PROFILE == 1):
-	startFileNum  = 200000
-	endFileNum    = 500000
-	deltaFileNum  = 1000
 
-	# parameters
-	nFluid = 1331
-	yMin = 0.
-	yMax = 6.
-	ybinWidth = 0.3
 	ybins = int( ( yMax - yMin ) / ybinWidth )
 
 	v_vs_Y = np.zeros( (ybins,3) )
@@ -328,3 +331,28 @@ if ( VEL_PROFILE == 1):
 	plt.grid()
 	plt.legend()
 	plt.savefig( './plots/temp_vs_y.eps', format='eps', dpi=1200)
+
+# ----------------- PRESSURE_TENSOR PROFILE -----------------#
+if ( PRESSURE_TENSOR == 1):
+
+	data = np.loadtxt('./data/pTens.dat')
+
+	pxy = data[:,1] + data[:,10]
+	pyx = data[:,3] + data[:,12]
+
+	#print( np.mean( pxy[400:499] ) )
+	#print( np.mean( pxy[350:499] ) )
+	#print( np.mean( pxy[300:499] ) )
+	#print( np.mean( pxy[250:499] ) )
+	#print( np.mean( pxy[200:499] ) )
+	print( np.mean( pxy[200:400] ) )
+	print( np.mean( pyx[200:400] ) )
+
+	figEnv()
+	plt.plot( pxy, 'r-', label=r'$p_{xy}$')
+	plt.plot( pyx, 'bs', label=r'$p_{yx}$')
+	plt.xlabel( r'$t$' )
+	plt.ylabel( r'$p_{\alpha\beta}$' )
+	plt.grid()
+	plt.legend()
+	plt.savefig( './plots/pTens.eps', format='eps', dpi=1200)
