@@ -22,13 +22,13 @@ VEL_DIST	    = 0
 PRESSURE_TENSOR     = 1
 
 # parameters
-nFluid 		= 2744
+nFluid 		= 1728
 yMin 		= 0.
-yMax 		= 8.
+yMax 		= 7.
 ybinWidth 	= 0.2
 
-startFileNum  	= 100000
-endFileNum    	= 400000
+startFileNum  	= 200000
+endFileNum    	= 500000
 deltaFileNum  	= 1000
 
 #------ ENERGY STATISTICS --------#
@@ -269,6 +269,7 @@ if ( VEL_PROFILE == 1):
 	v_vs_Y /= count 
 	rho_vs_Y = rho / ( tot_files * ybinWidth * yMax * yMax )
 
+	print( v_vs_Y[:,0] )
 
 	figEnv()
 	plt.plot( ydata, v_vs_Y[:,0], 'rs-', label=r'v_{x}' )
@@ -337,22 +338,54 @@ if ( PRESSURE_TENSOR == 1):
 
 	data = np.loadtxt('./data/pTens.dat')
 
-	pxy = data[:,1] + data[:,10]
-	pyx = data[:,3] + data[:,12]
+	pxyC = data[:,1] + data[:,10]
+	pyxC = data[:,3] + data[:,12]
+
+	pC = ( pxyC + pyxC ) / 2.
+
+	pxyD = data[:,19]
+	pyxD = data[:,21]
+
+	pD = ( pxyD + pyxD ) / 2.
+
+	pxyR = data[:,28]
+	pyxR = data[:,30]
+
+	pR = ( pxyR + pyxR ) / 2.
 
 	#print( np.mean( pxy[400:499] ) )
 	#print( np.mean( pxy[350:499] ) )
 	#print( np.mean( pxy[300:499] ) )
 	#print( np.mean( pxy[250:499] ) )
 	#print( np.mean( pxy[200:499] ) )
-	print( np.mean( pxy[200:400] ) )
-	print( np.mean( pyx[200:400] ) )
+	#print( np.mean( pxy[100:300] ) )
+	#print( np.mean( pyx[100:300] ) )
+
+	Delv = np.max ( v_vs_Y[:,0] ) - np.min( v_vs_Y[:,0] )
+	vGrad = Delv/ ( yMax - yMin )
+
+	print( 'vMax, vMin, vGrad' )	
+	print( np.max( v_vs_Y[:,0] ), np.min( v_vs_Y[:,0] ) )
+	print( vGrad )
+
+	pxy =  pC[200:] + pD[200:]
+	pxy = np.mean( pxy[:] )
+
+	viscosity = abs(pxy) / vGrad 
 
 	figEnv()
-	plt.plot( pxy, 'r-', label=r'$p_{xy}$')
-	plt.plot( pyx, 'bs', label=r'$p_{yx}$')
+	plt.plot( pxyC, 'r-', label=r'$p_{xy, C}$')
+	plt.plot( pyxC, 'bs', label=r'$p_{yx, C}$')
+
+	plt.plot( pxyD, 'r-', label=r'$p_{xy, D}$')
+	plt.plot( pyxD, 'b^', label=r'$p_{yx, D}$')
+
+	plt.plot( pxyR, 'r-', label=r'$p_{xy, R}$')
+	plt.plot( pyxR, 'bo', label=r'$p_{yx, R}$')
+
 	plt.xlabel( r'$t$' )
 	plt.ylabel( r'$p_{\alpha\beta}$' )
+	plt.title ( r'$\eta$ = %.5f'%viscosity )
 	plt.grid()
 	plt.legend()
 	plt.savefig( './plots/pTens.eps', format='eps', dpi=1200)
