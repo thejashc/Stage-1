@@ -82,9 +82,9 @@ class DPD {
 			std::ofstream pTensStats	( "./data/pTens.dat"	);	// Pressure tensor data
 			std::ofstream momStats		( "./data/mom_data.dat"	);	// pressure and temperature data
 
-			createGridList();
-            		dens_calculation();
-			forceCalc();
+			// createGridList();
+            		// dens_calculation();
+			// forceCalc();
 	
 			resetVar();
 
@@ -107,7 +107,7 @@ class DPD {
 
 				// force calculation
 				createGridList();
-                		// dens_calculation();
+                		//dens_calculation();
 				forceCalc();
 
 				// Integrate equations of motion (including pbc)
@@ -310,15 +310,25 @@ class DPD {
 			pNonIdeal[2][1] = 0.0;
 			pNonIdeal[2][2] = 0.0;
 
-			pTensor[0][0] = 0.0;
-			pTensor[0][1] = 0.0;
-			pTensor[0][2] = 0.0;
-			pTensor[1][0] = 0.0;
-			pTensor[1][1] = 0.0;
-			pTensor[1][2] = 0.0;
-			pTensor[2][0] = 0.0;
-			pTensor[2][1] = 0.0;
-			pTensor[2][2] = 0.0;
+			pDissipative[0][0] = 0.0;
+			pDissipative[0][1] = 0.0;
+			pDissipative[0][2] = 0.0;
+			pDissipative[1][0] = 0.0;
+			pDissipative[1][1] = 0.0;
+			pDissipative[1][2] = 0.0;
+			pDissipative[2][0] = 0.0;
+			pDissipative[2][1] = 0.0;
+			pDissipative[2][2] = 0.0;
+
+			pRandom[0][0] = 0.0;
+			pRandom[0][1] = 0.0;
+			pRandom[0][2] = 0.0;
+			pRandom[1][0] = 0.0;
+			pRandom[1][1] = 0.0;
+			pRandom[1][2] = 0.0;
+			pRandom[2][0] = 0.0;
+			pRandom[2][1] = 0.0;
+			pRandom[2][2] = 0.0;
 
 			// find indices of all liquid particles
 			fluidCount = 0;
@@ -401,6 +411,77 @@ class DPD {
 
 							} // jj
 
+							#if LEES_EDWARDS_BC 
+							strain = std::fmod( strainRate * dt * ( step - 1 ) , boxEdge[x] );	// strain in units of boxEdge[x]
+							// strain = std::fmod( 2.75 , boxEdge[x] );	// strain in units of boxEdge[x]
+
+							if ( ( mi[y] == NrCells[y] - 1 ) && ( strain >= zeroTol ) ){	// calculating neighbor-cells for cells with mi[y] = NrCells[y] - 1 ( top-layer cells )
+								
+								// std::cout << "strain = " << strain << std::endl;
+								
+								dmCell1 = ceil( strain ) + 1;					
+								dmCell2 = dmCell1 - 1;
+								dmCell3 = dmCell2 - 1;
+								dmCell4 = dmCell3 - 1;
+
+								// std::cout << "dmCell1, dmCell2, dmCell3, dmCell4 = " << dmCell1 << ", " << dmCell2 << ", " << dmCell3 << "," << dmCell4 << std::endl;
+								#include "dm_LEbc_init.h"
+
+								// std::cout << "dm_LEbc initialized for cell mi[x], mi[y], mi[z]" << mi[x] << ", "<< mi[y] << ", " << mi[z] << std::endl;
+								// std::cout << "Cell mi[x], mi[y], mi[z]" << mi[x] << ", "<< mi[y] << ", " << mi[z] << std::endl;
+
+								for ( m = 0 ; m < 16 ; m++ )
+								{
+									int i1 = moduloAB( mi[x] - dm_LEbc[m][x] + 1, NrCells[x] );	// correction for cell in direction of shear ( x )
+									int i2 = mi[y] + dm_LEbc[m][y] + 1;
+									int i3 = mi[z] + dm_LEbc[m][z] + 1;
+									// std::cout << i1  <<", " << i2 <<", " << i3 << std::endl;
+
+									mj[x]        = periodN[ i1 ][ x ];
+									mj[y]	     = periodN[ i2 ][ y ];
+									mj[z]	     = periodN[ i3 ][ z ];
+
+									dR.X	     = strain * ( dm_LEbc[m][y] == 1 );			// correction for particle-position: should correct only for +1 change in y 
+									dR.Y	     = 0.; 
+									dR.Z	     = 0.;
+
+									// std::cout <<  m << " " << mj[x] << " " << mj[y] << " " << mj[z] << " " << dR.X << " " << dR.Y << " " << dR.Z << std::endl;
+									for ( jj = 1 ; jj <= grid[mj[x]][mj[y]][mj[z]][0] ; ++jj )
+									{
+										j = grid[mj[x]][mj[y]][mj[z]][jj];
+										// simProg << "j2 " << m << " " << mj[x] << " " << mj[y] << " " << mj[z] << " " << jj << " " << j << std::endl;
+
+										#include "dens_calculate.h"
+
+									} // jj
+
+								} // m
+							}
+							else{
+								for ( m = 0 ; m < 13 ; m++ )
+								{
+									mj[x]        = periodN[ mi[x] + dm[m][x] + 1 ][x];
+									mj[y]	     = periodN[ mi[y] + dm[m][y] + 1 ][y];
+									mj[z]	     = periodN[ mi[z] + dm[m][z] + 1 ][z];
+
+									/*
+									dR.X         = periodR[ mi[x] + dm[m][x] + 1 ][x]; // correction for position
+									dR.Y	     = periodR[ mi[y] + dm[m][y] + 1 ][y];
+									dR.Z	     = periodR[ mi[z] + dm[m][z] + 1 ][z];*/
+
+									dR.setZero();
+
+									for ( jj = 1 ; jj <= grid[mj[x]][mj[y]][mj[z]][0] ; ++jj )
+									{
+										j = grid[mj[x]][mj[y]][mj[z]][jj];
+										// simProg << "j2 " << m << " " << mj[x] << " " << mj[y] << " " << mj[z] << " " << jj << " " << j << std::endl;
+										#include "dens_calculate.h"
+
+									} // jj
+								} // m
+
+							}
+							#else
 							// particle j in neighbour cell to i
 							for ( m = 0 ; m < 13 ; m++ )
 							{
@@ -419,6 +500,8 @@ class DPD {
 
 								} // jj
 							} // m
+
+							#endif // LEES_EDWARDS_BC
 
 						} // ii
 
@@ -1055,9 +1138,9 @@ class DPD {
 				// Density, Temperature, Average Pressure
 				eosStats 	<< std::setw(20) << std::setprecision(15) << rho 	<< "\t" 
 					        << std::setw(20) << std::setprecision(15) << temp	<< "\t" 
-                            #if WALL_ON
+					        #if WALL_ON
 					        << std::setw(20) << std::setprecision(15) << wallTemp	<< "\t" 
-                            #endif
+					        #endif
 				        	<< std::setw(20) << std::setprecision(15) << pressure 	<< std::endl;
 
 				// Momentum
@@ -1068,39 +1151,44 @@ class DPD {
 				// average and reset the pTensor
 				#include "pTensAverage.h"
 
-				/*	
 				// Pressure tensor	
-				pTensStats 	<< std::setw(20) << std::setprecision(15) << pTensor[0][0] << "\t" 
-				<< std::setw(20) << std::setprecision(15) << pTensor[0][1] << "\t" 
-				<< std::setw(20) << std::setprecision(15) << pTensor[0][2] << "\t"
-				<< std::setw(20) << std::setprecision(15) << pTensor[1][0] << "\t"
-				<< std::setw(20) << std::setprecision(15) << pTensor[1][1] << "\t"
-				<< std::setw(20) << std::setprecision(15) << pTensor[1][2] << "\t"
-				<< std::setw(20) << std::setprecision(15) << pTensor[2][0] << "\t"
-				<< std::setw(20) << std::setprecision(15) << pTensor[2][1] << "\t"
-				<< std::setw(20) << std::setprecision(15) << pTensor[2][2] << std::endl;
-				 */
-
-				// Pressure tensor	
-				pTensStats 	<<  pIdeal[0][0] << ", " 
-					        <<  pIdeal[0][1] << ", " 
-	        				<<  pIdeal[0][2] << ", "
-		        			<<  pIdeal[1][0] << ", "
-			        		<<  pIdeal[1][1] << ", "
-				        	<<  pIdeal[1][2] << ", "
-				        	<<  pIdeal[2][0] << ", "
-	        				<<  pIdeal[2][1] << ", "
-		        			<<  pIdeal[2][2] << ", "
-			        		<<  pNonIdeal[0][0] << ", " 
-				        	<<  pNonIdeal[0][1] << ", " 
-        					<<  pNonIdeal[0][2] << ", "
-	        				<<  pNonIdeal[1][0] << ", "
-		        			<<  pNonIdeal[1][1] << ", "
-		        			<<  pNonIdeal[1][2] << ", "
-			        		<<  pNonIdeal[2][0] << ", "
-		        			<<  pNonIdeal[2][1] << ", "
-			        		<<  pNonIdeal[2][2] << std::endl;
-
+				pTensStats 	<<  pIdeal[0][0]		 << " " 
+					        <<  pIdeal[0][1]		 << " " 
+	        				<<  pIdeal[0][2]		 << " "
+		        			<<  pIdeal[1][0]		 << " "
+			        		<<  pIdeal[1][1]		 << " "
+				        	<<  pIdeal[1][2]		 << " "
+				        	<<  pIdeal[2][0]		 << " "
+	        				<<  pIdeal[2][1]		 << " "
+		        			<<  pIdeal[2][2]		 << " "
+			        		<<  pNonIdeal[0][0]		 << " " 
+				        	<<  pNonIdeal[0][1]		 << " " 
+        					<<  pNonIdeal[0][2]		 << " "
+	        				<<  pNonIdeal[1][0]		 << " "
+		        			<<  pNonIdeal[1][1]		 << " "
+		        			<<  pNonIdeal[1][2]		 << " "
+			        		<<  pNonIdeal[2][0]		 << " "
+		        			<<  pNonIdeal[2][1]		 << " "
+			        		<<  pNonIdeal[2][2]		 << " " 
+			        		<<  pDissipative[0][0]	         << " " 
+				        	<<  pDissipative[0][1]	         << " " 
+        					<<  pDissipative[0][2]	         << " "
+	        				<<  pDissipative[1][0]	         << " "
+		        			<<  pDissipative[1][1]	         << " "
+		        			<<  pDissipative[1][2]	         << " "
+			        		<<  pDissipative[2][0]	         << " "
+		        			<<  pDissipative[2][1]	         << " "
+			        		<<  pDissipative[2][2]	         << " " 
+			        		<<  pRandom[0][0]                << " " 
+				        	<<  pRandom[0][1]                << " " 
+        					<<  pRandom[0][2]                << " "
+	        				<<  pRandom[1][0]                << " "
+		        			<<  pRandom[1][1]                << " "
+		        			<<  pRandom[1][2]                << " "
+			        		<<  pRandom[2][0]                << " "
+		        			<<  pRandom[2][1]                << " "
+			        		<<  pRandom[2][2]                << std::endl;
+						
 				#include "pTensReset.h"
 
 				// density profile rhoZ
