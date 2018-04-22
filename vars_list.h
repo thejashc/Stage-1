@@ -35,7 +35,8 @@ double tot_en;				// system total energy
 double pressure;			// pressure
 double pIdeal[3][3];			// Ideal component of pressure tensor
 double pNonIdeal[3][3];			// Non Ideal component of pressure tensor
-double pTensor[3][3];			// Virial component of pressure tensor
+double pDissipative[3][3];			// Non Ideal component of pressure tensor
+double pRandom[3][3];			// Non Ideal component of pressure tensor
 double idealComp;			// ideal component of pressure
 double temp;				// temperature
 double tempSum;				// temperature sum

@@ -1,15 +1,3 @@
-/*
-pTensor[0][0] /= counter;
-pTensor[0][1] /= counter;
-pTensor[0][2] /= counter;
-pTensor[1][0] /= counter;
-pTensor[1][1] /= counter;
-pTensor[1][2] /= counter;
-pTensor[2][0] /= counter;
-pTensor[2][1] /= counter;
-pTensor[2][2] /= counter;
-*/
-
 // ideal component
 pIdeal[0][0] /= counter;
 pIdeal[0][1] /= counter;
@@ -31,3 +19,25 @@ pNonIdeal[1][2] /= ( counter * volume );
 pNonIdeal[2][0] /= ( counter * volume );
 pNonIdeal[2][1] /= ( counter * volume );
 pNonIdeal[2][2] /= ( counter * volume );
+
+// Dissipative
+pDissipative[0][0] /= ( counter * volume );
+pDissipative[0][1] /= ( counter * volume );
+pDissipative[0][2] /= ( counter * volume );
+pDissipative[1][0] /= ( counter * volume );
+pDissipative[1][1] /= ( counter * volume );
+pDissipative[1][2] /= ( counter * volume );
+pDissipative[2][0] /= ( counter * volume );
+pDissipative[2][1] /= ( counter * volume );
+pDissipative[2][2] /= ( counter * volume );
+
+// Random
+pRandom[0][0] /= ( counter * volume );
+pRandom[0][1] /= ( counter * volume );
+pRandom[0][2] /= ( counter * volume );
+pRandom[1][0] /= ( counter * volume );
+pRandom[1][1] /= ( counter * volume );
+pRandom[1][2] /= ( counter * volume );
+pRandom[2][0] /= ( counter * volume );
+pRandom[2][1] /= ( counter * volume );
+pRandom[2][2] /= ( counter * volume );
