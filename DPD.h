@@ -30,14 +30,14 @@
 #define ROUGH_WALL 0
 
 // POISEUILLE flow
-#define BODY_FORCE 0		// activated only with WALL_ON
+#define BODY_FORCE 1		// activated only with WALL_ON
 
 // FILE_WRITE
 #define STYLE_VMD 1
 #define STYLE_MERCURY_DPM 0
 
 // LEES-EDWARDS BOUNDARY CONDITION
-#define LEES_EDWARDS_BC 1
+#define LEES_EDWARDS_BC 0
 
 //declare DPD solver
 class DPD {
@@ -737,7 +737,15 @@ class DPD {
 							particles[i].w += ( particles[i].fC + particles[i].fCW +  particles[i].fD + particles[i].fR + particles[i].fext )*(dt/particles[i].m);
 						#endif
 					#else 	
-						particles[i].w += ( particles[i].fC + particles[i].fD + particles[i].fR )*(dt/particles[i].m);
+						#if BODY_FORCE
+							particles[i].fBody.X = ( particles[i].r.Y < 0.5 * boxEdge[y] ) ? fBodyX : -1. * fBodyX;	
+							particles[i].fBody.Y = 0.;
+							particles[i].fBody.Z = 0.; 	
+
+							particles[i].w += ( particles[i].fC + particles[i].fD + particles[i].fR + particles[i].fBody )*(dt/particles[i].m);
+						#else
+							particles[i].w += ( particles[i].fC + particles[i].fD + particles[i].fR )*(dt/particles[i].m);
+						#endif
 					#endif // WALL_ON
 				#else 
 					#if WALL_ON
@@ -1092,7 +1100,11 @@ class DPD {
 			#if BODY_FORCE
 			paraInfo << "Particle x body force ( fBodyX )           :           " << fBodyX << std::endl;
 			#endif
-			#endif 
+			#else
+			#if BODY_FORCE
+			paraInfo << "Particle x body force ( fBodyX )           :           " << fBodyX << std::endl;
+			#endif
+			#endif // WALL_ON
 			
 			paraInfo << "---------------------------" << std::endl;
 			paraInfo << "Conservative Force         " << std::endl;
