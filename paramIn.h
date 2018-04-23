@@ -40,11 +40,6 @@ readParam >> emptyLine ;		readParam.ignore(256,'\n');		// L21
 simProg << "Reading Solid geometrical Parameters" << std::endl;
 readParam >> buffer >> wallHeight;	readParam.ignore(256,'\n');		// L22
 readParam >> buffer >> initWallRho;	readParam.ignore(256,'\n');		// L23
-#if BODY_FORCE 
-readParam >> buffer >> fBodyX;		readParam.ignore(256,'\n');		// L24
-#else
-readParam.ignore(256, '\n');
-#endif
 
 #else					
 readParam.ignore(256, '\n');
@@ -60,6 +55,10 @@ readParam.ignore(256, '\n');
 readParam >> emptyLine;			readParam.ignore(256,'\n');
 readParam.ignore(256, '\n');
 readParam.ignore(256, '\n');
+#endif
+#if BODY_FORCE 
+readParam >> buffer >> fBodyX;		readParam.ignore(256,'\n');		// L24
+#else
 readParam.ignore(256, '\n');
 #endif
 readParam >> emptyLine;			readParam.ignore(256,'\n');		// L25

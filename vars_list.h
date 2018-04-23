@@ -141,7 +141,6 @@ int dmCell3;
 int dmCell4;
 
 double zeroTol = 1e-7;
-Vec3D velCorr;
 double strainRate;
 #endif
 
@@ -195,6 +194,7 @@ Vec3D Rij;
 Vec3D minRij;
 Vec3D tempVec;
 Vec3D dR;
+Vec3D velCorr;
 
 // dissipative and random forces
 #if RANDOM_DISSIPATIVE
@@ -262,7 +262,6 @@ double wallTopPos;
 double wallLowDist;
 double wallTopDist;
 double wallPenetration;
-double fBodyX;
 double kWall;
 double wallTemp;
 
@@ -344,6 +343,11 @@ double zindUW_min;
 double zindUW_max;
 #endif
 #endif
+
+#if BODY_FORCE
+double fBodyX;
+#endif
+
 // momentum calculation
 long double momX;
 long double momY;
