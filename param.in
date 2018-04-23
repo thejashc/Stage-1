@@ -1,9 +1,9 @@
-boxEdgeX            6.0		# box dimensions
-boxEdgeY            6.0
-boxEdgeZ            6.0
+boxEdgeX            7.0		# box dimensions
+boxEdgeY            7.0
+boxEdgeZ            7.0
 initRho             6.51
 #
-All                 -15.0		# liquid-liquid interaction parameters
+All                 -40.0		# liquid-liquid interaction parameters
 Bll                 25.0		
 rcutoff             1.0		
 rd_cutoff           0.75
@@ -21,10 +21,10 @@ rdWcutoff           0.75
 #
 wallHeight          2.0			# wall geometrical parameters
 initWallRho         6.51
-fBodyX              +10.0
+fBodyX              0.05
 #
 kBT                 1.0 		# temperature	
-sigma               3.0			# dissipation coeffecient
+sigma               6.0			# dissipation coeffecient
 dim                 3			# dimensions
 #
 dt                  0.001		# time parameters	
