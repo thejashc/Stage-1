@@ -14,7 +14,7 @@
 #include <random> 
 
 // configuration of particles
-#define RANDOM_DISSIPATIVE 1
+#define RANDOM_DISSIPATIVE 0
 #define SPHERICAL_DROPLET 0
 #define SPHERICAL_CAP 0
 #define CYLINDER_DROPLET 0
@@ -30,14 +30,14 @@
 #define ROUGH_WALL 0
 
 // POISEUILLE flow
-#define BODY_FORCE 1		// activated only with WALL_ON
+#define BODY_FORCE 0		// activated with/without WALL_ON
 
 // FILE_WRITE
 #define STYLE_VMD 1
 #define STYLE_MERCURY_DPM 0
 
 // LEES-EDWARDS BOUNDARY CONDITION
-#define LEES_EDWARDS_BC 0
+#define LEES_EDWARDS_BC 1
 
 //declare DPD solver
 class DPD {
@@ -71,20 +71,22 @@ class DPD {
 			inv_sqrt_dt = 1.0/std::sqrt(dt);			// inverse of square root of the time step
 			half_dt = 0.5*dt;					// 0.5*dt to be used in the integrateEOM()
 			half_dt_sqr = half_dt*dt;				// 0.5*dt*dt to be used in the integrateEOM()
+
 			rd4 = pow(rd_cutoff, 4.0);				// fourth power of rd_cutoff
-			piThirty = M_PI/30.0;					// Pi/30.0 
-			k1 = piThirty*All;					// constant k1
-			k2 = piThirty*rd4*Bll;					// constant k2
+			rc4 = pow(rcutoff, 4.0);				// fourth power of rc_cutoff
+			k1 = piThirty * rc4 * All;				// constant k1
+			k2 = piThirty * rd4 * Bll;				// constant k2
 
 			counter = 0;						// initialize time, counter for file writing
+			pcounter = 0;						// initialize time, counter for file writing
 			std::ofstream enStats 		( "./data/en_data.dat"	);	// Kinetic, Potential and total energy
 			std::ofstream eosStats		( "./data/eos_data.dat"	);	// Mean Pressure and temperature data
 			std::ofstream pTensStats	( "./data/pTens.dat"	);	// Pressure tensor data
 			std::ofstream momStats		( "./data/mom_data.dat"	);	// pressure and temperature data
 
-			// createGridList();
-            		// dens_calculation();
-			// forceCalc();
+			createGridList();
+            		dens_calculation();
+			forceCalc();
 	
 			resetVar();
 
@@ -100,38 +102,31 @@ class DPD {
 				abort();
 			}
 			#endif
-
+		
 			simProg << " ********************* STARTING SIMULATION ************************* " << std::endl;	
 
 			while (step<stepMax) {
 
-				// force calculation
 				createGridList();
-                		//dens_calculation();
+                		dens_calculation();
 				forceCalc();
 
-				// Integrate equations of motion (including pbc)
 				integrateEOM();
 
-				// total energy and g(r) sample calculation
-				// potential energy
-				for (Particle& p : particles) {
-					pot_en += k1*p.rhoBar + k2*pow(p.dens, 2.0); 	// sum of self-energies of all particles
+				for ( i=0 ; i < npart ; ++i ) {
+					pot_en += k1 * particles[i].rhoBar + k2 * pow( particles[i].dens, 2.0 ); 	// sum of self-energies of all particles
 				}
 				tot_en = kin_en + pot_en;
+
 				if ( (step > gR_tStart) && (step % gR_tDelta == 0) ) grSample();
 
-				// filewriting 
-				counter += 1;
+				counter += 1;						// filewriting
+				pcounter += 1;
 				fileWrite(enStats, eosStats, momStats, pTensStats);
 
-				// reset variables to zero
-				resetVar();
+				resetVar();						// reset variables to zero
 
-				// increment time step
-				step += 1;
-
-				// std::cout << step << std::endl;
+				step += 1;						// increment time step
 
 				// for (Particle& p : particles)
 				//	simProg << "Position: " << p.r << ", Density: " << p.dens <<", conservative force: " << p.fC << std::endl;
@@ -208,28 +203,6 @@ class DPD {
 				for ( i=0; i < rhoZ_bins ; ++i ){
 					rhoZ.push_back(0.0);
 				}	
-
-				#if WALL_ON
-				/*
-				// Initialize the segPlane array
-				for ( i=0; i < segPlane_bins ; ++i ){
-
-					segPlane_xCOM.push_back(0.0);
-					segPlane_zCOM.push_back(0.0);
-					segPlane_count.push_back(0);
-				}
-				*/
-
-				// Intialize nZ array
-				/*
-				nZ.resize( nZ_zbins );
-				for ( i = 0; i < nZ_zbins ; ++i )
-					nZ[i].resize( nZ_xbins );
-					for ( j = 0; j < nZ_xbins; ++j )
-							nZ[i][j] = 0;
-				*/
-				#endif
-				
 
 			#elif CYLINDER_DROPLET
 				// Initialize the rhor array
@@ -364,7 +337,7 @@ class DPD {
 			Vec3D velAvg={0.0, 0.0, 0.0};
 			// Remove excess velocity and set particle density to 0
 			for ( i=fluid_index[0] ; i <= fluid_index[fluidCount - 1] ; ++i ){
-				velAvg 		+= particles[i].w/fluidCount;
+				velAvg 			+= particles[i].w/fluidCount;
 				particles[i].dens 	 = 0.0;
 				particles[i].dens_new	 = 0.0;
 				particles[i].fC.setZero();
@@ -412,18 +385,11 @@ class DPD {
 							} // jj
 
 							#if LEES_EDWARDS_BC 
-							strain = std::fmod( strainRate * dt * ( step - 1 ) , boxEdge[x] );	// strain in units of boxEdge[x]
-							// strain = std::fmod( 2.75 , boxEdge[x] );	// strain in units of boxEdge[x]
+							// strain = std::fmod( strainRate * dt * ( step - 1 ) , boxEdge[x] );	// strain in units of boxEdge[x]
+							strain = std::fmod( gammaDot , boxEdge[x] );	// strain in units of boxEdge[x]
 
-							if ( ( mi[y] == NrCells[y] - 1 ) && ( strain >= zeroTol ) ){	// calculating neighbor-cells for cells with mi[y] = NrCells[y] - 1 ( top-layer cells )
+							if ( mi[y] == NrCells[y] - 1 ){	// calculating neighbor-cells for cells with mi[y] = NrCells[y] - 1 ( top-layer cells )
 								
-								// std::cout << "strain = " << strain << std::endl;
-								
-								dmCell1 = ceil( strain ) + 1;					
-								dmCell2 = dmCell1 - 1;
-								dmCell3 = dmCell2 - 1;
-								dmCell4 = dmCell3 - 1;
-
 								// std::cout << "dmCell1, dmCell2, dmCell3, dmCell4 = " << dmCell1 << ", " << dmCell2 << ", " << dmCell3 << "," << dmCell4 << std::endl;
 								#include "dm_LEbc_init.h"
 
@@ -590,19 +556,11 @@ class DPD {
 
 							// particle j in neighbour cell to i
 							#if LEES_EDWARDS_BC
-							strain = std::fmod( strainRate * dt * ( step - 1 ) , boxEdge[x] );	// strain in units of boxEdge[x]
-							// strain = std::fmod( 2.75 , boxEdge[x] );	// strain in units of boxEdge[x]
+							//strain = std::fmod( strainRate * dt * ( step - 1 ) , boxEdge[x] );	// strain in units of boxEdge[x]
+							strain = std::fmod( gammaDot , boxEdge[x] );	// strain in units of boxEdge[x]
 
-							if ( ( mi[y] == NrCells[y] - 1 ) && ( strain >= zeroTol ) ){	// calculating neighbor-cells for cells with mi[y] = NrCells[y] - 1 ( top-layer cells )
+							if (  mi[y] == NrCells[y] - 1 ){	// calculating neighbor-cells for cells with mi[y] = NrCells[y] - 1 ( top-layer cells )
 								
-								/* BUG:When top and bottom box overlap, it still searches for 4 neighbors */
-								// std::cout << "strain = " << strain << std::endl;
-								
-								dmCell1 = ceil( strain ) + 1;					
-								dmCell2 = dmCell1 - 1;
-								dmCell3 = dmCell2 - 1;
-								dmCell4 = dmCell3 - 1;
-
 								// std::cout << "dmCell1, dmCell2, dmCell3, dmCell4 = " << dmCell1 << ", " << dmCell2 << ", " << dmCell3 << "," << dmCell4 << std::endl;
 								#include "dm_LEbc_init.h"
 
@@ -643,6 +601,9 @@ class DPD {
 
 							} // ( mi[y] == NrCells[y] - 1 )
 							else {
+								dR.setZero();
+								velCorr.setZero();
+
 								for ( m = 0 ; m < 13 ; m++ )
 								{
 									mj[x]        = periodN[ mi[x] + dm[m][x] + 1 ][x];
@@ -654,8 +615,6 @@ class DPD {
 									dR.Y	     = periodR[ mi[y] + dm[m][y] + 1 ][y];
 									dR.Z	     = periodR[ mi[z] + dm[m][z] + 1 ][z];*/
 
-									dR.setZero();
-									velCorr.setZero();
 
 									for ( jj = 1 ; jj <= grid[mj[x]][mj[y]][mj[z]][0] ; ++jj )
 									{
@@ -759,11 +718,11 @@ class DPD {
 				particles[i].r += particles[i].w*dt;				
 				// simProg << i << " " << particles[i].r << std::endl;
 
-				// calculate velocity (integral time step)
-				particles[i].v = 0.5*( particles[i].w_old + particles[i].w );
-
 				// implement periodic boundary condition 
 				#include "pbc.h"
+
+				// calculate velocity (integral time step)
+				particles[i].v = 0.5*( particles[i].w_old + particles[i].w );
 
 				// distribute velocities into velocity bins
 				if ( (step > velHist_tStart) && (step % velHist_tDelta == 0) ) {
@@ -811,12 +770,18 @@ class DPD {
 				vx2 += particles[i].v.X * particles[i].v.X;
 				vy2 += particles[i].v.Y * particles[i].v.Y;
 				vz2 += particles[i].v.Z * particles[i].v.Z;
+
+				// calculate momentum
+				momX += particles[i].v.X;
+				momY += particles[i].v.Y;
+				momZ += particles[i].v.Z;
 			}
 
 			// temperature calculation	
-			v2 = ( vx2 + vy2 + vz2 ) / ( 3. * fluidCount );
+			//v2 = ( vx2 + vy2 + vz2 ) / ( 3. * fluidCount );
+			v2 =  vx2 + vy2 + vz2 ;
 			kin_en = 0.5 * v2;		// unit mass assumption
-			temp = 2.*kin_en;
+			temp = ( 2. / 3. )* ( kin_en / fluidCount );
 
 			tempSum += temp;
 			tempCount += 1;
@@ -888,9 +853,9 @@ class DPD {
 			// simProg << " fi[0], fi[fluidCount - 1], fluidCount " << fluid_index[0] << " " << fluid_index[1] << " " << fluidCount << std::endl;	
 			for ( i = 0; i < npart ; ++i )
 			{
-				particles[i].dens = particles[i].dens_new;
-				particles[i].dens_new = 0.;
-				// particles[i].dens = 0.0;
+				//particles[i].dens = particles[i].dens_new;
+				//particles[i].dens_new = 0.;
+				particles[i].dens = 0.0;
 				particles[i].rhoBar = 0.0;
 				particles[i].fC.setZero();
 		
@@ -1050,6 +1015,7 @@ class DPD {
 			paraInfo << "---------------------------" << std::endl;
 			paraInfo << "Total run time (stepMax)                   :           " << stepMax << std::endl;
 			paraInfo << "Data frequency (saveCount)                 :           " << saveCount << std::endl;
+			paraInfo << "Pressure Data frequency (psaveCount)       :           " << psaveCount << std::endl;
 			
 			#if SPHERICAL_DROPLET 
 			paraInfo << "---------------------------" << std::endl;
@@ -1136,30 +1102,9 @@ class DPD {
 				simProg << step << " steps out of " << stepMax << " completed " << std::endl;
 			}
 
-			//write output file in the .data format
-			if (counter>=saveCount) {				
-
-				// particle positions in vtk file format
-				vtkFileWritePosVel();
-
-				// Energy
-				enStats 	<< std::setw(20) << std::setprecision(15) << pot_en << "\t" 
-					        << std::setw(20) << std::setprecision(15) << kin_en << "\t" 
-				        	<< std::setw(20) << std::setprecision(15) << tot_en << std::endl;
-
-				// Density, Temperature, Average Pressure
-				eosStats 	<< std::setw(20) << std::setprecision(15) << rho 	<< "\t" 
-					        << std::setw(20) << std::setprecision(15) << temp	<< "\t" 
-					        #if WALL_ON
-					        << std::setw(20) << std::setprecision(15) << wallTemp	<< "\t" 
-					        #endif
-				        	<< std::setw(20) << std::setprecision(15) << pressure 	<< std::endl;
-
-				// Momentum
-				momStats 	<< std::setw(20) << std::setprecision(15) << momX << "\t" 
-				        	<< std::setw(20) << std::setprecision(15) << momY << "\t" 
-				        	<< std::setw(20) << std::setprecision(15) << momZ << std::endl;
-
+			// separate module for pressure -- requires better averaging
+			if ( pcounter >= psaveCount ) {
+				
 				// average and reset the pTensor
 				#include "pTensAverage.h"
 
@@ -1202,6 +1147,34 @@ class DPD {
 			        		<<  pRandom[2][2]                << std::endl;
 						
 				#include "pTensReset.h"
+
+				pcounter = 0;	
+			}
+
+			//write output file in the .data format
+			if (counter>=saveCount) {				
+
+				// particle positions in vtk file format
+				vtkFileWritePosVel();
+
+				// Energy
+				enStats 	<< std::setw(20) << std::setprecision(15) << pot_en << "\t" 
+					        << std::setw(20) << std::setprecision(15) << kin_en << "\t" 
+				        	<< std::setw(20) << std::setprecision(15) << tot_en << std::endl;
+
+				// Density, Temperature, Average Pressure
+				eosStats 	<< std::setw(20) << std::setprecision(15) << rho 	<< "\t" 
+					        << std::setw(20) << std::setprecision(15) << temp	<< "\t" 
+					        #if WALL_ON
+					        << std::setw(20) << std::setprecision(15) << wallTemp	<< "\t" 
+					        #endif
+				        	<< std::setw(20) << std::setprecision(15) << pressure 	<< std::endl;
+
+				// Momentum
+				momStats 	<< std::setw(20) << std::setprecision(15) << momX << "\t" 
+				        	<< std::setw(20) << std::setprecision(15) << momY << "\t" 
+				        	<< std::setw(20) << std::setprecision(15) << momZ << std::endl;
+
 
 				// density profile rhoZ
 				#if PLANAR_SLAB 

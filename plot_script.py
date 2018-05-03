@@ -13,46 +13,55 @@ def figEnv():
     return plt.figure(num=None, figsize=(8. , 6.), dpi=80, facecolor='w', edgecolor='k')
 
 # KNOBS
-ENERGY		    = 0
-MOMENTUM	    = 0
-TEMPERATURE	    = 1
-VEL_PROFILE	    = 1
+ENERGY		    = 1
+MOMENTUM	    = 1
+TEMPERATURE	    = 0
+VEL_PROFILE	    = 0
 GR		    = 0 
 VEL_DIST	    = 0
-PRESSURE_TENSOR     = 1
+PRESSURE_TENSOR     = 0
 
 # parameters
-nFluid 		= 1728
+nFluid 		= 2058
 yMin 		= 0.
 yMax 		= 7.
 ybinWidth 	= 0.2
 
-startFileNum  	= 200000
-endFileNum    	= 500000
-deltaFileNum  	= 1000
+startFileNum  	= 100000
+endFileNum    	= 2030000
+deltaFileNum  	= 20000
 
 #------ ENERGY STATISTICS --------#
 if ( ENERGY == 1 ):
 	data = np.loadtxt( './data/en_data.dat' )
 
+	# raw data
+	pe      = data[:,0]
+	ke      = data[:,1]
+	te      = data[:,2]
+
 	# average energy values
-	peAvg 	= np.mean( data[:,0] )
-	keAvg 	= np.mean( data[:,1] )
-	totAvg 	= np.mean( data[:,2] )
+	peAvg 	= np.mean( pe )
+	keAvg 	= np.mean( ke )
+	teAvg 	= np.mean( te )
 
 	# deviation from mean
-	peDev 	= ( data[:,0] - peAvg  ) / peAvg
-	keDev 	= ( data[:,1] - keAvg  ) / keAvg
-	totDev	= ( data[:,2] - totAvg ) / totAvg
+	peDev 	= np.std(pe) / peAvg
+	keDev 	= np.std(ke) / keAvg
+	teDev	= np.std(te) / teAvg
+
+	print ( 'pe fluctuation = '+str( abs( peDev * 100 ) ) )
+	print ( 'ke fluctuation = '+str( abs( keDev * 100 ) ) )
+	print ( 'te fluctuation = '+str( abs( teDev * 100 ) ) )
 
 	figEnv()
 	plt.title('Energy vs time')
 	#plt.plot( keDev	, label= r'$KE$' )
 	#plt.plot( peDev	, label= r'$PE$' )
 	#plt.plot( totDev, label= r'$TE$' )
-	plt.plot( data[:,0], label= r'$KE$' )
-	plt.plot( data[:,1], label= r'$PE$' )
-	plt.plot( data[:,2], label= r'$TE$' )
+	plt.plot( pe, 'rs', label= r'$PE$' )
+	plt.plot( ke, 'b^', label= r'$KE$' )
+	plt.plot( te, 'g-', label= r'$TE$' )
 	plt.xlabel( r'$t$' )
 	plt.ylabel( r'$\frac{\Delta E}{\langle E \rangle}$' )
 	plt.legend()
@@ -269,7 +278,7 @@ if ( VEL_PROFILE == 1):
 	v_vs_Y /= count 
 	rho_vs_Y = rho / ( tot_files * ybinWidth * yMax * yMax )
 
-	print( v_vs_Y[:,0] )
+	print( ydata ) 
 
 	figEnv()
 	plt.plot( ydata, v_vs_Y[:,0], 'rs-', label=r'v_{x}' )
@@ -333,10 +342,16 @@ if ( VEL_PROFILE == 1):
 	plt.legend()
 	plt.savefig( './plots/temp_vs_y.eps', format='eps', dpi=1200)
 
+	# writing the velocity data
+	wrtData = np.array( ( ydata, v_vs_Y[:,0] ) )
+	wrtData = wrtData.transpose()
+	np.savetxt( './data/velProfile.dat', wrtData, fmt='%1.7f' )
+
 # ----------------- PRESSURE_TENSOR PROFILE -----------------#
 if ( PRESSURE_TENSOR == 1):
 
 	data = np.loadtxt('./data/pTens.dat')
+	indStart = 5
 
 	pxyC = data[:,1] + data[:,10]
 	pyxC = data[:,3] + data[:,12]
@@ -353,25 +368,40 @@ if ( PRESSURE_TENSOR == 1):
 
 	pR = ( pxyR + pyxR ) / 2.
 
-	#print( np.mean( pxy[400:499] ) )
-	#print( np.mean( pxy[350:499] ) )
-	#print( np.mean( pxy[300:499] ) )
-	#print( np.mean( pxy[250:499] ) )
-	#print( np.mean( pxy[200:499] ) )
-	#print( np.mean( pxy[100:300] ) )
-	#print( np.mean( pyx[100:300] ) )
+	v_vs_Y = np.loadtxt('./data/velProfile.dat')
+	Delv = v_vs_Y[-1,1] - v_vs_Y[0,1]
 
-	Delv = np.max ( v_vs_Y[:,0] ) - np.min( v_vs_Y[:,0] )
-	vGrad = Delv/ ( yMax - yMin )
+	yLow = ( 2*v_vs_Y[0,0]  + ybinWidth ) * 0.5			# equivalent to ( 1st + 2nd ) / 2 
+	yHigh = ( yMax + v_vs_Y[-1,0] ) * 0.5				# equivalent to ( upper-limit + last-element ) / 2 
 
-	print( 'vMax, vMin, vGrad' )	
-	print( np.max( v_vs_Y[:,0] ), np.min( v_vs_Y[:,0] ) )
-	print( vGrad )
+	print( yLow, yHigh )
+	vGrad = Delv/ ( yHigh - yLow ) 
 
-	pxy =  pC[200:] + pD[200:]
-	pxy = np.mean( pxy[:] )
+	pCMean = np.mean( pC[indStart:] )
+	pDMean = np.mean( pD[indStart:] )
+	pRMean = np.mean( pR[indStart:] )
 
-	viscosity = abs(pxy) / vGrad 
+	pCStd = np.std( pC[indStart:] )
+	pDStd = np.std( pD[indStart:] )
+	pRStd = np.std( pR[indStart:] )
+
+	pxy     = pC[indStart:] + pD[indStart:] + pR[indStart:]
+	pxyMean =  np.mean( pxy[:] )
+	pxyStd  =  abs( np.std( pxy[:] ) )
+
+	viscosity    = ( -1. * pxyMean ) / vGrad 
+	viscosityUp  = ( -1. * ( pxyMean + pxyStd ) ) / vGrad 
+	viscosityLow = ( -1. * ( pxyMean - pxyStd ) ) / vGrad 
+	
+	print( 'vMax=%f'%np.max( v_vs_Y[:,1] ) )	
+	print( 'vMin=%f'%np.min( v_vs_Y[:,1] ) )	
+	print( 'vGrad=%f'%vGrad )
+
+	print( 'pC= '+str(pCMean)+' +/- '+str(pCStd) )	
+	print( 'pD= '+str(pDMean)+' +/- '+str(pDStd) )	
+	print( 'pR= '+str(pRMean)+' +/- '+str(pRStd) )	
+
+	print( 'Lower limit Visc= '+str(viscosityLow)+', Mean Viscosity = '+str(viscosity)+', Viscosity Higher = '+str(viscosityUp) )
 
 	figEnv()
 	plt.plot( pxyC, 'r-', label=r'$p_{xy, C}$')

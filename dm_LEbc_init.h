@@ -21,6 +21,13 @@ dm_LEbc	= {
 	{  dmCell4,  1,  1 }                  
 };
 */
+/* BUG:When top and bottom box overlap, it still searches for 4 neighbors */
+// std::cout << "strain = " << strain << std::endl;
+
+dmCell1 = ceil( strain ) + 1;					
+dmCell2 = dmCell1 - 1;
+dmCell3 = dmCell2 - 1;
+dmCell4 = dmCell3 - 1;
 
 dm_LEbc[0][0] =  0;	// {0, 0, 1}
 dm_LEbc[0][1] =  0;

@@ -72,6 +72,7 @@ std::vector<int> solid_index;	// index of solid type
 #elif CYLINDER_DROPLET 
 	double cylCenterX;
 	double cylCenterY;
+	double cylCenterZ;
 	double cylRad;	
 	double cylHeight;
 	double xCOM;
@@ -214,6 +215,7 @@ double magDiss;
 
 // file writing parameters
 unsigned int saveCount;		// number of timestep between saves
+unsigned int psaveCount;	// number of timestep between saves for pressure calculation
 
 // parameters for post-processing
 // g(r) -- structure function
@@ -378,20 +380,23 @@ double bin_upper;
 double vel;
 
 // constants
-double one_by_pi = 1.0/M_PI;
-double five_by_pi = 5.0/M_PI;				// 5/PI used in Lucy weight function
-double thirty_by_pi = 30.0/M_PI;			// 5/PI used in Lucy weight function
-double neg_sixty_by_pi = -(60.0/M_PI);			// 60/PI used in first derivative of Lucy weight function
-double neg_onetwenty_by_pi = 2.0*neg_sixty_by_pi;	// (120/PI) used in second derivative of Lucy weight function
+double one_by_pi              = 1.0/M_PI;
+double five_by_pi             = 5.0/M_PI;		// 5/PI used in Lucy weight function
+double thirty_by_pi           = 30.0/M_PI;		// 5/PI used in Lucy weight function
+double neg_sixty_by_pi        = -(60.0/M_PI);		// 60/PI used in first derivative of Lucy weight function
+double neg_onetwenty_by_pi    = 2.0*neg_sixty_by_pi;	// (120/PI) used in second derivative of Lucy weight function
+double piThirty               = M_PI/30.;		// Pi/30.0 
+double piFifteen              = M_PI/15.;		// Pi/15.0
 double fifteen_by_twopi_by_rd;				// (15/(2*pi*rd^3))
 double fifteen_by_twopi_by_rc;				// (15/(2*pi*rc^3))
 double rd4;						// rd^4
-double piThirty;					// pi/30.0
+double rc4;						// rc^4
 double k1;
 double k2;
 
 //initialise time, and counter/ofstream for data output
 unsigned int counter;
+unsigned int pcounter;
 unsigned int n; //mesh size
 //define Cell as vector of Particle pointers
 typedef std::vector<Particle*> Cell; 

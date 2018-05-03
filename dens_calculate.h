@@ -1,12 +1,7 @@
-// Rij = particles[i].r - ( particles[j].r + dR );		// need to modify this to my code
 Rij = particles[i].r - ( particles[j].r + dR );
 
 // nearest image distance
-#if LEES_EDWARDS_BC
-Rij.X = Rij.X - boxEdge[x] * round( Rij.X / boxEdge[x] );		// rij shear-flow correction : dR
-#else
-Rij.X = Rij.X - boxEdge[x] * round( Rij.X / boxEdge[x] );
-#endif
+Rij.X = Rij.X - boxEdge[x] * round( Rij.X / boxEdge[x] );	
 Rij.Y = Rij.Y - boxEdge[y] * round( Rij.Y / boxEdge[y] );
 Rij.Z = Rij.Z - boxEdge[z] * round( Rij.Z / boxEdge[z] );
 

@@ -1,13 +1,7 @@
-// Rij = particles[i].r - ( particles[j].r + dR );		// need to modify this to my code
-
 Rij = particles[i].r - ( particles[j].r + dR );
 
 // nearest image distance
-#if LEES_EDWARDS_BC
 Rij.X = Rij.X - boxEdge[x] * round( Rij.X / boxEdge[x] );		// rij shear-flow correction : dR
-#else
-Rij.X = Rij.X - boxEdge[x] * round( Rij.X / boxEdge[x] );
-#endif
 Rij.Y = Rij.Y - boxEdge[y] * round( Rij.Y / boxEdge[y] );
 Rij.Z = Rij.Z - boxEdge[z] * round( Rij.Z / boxEdge[z] );
 
@@ -53,10 +47,10 @@ if ( r2 <= rc2 ) {
 		term2 = Bll * ( particles[i].dens + particles[j].dens ) * wDij;
 
 		wDij2 = wDij * wDij; 
-		rho_temp = fifteen_by_twopi_by_rd * wDij2;
+		// rho_temp = fifteen_by_twopi_by_rd * wDij2;
 
-		particles[i].dens_new += rho_temp;
-		particles[j].dens_new += rho_temp;
+		// particles[i].dens_new += rho_temp;
+		// particles[j].dens_new += rho_temp;
 	}
 
 	term1 = All * wCij;
@@ -116,6 +110,7 @@ if ( r2 <= rc2 ) {
 	pNonIdeal[2][1] += Rij.Z * fCij.Y;
 	pNonIdeal[2][2] += Rij.Z * fCij.Z;
 
+	#if RANDOM_DISSIPATIVE
 	// Non-Ideal contribution to pressure -- Dissipative forces
 	pDissipative[0][0] += Rij.X * fDij.X;
 	pDissipative[0][1] += Rij.X * fDij.Y;
@@ -140,8 +135,8 @@ if ( r2 <= rc2 ) {
 
 	pRandom[2][0] += Rij.Z * fRij.X;
 	pRandom[2][1] += Rij.Z * fRij.Y;
-	pRandom[2][2] += Rij.Z * fRij.Z;
-	
+	pRandom[2][2] += Rij.Z * fRij.Z;	
+	#endif	
 	//simProg << i << ", fC = " << particles[i].fC << ", fR= " << particles[i].fR << ", fD= " << particles[i].fD << std::endl;
 
 } // rcutoff
