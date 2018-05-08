@@ -13,23 +13,23 @@ def figEnv():
     return plt.figure(num=None, figsize=(8. , 6.), dpi=80, facecolor='w', edgecolor='k')
 
 # KNOBS
-ENERGY		    = 1
-MOMENTUM	    = 1
+ENERGY		    = 0
+MOMENTUM	    = 0
 TEMPERATURE	    = 0
 VEL_PROFILE	    = 0
 GR		    = 0 
 VEL_DIST	    = 0
-PRESSURE_TENSOR     = 0
+PRESSURE_TENSOR     = 1
 
 # parameters
-nFluid 		= 2058
+nFluid 		= 4374
 yMin 		= 0.
-yMax 		= 7.
-ybinWidth 	= 0.2
+yMax 		= 9.
+ybinWidth 	= 0.5
 
 startFileNum  	= 100000
-endFileNum    	= 2030000
-deltaFileNum  	= 20000
+endFileNum    	= 880000
+deltaFileNum  	= 1000
 
 #------ ENERGY STATISTICS --------#
 if ( ENERGY == 1 ):
@@ -59,9 +59,9 @@ if ( ENERGY == 1 ):
 	#plt.plot( keDev	, label= r'$KE$' )
 	#plt.plot( peDev	, label= r'$PE$' )
 	#plt.plot( totDev, label= r'$TE$' )
-	plt.plot( pe, 'rs', label= r'$PE$' )
+	#plt.plot( pe, 'rs', label= r'$PE$' )
 	plt.plot( ke, 'b^', label= r'$KE$' )
-	plt.plot( te, 'g-', label= r'$TE$' )
+	#plt.plot( te, 'g-', label= r'$TE$' )
 	plt.xlabel( r'$t$' )
 	plt.ylabel( r'$\frac{\Delta E}{\langle E \rangle}$' )
 	plt.legend()
@@ -351,7 +351,7 @@ if ( VEL_PROFILE == 1):
 if ( PRESSURE_TENSOR == 1):
 
 	data = np.loadtxt('./data/pTens.dat')
-	indStart = 5
+	indStart = 3
 
 	pxyC = data[:,1] + data[:,10]
 	pyxC = data[:,3] + data[:,12]
@@ -376,6 +376,7 @@ if ( PRESSURE_TENSOR == 1):
 
 	print( yLow, yHigh )
 	vGrad = Delv/ ( yHigh - yLow ) 
+	vGradInput = 0.13
 
 	pCMean = np.mean( pC[indStart:] )
 	pDMean = np.mean( pD[indStart:] )
@@ -389,9 +390,9 @@ if ( PRESSURE_TENSOR == 1):
 	pxyMean =  np.mean( pxy[:] )
 	pxyStd  =  abs( np.std( pxy[:] ) )
 
-	viscosity    = ( -1. * pxyMean ) / vGrad 
-	viscosityUp  = ( -1. * ( pxyMean + pxyStd ) ) / vGrad 
-	viscosityLow = ( -1. * ( pxyMean - pxyStd ) ) / vGrad 
+	viscosity    = ( -1. * pxyMean ) / vGradInput
+	viscosityUp  = ( -1. * ( pxyMean + pxyStd ) ) / vGradInput
+	viscosityLow = ( -1. * ( pxyMean - pxyStd ) ) / vGradInput
 	
 	print( 'vMax=%f'%np.max( v_vs_Y[:,1] ) )	
 	print( 'vMin=%f'%np.min( v_vs_Y[:,1] ) )	
