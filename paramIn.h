@@ -211,6 +211,5 @@ rhor_bins  	= round( ( rhor_rmax - rhor_rmin ) / rhor_rdelta ); // number of ele
 #endif
 
 #if LEES_EDWARDS_BC
-//strainRate = gammaDot * boxEdge[y];
-strainRate = 0.;
+strainRate = gammaDot * boxEdge[y];
 #endif
