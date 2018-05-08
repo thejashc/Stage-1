@@ -56,7 +56,6 @@ zind_max = ( boxEdge[z] / 2. ) + ( slabWidth / 2. );
 
 xind = xind_min;
 aCube = pow( 1. / initRho, 1./3. );
-simProg << "started initializing the planar slab of slabWidth with aCube: " << slabWidth << ", " << aCube << std::endl;
 // Particle position intialization in a crystal structure 
 while ( xind < xind_max){
 	yind = yind_min;
