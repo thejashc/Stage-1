@@ -14,30 +14,35 @@
 #include <random> 
 
 // configuration of particles
-#define RANDOM_DISSIPATIVE 0
-#define SPHERICAL_DROPLET 0
-#define SPHERICAL_CAP 0
-#define CYLINDER_DROPLET 0
-#define PLANAR_SLAB 0
-#define CRYSTAL	1
-#define RESTART	0
+#define RANDOM_DISSIPATIVE               1
+#define SPHERICAL_DROPLET                0
+#define SPHERICAL_CAP                    0
+#define CYLINDER_DROPLET                 1
+#define PLANAR_SLAB                      0
+#define CRYSTAL	                         0
+#define RESTART	                         0 
 
 // WALL flags
-#define WALL_ON 0
-#define LOWER_WALL_ON 1
-#define UPPER_WALL_ON 1
-#define FCC_WALL 1
-#define ROUGH_WALL 0
+#define WALL_ON                          0
+#define LOWER_WALL_ON                    1
+#define UPPER_WALL_ON                    1
+#define FCC_WALL                         1
+#define ROUGH_WALL                       0
 
 // POISEUILLE flow
-#define BODY_FORCE 0		// activated with/without WALL_ON
+#define BODY_FORCE                       0
 
 // FILE_WRITE
-#define STYLE_VMD 1
-#define STYLE_MERCURY_DPM 0
+#define STYLE_VMD                        1
+#define STYLE_MERCURY_DPM                0
+
+// CORRELATION FUNCTIONS
+#define PACF                             0          
+#define VACF                             0
+#define SACF                             0
 
 // LEES-EDWARDS BOUNDARY CONDITION
-#define LEES_EDWARDS_BC 1
+#define LEES_EDWARDS_BC                  0
 
 //declare DPD solver
 class DPD {
@@ -56,29 +61,30 @@ class DPD {
 			init();
 
 			// parameters declaration
-			step = 1;
-			temp = 0.0;
-			tempSum = 0.0;
+			step 			= 1;
+			temp 			= 0.0;
+			tempSum 		= 0.0;
 		    	#if WALL_ON
-			wallTemp = 0.;
+			wallTemp 		= 0.;
 			#endif
-			tempAv = 0.0;
-			tempCount = 0;
-			volume = boxEdge[x] * boxEdge[y] * boxEdge[z];		// system volume
-			npart = particles.size();				// number of particles
-			rho = npart/volume;					// density of system 
-			dof = dim*(npart - 1);					// total degrees of freedom (momentum only, no energy conservation)
-			inv_sqrt_dt = 1.0/std::sqrt(dt);			// inverse of square root of the time step
-			half_dt = 0.5*dt;					// 0.5*dt to be used in the integrateEOM()
-			half_dt_sqr = half_dt*dt;				// 0.5*dt*dt to be used in the integrateEOM()
+			tempAv 			= 0.0;
+			tempCount 		= 0;
+			volume 			= boxEdge[x] * boxEdge[y] * boxEdge[z];		// system volume
+			npart 			= particles.size();				// number of particles
+			rho 			= npart/volume;					// density of system 
+			dof 			= dim*(npart - 1);				// total degrees of freedom (momentum only, no energy conservation)
+			inv_sqrt_dt 		= 1.0/std::sqrt(dt);				// inverse of square root of the time step
+			half_dt 		= 0.5*dt;					// 0.5*dt to be used in the integrateEOM()
+			half_dt_sqr 		= half_dt*dt;					// 0.5*dt*dt to be used in the integrateEOM()
 
-			rd4 = pow(rd_cutoff, 4.0);				// fourth power of rd_cutoff
-			rc4 = pow(rcutoff, 4.0);				// fourth power of rc_cutoff
-			k1 = piThirty * rc4 * All;				// constant k1
-			k2 = piThirty * rd4 * Bll;				// constant k2
+			rd4 			= pow(rd_cutoff, 4.0);				// fourth power of rd_cutoff
+			rc4 			= pow(rcutoff, 4.0);				// fourth power of rc_cutoff
+			k1 			= piThirty * rc4 * All;				// constant k1
+			k2 			= piThirty * rd4 * Bll;				// constant k2
 
-			counter = 0;						// initialize time, counter for file writing
-			pcounter = 0;						// initialize time, counter for file writing
+			counter 		= 0;						// initialize time, counter for file writing
+			pcounter 		= 0;						// initialize time, counter for file writing
+
 			std::ofstream enStats 		( "./data/en_data.dat"	);	// Kinetic, Potential and total energy
 			std::ofstream eosStats		( "./data/eos_data.dat"	);	// Mean Pressure and temperature data
 			std::ofstream pTensStats	( "./data/pTens.dat"	);	// Pressure tensor data
@@ -385,8 +391,8 @@ class DPD {
 							} // jj
 
 							#if LEES_EDWARDS_BC 
-							// strain = std::fmod( strainRate * dt * ( step - 1 ) , boxEdge[x] );	// strain in units of boxEdge[x]
-							strain = std::fmod( gammaDot , boxEdge[x] );	// strain in units of boxEdge[x]
+							strain = std::fmod( strainRate * dt * ( step - 1 ) , boxEdge[x] );	// strain in units of boxEdge[x]
+							//strain = std::fmod( gammaDot , boxEdge[x] );	// strain in units of boxEdge[x]
 
 							if ( mi[y] == NrCells[y] - 1 ){	// calculating neighbor-cells for cells with mi[y] = NrCells[y] - 1 ( top-layer cells )
 								
@@ -556,8 +562,8 @@ class DPD {
 
 							// particle j in neighbour cell to i
 							#if LEES_EDWARDS_BC
-							//strain = std::fmod( strainRate * dt * ( step - 1 ) , boxEdge[x] );	// strain in units of boxEdge[x]
-							strain = std::fmod( gammaDot , boxEdge[x] );	// strain in units of boxEdge[x]
+							strain = std::fmod( strainRate * dt * ( step - 1 ) , boxEdge[x] );	// strain in units of boxEdge[x]
+							// strain = std::fmod( gammaDot , boxEdge[x] );	// strain in units of boxEdge[x]
 
 							if (  mi[y] == NrCells[y] - 1 ){	// calculating neighbor-cells for cells with mi[y] = NrCells[y] - 1 ( top-layer cells )
 								
@@ -775,6 +781,10 @@ class DPD {
 				momX += particles[i].v.X;
 				momY += particles[i].v.Y;
 				momZ += particles[i].v.Z;
+
+				// calculate auto-correlations
+				#if VACF
+				#endif
 			}
 
 			// temperature calculation	
