@@ -1,4 +1,4 @@
-#ifndef _DPD_
+#ifndef _DPD_CG
 #define _DPD_
 
 #include <vector>
@@ -14,12 +14,12 @@
 #include <random> 
 
 // configuration of particles
-#define RANDOM_DISSIPATIVE               1
+#define RANDOM_DISSIPATIVE               0
 #define SPHERICAL_DROPLET                0
 #define SPHERICAL_CAP                    0
-#define CYLINDER_DROPLET                 1
+#define CYLINDER_DROPLET                 0
 #define PLANAR_SLAB                      0
-#define CRYSTAL	                         0
+#define CRYSTAL	                         1
 #define RESTART	                         0 
 
 // WALL flags
@@ -37,9 +37,7 @@
 #define STYLE_MERCURY_DPM                0
 
 // CORRELATION FUNCTIONS
-#define PACF                             0          
-#define VACF                             0
-#define SACF                             0
+#define SACF                             1 
 
 // LEES-EDWARDS BOUNDARY CONDITION
 #define LEES_EDWARDS_BC                  0
@@ -54,13 +52,14 @@ class DPD {
 		/******************************************************************************************************/
 		//solve contains the time stepping algorithm and the output routines 
 		void solve () {
-
+	
 			simProg.open ( "./simProg.txt", std::ios::out );
 			simProg << " Proccess ID : " << getpid() << std::endl;
 			// initialize position, velocity, hoc, ll
 			init();
 
 			// parameters declaration
+			normalizeCorr           = 0.;
 			step 			= 1;
 			temp 			= 0.0;
 			tempSum 		= 0.0;
@@ -79,28 +78,30 @@ class DPD {
 
 			rd4 			= pow(rd_cutoff, 4.0);				// fourth power of rd_cutoff
 			rc4 			= pow(rcutoff, 4.0);				// fourth power of rc_cutoff
-			k1 			= piThirty * rc4 * All;				// constant k1
-			k2 			= piThirty * rd4 * Bll;				// constant k2
+			K1 			= piThirty * rc4 * All;				// constant k1
+			K2 			= piThirty * rd4 * Bll;				// constant k2
 
 			counter 		= 0;						// initialize time, counter for file writing
 			pcounter 		= 0;						// initialize time, counter for file writing
-
-			std::ofstream enStats 		( "./data/en_data.dat"	);	// Kinetic, Potential and total energy
-			std::ofstream eosStats		( "./data/eos_data.dat"	);	// Mean Pressure and temperature data
-			std::ofstream pTensStats	( "./data/pTens.dat"	);	// Pressure tensor data
-			std::ofstream momStats		( "./data/mom_data.dat"	);	// pressure and temperature data
 
 			createGridList();
             		dens_calculation();
 			forceCalc();
 	
 			resetVar();
+		
+			std::ofstream enStats 		( "./data/en_data.dat"	);	// Kinetic, Potential and total energy
+			std::ofstream eosStats		( "./data/eos_data.dat"	);	// Mean Pressure and temperature data
+			std::ofstream pTensStats	( "./data/pTens.dat"	);	// Pressure tensor data
+			std::ofstream momStats		( "./data/mom_data.dat"	);	// pressure and temperature data
 
 			// write parameters and initial configuration
 			vtkFileWritePosVel();
 			std::ofstream paraInfo( "param.out" );
 			paraWrite(paraInfo);
 			paraInfo.close();
+
+			// #include "harmonicLangevinRead.h"
 
 			#if WALL_ON
 			if ( rd_cutoff > rcWcutoff ){
@@ -111,16 +112,54 @@ class DPD {
 		
 			simProg << " ********************* STARTING SIMULATION ************************* " << std::endl;	
 
+			std::ifstream file("./cbp7_li_ForLi/durai_com.dat", std::ios::in);
+			std::string Load;
+			
+
+			if ( file.is_open() )
+				simProg << "file opened successfully" << std::endl;
+			else
+				simProg << "sorry!" << std::endl;
+
+			//for ( i=1 ; i<= 10000001 ; ++i ) {
+			for ( int i2=1 ; i2<= 10000001 ; i2++ ) {
+
+				// getline( file, Load );
+
+				file >> xind >> yind >> zind ;
+				/*
+				file.read ( ( char * ) &xind, sizeof ( double ) );
+				file.read ( ( char * ) &yind, sizeof ( double )  );
+				file.read ( ( char * ) &zind, sizeof ( double )  );
+
+				std::cout << Load << std::endl;
+				std::cout << xind << "\t" << yind << "\t" << zind << std::endl;
+				*/
+			
+				if ( i2 % 1000000 == 0 )	
+					simProg << i2 << std::endl;
+
+				#include "ACF.h"
+				// std::cout << xind << "\t\t" << yind << "\t\t" << zind << std::endl;
+
+				//if( (i2 - 1) % ( 10000 ) == 0 )
+				//	std::cout << fCorr[0][0][0] << std::endl;
+
+				
+			        //std::cout << " xind= " << xind << ", yind= " << yind << ", zind= " << zind << std::endl;
+			}
+
+			/*
 			while (step<stepMax) {
 
 				createGridList();
-                		dens_calculation();
+                		// dens_calculation();
 				forceCalc();
 
 				integrateEOM();
 
-				for ( i=0 ; i < npart ; ++i ) {
-					pot_en += k1 * particles[i].rhoBar + k2 * pow( particles[i].dens, 2.0 ); 	// sum of self-energies of all particles
+				for ( i=0 ; i <npart ; ++i ) {
+					pot_en += K1 * particles[i].rhoBar + K2 * pow( particles[i].dens, 2.0 ); 	// sum of self-energies of all particles
 				}
 				tot_en = kin_en + pot_en;
 
@@ -131,13 +170,14 @@ class DPD {
 				fileWrite(enStats, eosStats, momStats, pTensStats);
 
 				resetVar();						// reset variables to zero
-
-				step += 1;						// increment time step
-
+				
 				// for (Particle& p : particles)
 				//	simProg << "Position: " << p.r << ", Density: " << p.dens <<", conservative force: " << p.fC << std::endl;
 
+				step += 1;						// increment time step
+
 			}//end time loop
+			*/
 
 			#if RESTART
 			// write position velocity stats 
@@ -148,11 +188,15 @@ class DPD {
 			#endif
 
 			// post-processing
-			grCalc();	 
-			velHistCalc();
-			enStats.close();
-			eosStats.close();
-			momStats.close();
+			// grCalc();	 
+			// velHistCalc();
+			#if SACF 
+			writeCorr();
+			#endif
+
+			// enStats.close();	// close file-streams
+			// eosStats.close();
+			// momStats.close();
 			
 			simProg << " ********************* ENDING SIMULATION ************************* " << std::endl;	
 			simProg.close();
@@ -365,6 +409,61 @@ class DPD {
 				particles[i].w -= velAvg;
 			#endif
 
+			#if SACF
+			// multi-tau correlation matrix definition
+			fCorr.resize(n_vars);		// fcor stores the calculated correlation at a given level
+			aCorr.resize(n_vars);		// acor stores the data used to calculate correlation
+			nCorr.resize(n_vars);		// ncor stores the number of samples used for averaging the correlation
+			pointCorr.resize(n_vars);	// pointcor stores the array-indes at which the last data was stored
+
+			// fCorr matrix initialize
+			for ( i=0 ; i<n_vars ; ++i ) {
+
+				aCorr[i].resize( corLevels );
+				fCorr[i].resize( corLevels );
+				nCorr[i].resize( corLevels );
+				pointCorr[i].resize( corLevels );
+
+				for (  j = 0 ; j < corLevels ; ++j ){
+					aCorr[i][j].resize( pCorr );
+					fCorr[i][j].resize( pCorr2 );
+					nCorr[i][j].resize( pCorr2 );
+				}// j
+			}// i
+
+			// initialize aCorr
+			for ( i=0 ; i<n_vars ; ++i )
+				for ( j=0 ; j<corLevels ; ++j )
+					for( k=0 ; k<pCorr ; ++k )
+						aCorr[i][j][k] = -1e6;
+
+			// initialize fCorr
+			for ( i=0 ; i<n_vars ; ++i )
+				for ( j=0 ; j<corLevels ; ++j )
+					for( k=0 ; k<pCorr2 ; ++k )
+						fCorr[i][j][k] = 0.;
+
+			// initialize norr
+			for ( i=0 ; i<n_vars ; ++i )
+				for ( j=0 ; j<corLevels ; ++j )
+					for( k=0 ; k<pCorr2 ; ++k )
+						nCorr[i][j][k] = 0;
+
+			// initialize pointCorr
+			for ( i=0 ; i<n_vars ; ++i )
+				for ( j=0 ; j<corLevels ; ++j )
+					pointCorr[i][j] = -1;
+
+			// initialize sacpunt
+			sacpunt = 0;
+
+			// finding size of arrays
+			// simProg << "aCorr [" << aCorr.size() << "][" << aCorr[0].size() << "][" << aCorr[0][0].size() << "]" << std::endl;
+			// simProg << "fCorr [" << fCorr.size() << "][" << fCorr[0].size() << "][" << fCorr[0][0].size() << "]" << std::endl;
+			// simProg << "nCorr [" << nCorr.size() << "][" << nCorr[0].size() << "][" << nCorr[0][0].size() << "]" << std::endl;
+			// simProg << "pointCorr [" << pointCorr.size() << "][" << pointCorr[0].size() << "]" << std::endl;
+			#endif
+
 		}//init
 
 
@@ -404,9 +503,9 @@ class DPD {
 
 								for ( m = 0 ; m < 16 ; m++ )
 								{
-									int i1 = moduloAB( mi[x] - dm_LEbc[m][x] + 1, NrCells[x] );	// correction for cell in direction of shear ( x )
-									int i2 = mi[y] + dm_LEbc[m][y] + 1;
-									int i3 = mi[z] + dm_LEbc[m][z] + 1;
+									i1 = moduloAB( mi[x] - dm_LEbc[m][x] + 1, NrCells[x] );	// correction for cell in direction of shear ( x )
+									i2 = mi[y] + dm_LEbc[m][y] + 1;
+									i3 = mi[z] + dm_LEbc[m][z] + 1;
 									// std::cout << i1  <<", " << i2 <<", " << i3 << std::endl;
 
 									mj[x]        = periodN[ i1 ][ x ];
@@ -549,7 +648,7 @@ class DPD {
 										#include "pairforceSL.h"
 								} // solid liquid interaction
 								#else
-									#include "pairforceLL.h"
+										#include "pairforceLL.h"
 								#endif
 
 								// simProg << "i, mi[x], mi[y], mi[z] = " <<  i << " " << mi[x] << " " << mi[y] << " " <<  mi[z] ;
@@ -575,9 +674,9 @@ class DPD {
 
 								for ( m = 0 ; m < 16 ; m++ )
 								{
-									int i1 = moduloAB( mi[x] - dm_LEbc[m][x] + 1, NrCells[x] );	// correction for cell in direction of shear ( x )
-									int i2 = mi[y] + dm_LEbc[m][y] + 1;
-									int i3 = mi[z] + dm_LEbc[m][z] + 1;
+									i1 = moduloAB( mi[x] - dm_LEbc[m][x] + 1, NrCells[x] );	// correction for cell in direction of shear ( x )
+									i2 = mi[y] + dm_LEbc[m][y] + 1;
+									i3 = mi[z] + dm_LEbc[m][z] + 1;
 									// std::cout << i1  <<", " << i2 <<", " << i3 << std::endl;
 
 									mj[x]        = periodN[ i1 ][ x ];
@@ -782,10 +881,25 @@ class DPD {
 				momY += particles[i].v.Y;
 				momZ += particles[i].v.Z;
 
-				// calculate auto-correlations
-				#if VACF
-				#endif
 			}
+
+			
+			// calculate auto-correlation
+			#if SACF
+				#include "ACF.h"
+
+				/*
+				for ( i1=0; i1<n_vars ; ++i1 ){
+					for( j1=0; j1<corLevels ; ++j1 ){
+						for( k1=0; k1<pCorr ; ++k1 ){
+							std::cout << aCorr[i1][j1][k1] << ", ";
+						}
+						std::cout << std::endl;
+					}
+					std::cout << "----------------" << std::endl;
+				}
+				*/
+			#endif
 
 			// temperature calculation	
 			//v2 = ( vx2 + vy2 + vz2 ) / ( 3. * fluidCount );
@@ -1003,6 +1117,81 @@ class DPD {
 			velDistdata.close();
 		}
 
+		//---------------------------------------- Auto-correlation function calculation------------------------------//
+		void recursive_addCorr(double f, unsigned int nf, unsigned int k){
+
+			// shift-pointer and put in f
+			point               = ( pointCorr[nf][k] + 1 ) % pCorr;
+			pointCorr[nf][k]    = point;
+			aCorr[nf][k][point] = f;
+
+			//std::cout << "point = " << point  << "\t f = " << f << "\t nf= " << nf << "\t k = " << k << std::endl;
+
+			// correlate data
+			for ( i=0 ; i<pCorr2 ; ++i ){
+				j = ( point + pCorr - i - pCorr2 ) % pCorr;			// see report for explanation
+
+				if ( aCorr[nf][k][j] > -5e5 ){
+					fCorr[nf][k][i] += f*aCorr[nf][k][j];
+					nCorr[nf][k][i] += 1; 
+				}
+			} // do the correlation only when the array is filled up
+			
+			// putting in 0 missing values -- from 1 to pCorr2-1
+			if ( k == 1 ){
+				for ( i=0 ; i<pCorr2-1 ; ++i ){
+		
+					j = ( point + pCorr - i - 1 ) % pCorr;
+					if ( aCorr[nf][1][j] > -5e5 ){
+						fCorr[nf][0][i] += aCorr[nf][1][point] * aCorr[nf][1][j];
+						nCorr[nf][0][i] += 1;
+			}}}
+	
+			// shift to next-level : hard-coded to handle only mCorr = 2
+			if ( ( (point + 1) % mCorr == 0 ) && k < (corLevels - 1) )
+				recursive_addCorr( (1. / mCorr) * ( aCorr[nf][k][point] + aCorr[nf][k][point - 1] ), nf, k+1);
+			else 
+				return;
+		}
+
+		//--------------------------------------- velocity histogram calculation --------------------------------------//
+		void writeCorr(){
+
+			// std::ofstream corrdata("./data/correlationData.dat"); 
+			std::ofstream corrdata("./data/mycorrelationData_p_128.dat"); 
+
+			// data averaging
+			for ( i1=0 ; i1<n_vars ; ++i1 ){
+				for( j1=0; j1<corLevels ; ++j1 ){
+					for( k1=0; k1<pCorr2 ; ++k1 ){
+						fCorr[i1][j1][k1] /= nCorr[i1][j1][k1];
+					} // blocks
+				} // levels
+			} // variables
+
+			normalizeCorr /= ( 1e7 + 1 );
+
+			// writing data -- writing level 0 and other levels separately
+			// Level 0
+			for( k1=0 ; k1<pCorr2-1 ; ++k1 ){
+				for( i1=0 ; i1<n_vars ; ++i1){
+					corrdata << k1+1 << "\t\t\t" << fCorr[i1][0][k1] << "\t\t\t";
+				}
+				corrdata << normalizeCorr << std::endl;
+			}
+	
+			// Level1 to corLevels-1
+			for( j1=1 ; j1<corLevels ; ++j1 ){
+				for( k1=0 ; k1<pCorr2 ; ++k1 ){
+					for ( i1=0 ; i1<n_vars ; ++i1 ){
+						corrdata << ( pCorr2 + k1 ) * pow(2. , j1 - 1) << "\t\t\t" << fCorr[i1][j1][k1] << "\t\t\t";
+					}
+					corrdata << normalizeCorr << std::endl;
+				}
+			} 
+			corrdata.close();
+		}
+
 		//--------------------------------------- Parameter file writing--------------------------------------//
 		void paraWrite(std::ofstream& paraInfo){
 
@@ -1087,9 +1276,6 @@ class DPD {
 			paraInfo << "---------------------------" << std::endl;
 			paraInfo << "Liquid-Liquid Attraction Strength (All)    :           " << All << std::endl;
 			paraInfo << "Liquid-Liquid Repulsion Strength (Bll)     :           " << Bll << std::endl;
-			paraInfo << "---------------------------" << std::endl;
-			paraInfo << "---------------------------" << std::endl;
-			paraInfo << "---------------------------" << std::endl;
 
 			#if LEES_EDWARDS_BC
 			paraInfo << "---------------------------" << std::endl;
@@ -1097,10 +1283,20 @@ class DPD {
 			paraInfo << "---------------------------" << std::endl;
 			paraInfo << "Homogeneous shear-rate (gammaDot)          :            " << gammaDot << std::endl;
 			paraInfo << "Strain-rate (strainRate)                   :            " << strainRate << std::endl;
-			paraInfo << "---------------------------" << std::endl;
-			paraInfo << "---------------------------" << std::endl;
-			paraInfo << "---------------------------" << std::endl;
 			#endif
+
+			#if SACF
+			paraInfo << "-------------------------------" << std::endl;
+			paraInfo << "Stress-Autocorrelation function" << std::endl;
+			paraInfo << "-------------------------------" << std::endl;
+			paraInfo << "Number of variables (nvars )           :            " << n_vars << std::endl;
+			paraInfo << "Levels of correlation (corLevels)      :            " << corLevels << std::endl;
+			paraInfo << "Blocks in a level (pCorr)              :            " << pCorr << std::endl;
+			paraInfo << "Average length in a level (mCorr)      :            " << mCorr << std::endl;
+			#endif
+			paraInfo << "---------------------------" << std::endl;
+			paraInfo << "---------------------------" << std::endl;
+			paraInfo << "---------------------------" << std::endl;
 			
 
 		}
