@@ -68,25 +68,25 @@ std::vector<int> solid_index;	// index of solid type
 
 // geometry initialization
 #if SPHERICAL_DROPLET 
-	double dropBox;
+double dropBox;
 #elif CYLINDER_DROPLET 
-	double cylCenterX;
-	double cylCenterY;
-	double cylCenterZ;
-	double cylRad;	
-	double cylHeight;
-	double xCOM;
-	double yCOM;
-	double zCOM;
+double cylCenterX;
+double cylCenterY;
+double cylCenterZ;
+double cylRad;	
+double cylHeight;
+double xCOM;
+double yCOM;
+double zCOM;
 
-	double pCount;
+double pCount;
 #elif PLANAR_SLAB
-	double slabWidth;
-	double xCOM;
-	double yCOM;
-	double zCOM;
+double slabWidth;
+double xCOM;
+double yCOM;
+double zCOM;
 
-	double pCount;
+double pCount;
 #endif
 
 // Cell list variables
@@ -170,8 +170,11 @@ std::vector< std::vector <double> > periodR;				// determining the actual distan
 
 // loop variables
 int i;
+int i1;
 int j;
+int j1;
 int k;
+int k1;
 int m;
 int ii;		
 int jj;
@@ -350,6 +353,24 @@ double zindUW_max;
 double fBodyX;
 #endif
 
+#if SACF
+std::vector<std::vector<std::vector<double>>> aCorr;	// raw-data on which the correlation will be performed
+std::vector<std::vector<std::vector<double>>> fCorr;	// the correlated data
+std::vector<std::vector<std::vector<double>>> nCorr;	// the number of samples over which the data is correlated 
+std::vector<std::vector<int>> pointCorr;		// points to the latest element added 
+
+unsigned int sacpunt;
+unsigned int n_vars;	// number of elements over which the correlation should be considered 
+unsigned int n_vars_counter;	// number of elements over which the correlation should be considered 
+unsigned int corLevels; // number of levels in the multi-tau correlator
+unsigned int pCorr;	// number of blocks within a level
+unsigned int pCorr2;	// pCorr/2 
+unsigned int mCorr;	// number of blocks over data is averaged
+unsigned int point;	// pointer in the aCorr array
+
+double normalizeCorr;
+#endif
+
 // momentum calculation
 long double momX;
 long double momY;
@@ -391,8 +412,8 @@ double fifteen_by_twopi_by_rd;				// (15/(2*pi*rd^3))
 double fifteen_by_twopi_by_rc;				// (15/(2*pi*rc^3))
 double rd4;						// rd^4
 double rc4;						// rc^4
-double k1;
-double k2;
+double K1;
+double K2;
 
 //initialise time, and counter/ofstream for data output
 unsigned int counter;
