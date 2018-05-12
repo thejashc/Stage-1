@@ -129,10 +129,22 @@ readParam.ignore(256, '\n');
 readParam.ignore(256, '\n');
 readParam.ignore(256, '\n');
 #endif 
+
 readParam >> emptyLine;			readParam.ignore(256,'\n');		// L55
 #if LEES_EDWARDS_BC
-simProg << "Reading homogeneous-shear parameters (Lees-Edwards)" << std::endl;
-readParam >> buffer >> gammaDot;	readParam.ignore(256,'\n');		// L56
+	simProg << "Reading homogeneous-shear parameters (Lees-Edwards)" << std::endl;
+	readParam >> buffer >> gammaDot;	readParam.ignore(256,'\n');		// L56
+#else
+	readParam.ignore(256, '\n');
+#endif // LEES_EDWARDS_BC
+readParam >> emptyLine;			readParam.ignore(256,'\n');		// L57
+
+#if SACF
+	simProg << "Reading parameters for the calculation of stress-autocorrelation" << std::endl;	
+	readParam >> buffer >> n_vars;		readParam.ignore(256,'\n');		// L58
+	readParam >> buffer >> corLevels;	readParam.ignore(256,'\n');		// L59
+	readParam >> buffer >> pCorr;		readParam.ignore(256,'\n');		// L60
+	readParam >> buffer >> mCorr;		readParam.ignore(256,'\n');		// L61
 #endif
 
 readParam.close();
@@ -212,4 +224,8 @@ rhor_bins  	= round( ( rhor_rmax - rhor_rmin ) / rhor_rdelta ); // number of ele
 
 #if LEES_EDWARDS_BC
 strainRate = gammaDot * boxEdge[y];
+#endif
+
+#if SACF
+pCorr2 = pCorr / 2;
 #endif

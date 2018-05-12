@@ -1,7 +1,7 @@
-boxEdgeX            9.0		# box dimensions
-boxEdgeY            9.0
-boxEdgeZ            9.0
-initRho             6.00
+boxEdgeX            5.0		# box dimensions
+boxEdgeY            5.0
+boxEdgeZ            5.0
+initRho             4.00
 #
 All                 -40.0		# liquid-liquid interaction parameters
 Bll                 25.0		
@@ -28,7 +28,7 @@ sigma               6.0			# dissipation coeffecient
 dim                 3			# dimensions
 #
 dt                  0.001		# time parameters	
-stepMax             5000000	
+stepMax             1000
 saveCount           1000
 psaveCount          50000
 #
@@ -54,3 +54,8 @@ rhor_rmin           0.00
 rhor_rdelta         0.05
 #
 gammaDot            0.13		# homogeneous shear-rate 
+#
+n_vars              1			# values for the auto-correlation function
+corLevels           20
+pCorr               128 
+mCorr               2
