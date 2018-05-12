@@ -19,7 +19,8 @@ TEMPERATURE	    = 0
 VEL_PROFILE	    = 0
 GR		    = 0 
 VEL_DIST	    = 0
-PRESSURE_TENSOR     = 1
+PRESSURE_TENSOR     = 0
+SACF                = 1
 
 # parameters
 nFluid 		= 4374
@@ -28,7 +29,7 @@ yMax 		= 9.
 ybinWidth 	= 0.5
 
 startFileNum  	= 100000
-endFileNum    	= 880000
+endFileNum    	= 2840000
 deltaFileNum  	= 1000
 
 #------ ENERGY STATISTICS --------#
@@ -351,7 +352,7 @@ if ( VEL_PROFILE == 1):
 if ( PRESSURE_TENSOR == 1):
 
 	data = np.loadtxt('./data/pTens.dat')
-	indStart = 3
+	indStart = 10
 
 	pxyC = data[:,1] + data[:,10]
 	pyxC = data[:,3] + data[:,12]
@@ -420,3 +421,41 @@ if ( PRESSURE_TENSOR == 1):
 	plt.grid()
 	plt.legend()
 	plt.savefig( './plots/pTens.eps', format='eps', dpi=1200)
+
+# ----------------- AUTOCORRELATION PROFILE -----------------#
+if ( SACF == 1):
+
+	p64dat = np.loadtxt   ( './cbp7_li_ForLi/mycorrelationData_p_64.dat') 
+	p16dat = np.loadtxt   ( './cbp7_li_ForLi/mycorrelationData_p_16.dat') 
+	p8dat  = np.loadtxt   ( './cbp7_li_ForLi/mycorrelationData_p_8.dat') 
+	ref    = np.genfromtxt( './cbp7_li_ForLi/matlab_autocorr.dat', delimiter=',' )
+	#raw  = np.loadtxt( './cbp7_li_ForLi/durai_com.dat')
+
+	lag64     = p64dat[:,0]
+	acf64     = p64dat[:,1] / p64dat[0,1]
+
+	lag16     = p16dat[:,0]
+	acf16     = p16dat[:,1] / p16dat[0,1]
+
+	lag8      = p8dat[:,0]
+	acf8      = p8dat[:,1] / p8dat[0,1]
+
+	reflag  = ref[:,0]
+	refacf  = ref[:,1]
+
+	#acfNumpy = numpy.correlate(raw, raw, mode='valid')
+	#np.savetxt( './data/acfNumpy.dat', acfNumpy, fmt='%1.7f' )
+
+	figEnv()
+	plt.plot(    lag64,    acf64, '.' , label=r'p=64')	
+	plt.plot(    lag16,    acf16, '.' , label=r'p=16')	
+	plt.plot(    lag8,     acf8, '.'  , label=r'p=8' )	
+	plt.plot(    reflag, refacf, 'r-' )	
+	plt.xlim( (0. , 1e6 ) )
+
+	plt.xlabel( r'$\tau$' )
+	plt.ylabel( r'$CF$' )
+	plt.legend()
+	plt.title ( r'Correlation function -- Harmonic Oscillator + Brownian' )
+	plt.grid()
+	plt.savefig( './plots/corrData.eps', format='eps', dpi=1200)
