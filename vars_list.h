@@ -37,6 +37,10 @@ double pIdeal[3][3];			// Ideal component of pressure tensor
 double pNonIdeal[3][3];			// Non Ideal component of pressure tensor
 double pDissipative[3][3];			// Non Ideal component of pressure tensor
 double pRandom[3][3];			// Non Ideal component of pressure tensor
+double pNonIdeal_temp[3][3];		// Non Ideal component of pressure tensor
+double pDissipative_temp[3][3];		// Dissipative component of pressure tensor
+double pRandom_temp[3][3];		// Random component of pressure tensor
+unsigned int pTensCounter;
 double idealComp;			// ideal component of pressure
 double temp;				// temperature
 double tempSum;				// temperature sum
@@ -358,6 +362,7 @@ std::vector<std::vector<std::vector<double>>> aCorr;	// raw-data on which the co
 std::vector<std::vector<std::vector<double>>> fCorr;	// the correlated data
 std::vector<std::vector<std::vector<double>>> nCorr;	// the number of samples over which the data is correlated 
 std::vector<std::vector<int>> pointCorr;		// points to the latest element added 
+std::vector<double> normalizeCorr;		// used for normalizing the first point
 
 unsigned int sacpunt;
 unsigned int n_vars;	// number of elements over which the correlation should be considered 
@@ -367,8 +372,23 @@ unsigned int pCorr;	// number of blocks within a level
 unsigned int pCorr2;	// pCorr/2 
 unsigned int mCorr;	// number of blocks over data is averaged
 unsigned int point;	// pointer in the aCorr array
+unsigned int normalizeCorr_count;
 
-double normalizeCorr;
+double Sxx;
+double Sxy;
+double Sxz;
+
+double Syx;
+double Syy;
+double Syz;
+
+double Szx;
+double Szy;
+double Szz;
+
+double Nxy;
+double Nyz;
+double Nzx;
 #endif
 
 // momentum calculation

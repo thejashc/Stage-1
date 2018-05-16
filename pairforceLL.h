@@ -47,10 +47,10 @@ if ( r2 <= rc2 ) {
 		term2 = Bll * ( particles[i].dens + particles[j].dens ) * wDij;
 
 		wDij2 = wDij * wDij; 
-		// rho_temp = fifteen_by_twopi_by_rd * wDij2;
+		rho_temp = fifteen_by_twopi_by_rd * wDij2;
 
-		// particles[i].dens_new += rho_temp;
-		// particles[j].dens_new += rho_temp;
+		particles[i].dens_new += rho_temp;
+		particles[j].dens_new += rho_temp;
 	}
 
 	term1 = All * wCij;
@@ -98,45 +98,48 @@ if ( r2 <= rc2 ) {
 	#endif
 
 	// Non-Ideal contribution to pressure -- Conservative forces	
-	pNonIdeal[0][0] 	+= Rij.X * fCij.X;
-	pNonIdeal[0][1] 	+= Rij.X * fCij.Y;
-	pNonIdeal[0][2] 	+= Rij.X * fCij.Z;
+	pNonIdeal_temp[0][0] 		+= Rij.X * fCij.X;
+	pNonIdeal_temp[0][1] 		+= Rij.X * fCij.Y;
+	pNonIdeal_temp[0][2] 		+= Rij.X * fCij.Z;
 
-	pNonIdeal[1][0] 	+= Rij.Y * fCij.X;
-	pNonIdeal[1][1] 	+= Rij.Y * fCij.Y;
-	pNonIdeal[1][2] 	+= Rij.Y * fCij.Z;
+	pNonIdeal_temp[1][0] 		+= Rij.Y * fCij.X;
+	pNonIdeal_temp[1][1] 		+= Rij.Y * fCij.Y;
+	pNonIdeal_temp[1][2] 		+= Rij.Y * fCij.Z;
 
-	pNonIdeal[2][0] 	+= Rij.Z * fCij.X;
-	pNonIdeal[2][1] 	+= Rij.Z * fCij.Y;
-	pNonIdeal[2][2] 	+= Rij.Z * fCij.Z;
+	pNonIdeal_temp[2][0] 		+= Rij.Z * fCij.X;
+	pNonIdeal_temp[2][1] 		+= Rij.Z * fCij.Y;
+	pNonIdeal_temp[2][2] 		+= Rij.Z * fCij.Z;
 
 	#if RANDOM_DISSIPATIVE
 	// Non-Ideal contribution to pressure -- Dissipative forces
-	pDissipative[0][0] 	+= Rij.X * fDij.X;
-	pDissipative[0][1] 	+= Rij.X * fDij.Y;
-	pDissipative[0][2] 	+= Rij.X * fDij.Z;
+	pDissipative_temp[0][0] 	+= Rij.X * fDij.X;
+	pDissipative_temp[0][1] 	+= Rij.X * fDij.Y;
+	pDissipative_temp[0][2] 	+= Rij.X * fDij.Z;
 
-	pDissipative[1][0]	+= Rij.Y * fDij.X;
-	pDissipative[1][1] 	+= Rij.Y * fDij.Y;
-	pDissipative[1][2] 	+= Rij.Y * fDij.Z;
+	pDissipative_temp[1][0]	        += Rij.Y * fDij.X;
+	pDissipative_temp[1][1] 	+= Rij.Y * fDij.Y;
+	pDissipative_temp[1][2] 	+= Rij.Y * fDij.Z;
 
-	pDissipative[2][0] 	+= Rij.Z * fDij.X;
-	pDissipative[2][1] 	+= Rij.Z * fDij.Y;
-	pDissipative[2][2] 	+= Rij.Z * fDij.Z;
+	pDissipative_temp[2][0] 	+= Rij.Z * fDij.X;
+	pDissipative_temp[2][1] 	+= Rij.Z * fDij.Y;
+	pDissipative_temp[2][2] 	+= Rij.Z * fDij.Z;
 
 	// Non-Ideal contribution to pressure -- Random forces
-	pRandom[0][0] 		+= Rij.X * fRij.X;
-	pRandom[0][1] 		+= Rij.X * fRij.Y;
-	pRandom[0][2] 		+= Rij.X * fRij.Z;
+	pRandom_temp[0][0] 		+= Rij.X * fRij.X;
+	pRandom_temp[0][1] 		+= Rij.X * fRij.Y;
+	pRandom_temp[0][2] 		+= Rij.X * fRij.Z;
 
-	pRandom[1][0] 		+= Rij.Y * fRij.X;
-	pRandom[1][1] 		+= Rij.Y * fRij.Y;
-	pRandom[1][2] 		+= Rij.Y * fRij.Z;
+	pRandom_temp[1][0] 		+= Rij.Y * fRij.X;
+	pRandom_temp[1][1] 		+= Rij.Y * fRij.Y;
+	pRandom_temp[1][2] 		+= Rij.Y * fRij.Z;
 
-	pRandom[2][0] 		+= Rij.Z * fRij.X;
-	pRandom[2][1] 		+= Rij.Z * fRij.Y;
-	pRandom[2][2] 		+= Rij.Z * fRij.Z;	
-	#endif	
+	pRandom_temp[2][0] 		+= Rij.Z * fRij.X;
+	pRandom_temp[2][1] 		+= Rij.Z * fRij.Y;
+	pRandom_temp[2][2] 		+= Rij.Z * fRij.Z;	
+	#endif
+
+	pTensCounter += 1;	
+
 	//simProg << i << ", fC = " << particles[i].fC << ", fR= " << particles[i].fR << ", fD= " << particles[i].fD << std::endl;
 
 } // rcutoff

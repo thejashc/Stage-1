@@ -14,7 +14,7 @@
 #include <random> 
 
 // configuration of particles
-#define RANDOM_DISSIPATIVE               0
+#define RANDOM_DISSIPATIVE               1
 #define SPHERICAL_DROPLET                0
 #define SPHERICAL_CAP                    0
 #define CYLINDER_DROPLET                 0
@@ -38,6 +38,7 @@
 
 // CORRELATION FUNCTIONS
 #define SACF                             1 
+#define SACF_TEST                        0
 
 // LEES-EDWARDS BOUNDARY CONDITION
 #define LEES_EDWARDS_BC                  0
@@ -59,7 +60,8 @@ class DPD {
 			init();
 
 			// parameters declaration
-			normalizeCorr           = 0.;
+			pTensCounter            = 0;
+			normalizeCorr_count     = 0;
 			step 			= 1;
 			temp 			= 0.0;
 			tempSum 		= 0.0;
@@ -101,8 +103,6 @@ class DPD {
 			paraWrite(paraInfo);
 			paraInfo.close();
 
-			// #include "harmonicLangevinRead.h"
-
 			#if WALL_ON
 			if ( rd_cutoff > rcWcutoff ){
 				simProg<< " The cutoff for density calculation of fluid near wall needs to be checked " << std::endl; 
@@ -112,44 +112,29 @@ class DPD {
 		
 			simProg << " ********************* STARTING SIMULATION ************************* " << std::endl;	
 
-			std::ifstream file("./cbp7_li_ForLi/durai_com.dat", std::ios::in);
-			std::string Load;
-			
+			#if SACF_TEST
+			std::ifstream file("./cbp7_li_ForLi/durai_rawData.dat", std::ios::in);
 
 			if ( file.is_open() )
 				simProg << "file opened successfully" << std::endl;
 			else
-				simProg << "sorry!" << std::endl;
+				simProg << "sorry! file not found" << std::endl;
 
-			//for ( i=1 ; i<= 10000001 ; ++i ) {
 			for ( int i2=1 ; i2<= 10000001 ; i2++ ) {
 
-				// getline( file, Load );
 
 				file >> xind >> yind >> zind ;
-				/*
-				file.read ( ( char * ) &xind, sizeof ( double ) );
-				file.read ( ( char * ) &yind, sizeof ( double )  );
-				file.read ( ( char * ) &zind, sizeof ( double )  );
-
-				std::cout << Load << std::endl;
-				std::cout << xind << "\t" << yind << "\t" << zind << std::endl;
-				*/
 			
 				if ( i2 % 1000000 == 0 )	
 					simProg << i2 << std::endl;
 
 				#include "ACF.h"
-				// std::cout << xind << "\t\t" << yind << "\t\t" << zind << std::endl;
 
 				//if( (i2 - 1) % ( 10000 ) == 0 )
 				//	std::cout << fCorr[0][0][0] << std::endl;
-
-				
-			        //std::cout << " xind= " << xind << ", yind= " << yind << ", zind= " << zind << std::endl;
 			}
+			#endif //SACF_TEST
 
-			/*
 			while (step<stepMax) {
 
 				createGridList();
@@ -176,8 +161,10 @@ class DPD {
 
 				step += 1;						// increment time step
 
+				// if ( step % 1000 == 0 )
+				//	std::cout << " step= " << step << std::endl;
+
 			}//end time loop
-			*/
 
 			#if RESTART
 			// write position velocity stats 
@@ -415,6 +402,7 @@ class DPD {
 			aCorr.resize(n_vars);		// acor stores the data used to calculate correlation
 			nCorr.resize(n_vars);		// ncor stores the number of samples used for averaging the correlation
 			pointCorr.resize(n_vars);	// pointcor stores the array-indes at which the last data was stored
+			normalizeCorr.resize(n_vars);	// normalized values for every stress vector element
 
 			// fCorr matrix initialize
 			for ( i=0 ; i<n_vars ; ++i ) {
@@ -431,11 +419,13 @@ class DPD {
 				}// j
 			}// i
 
-			// initialize aCorr
+			// initialize aCorr -- WARNING : assign large initial negative 
+			// (or positive) values to ensure that the data read is larger(smaller)
+			// than this initial value 
 			for ( i=0 ; i<n_vars ; ++i )
 				for ( j=0 ; j<corLevels ; ++j )
 					for( k=0 ; k<pCorr ; ++k )
-						aCorr[i][j][k] = -1e6;
+						aCorr[i][j][k] = -10e20;
 
 			// initialize fCorr
 			for ( i=0 ; i<n_vars ; ++i )
@@ -453,6 +443,10 @@ class DPD {
 			for ( i=0 ; i<n_vars ; ++i )
 				for ( j=0 ; j<corLevels ; ++j )
 					pointCorr[i][j] = -1;
+
+			// initialize normalizeCorr
+			for ( i=0 ; i<n_vars ; ++i )
+					normalizeCorr[i] = 0.;
 
 			// initialize sacpunt
 			sacpunt = 0;
@@ -883,24 +877,6 @@ class DPD {
 
 			}
 
-			
-			// calculate auto-correlation
-			#if SACF
-				#include "ACF.h"
-
-				/*
-				for ( i1=0; i1<n_vars ; ++i1 ){
-					for( j1=0; j1<corLevels ; ++j1 ){
-						for( k1=0; k1<pCorr ; ++k1 ){
-							std::cout << aCorr[i1][j1][k1] << ", ";
-						}
-						std::cout << std::endl;
-					}
-					std::cout << "----------------" << std::endl;
-				}
-				*/
-			#endif
-
 			// temperature calculation	
 			//v2 = ( vx2 + vy2 + vz2 ) / ( 3. * fluidCount );
 			v2 =  vx2 + vy2 + vz2 ;
@@ -944,10 +920,17 @@ class DPD {
 			v2 = ( vx2 + vy2 + vz2 ) / ( 3. * solidCount );
 			kin_en = 0.5 * v2;		// unit mass assumption
 			wallTemp = 2.*kin_en;
-			#endif
+			#endif // WALL_ON
 
 			// calculation of  pressure tensor 
 			#include "pTensCalc.h"
+
+			// calculate auto-correlation
+			#if SACF
+			if ( step > 5e4 ){
+				#include "ACF.h"
+			}
+			#endif
 
 			// calculating center of mass for the slab
 			/*
@@ -977,9 +960,9 @@ class DPD {
 			// simProg << " fi[0], fi[fluidCount - 1], fluidCount " << fluid_index[0] << " " << fluid_index[1] << " " << fluidCount << std::endl;	
 			for ( i = 0; i < npart ; ++i )
 			{
-				//particles[i].dens = particles[i].dens_new;
-				//particles[i].dens_new = 0.;
-				particles[i].dens = 0.0;
+				particles[i].dens = particles[i].dens_new;
+				particles[i].dens_new = 0.;
+				// particles[i].dens = 0.0;
 				particles[i].rhoBar = 0.0;
 				particles[i].fC.setZero();
 		
@@ -996,28 +979,41 @@ class DPD {
 
 			} // set density equal to zero for solid type particles
 
-			// reset ideal and non-ideal component of pressure tensor
-			/*
-			   pIdeal[0][0] = 0.0;
-			   pIdeal[0][1] = 0.0;
-			   pIdeal[0][2] = 0.0;
-			   pIdeal[1][0] = 0.0;
-			   pIdeal[1][1] = 0.0;
-			   pIdeal[1][2] = 0.0;
-			   pIdeal[2][0] = 0.0;
-			   pIdeal[2][1] = 0.0;
-			   pIdeal[2][2] = 0.0;
+			// reset temporary ideal and non-ideal component of pressure tensor
+			// to 0 at every time step. 
+			pNonIdeal_temp[0][0] = 0.;
+			pNonIdeal_temp[0][1] = 0.;
+			pNonIdeal_temp[0][2] = 0.;
+			pNonIdeal_temp[1][0] = 0.;
+			pNonIdeal_temp[1][1] = 0.;
+			pNonIdeal_temp[1][2] = 0.;
+			pNonIdeal_temp[2][0] = 0.;
+			pNonIdeal_temp[2][1] = 0.;
+			pNonIdeal_temp[2][2] = 0.;
 
-			   pNonIdeal[0][0] = 0.0;
-			   pNonIdeal[0][1] = 0.0;
-			   pNonIdeal[0][2] = 0.0;
-			   pNonIdeal[1][0] = 0.0;
-			   pNonIdeal[1][1] = 0.0;
-			   pNonIdeal[1][2] = 0.0;
-			   pNonIdeal[2][0] = 0.0;
-			   pNonIdeal[2][1] = 0.0;
-			   pNonIdeal[2][2] = 0.0;
-			 */
+			#if RANDOM_DISSIPATIVE
+			// Dissipative
+			pDissipative_temp[0][0] = 0.;
+			pDissipative_temp[0][1] = 0.;
+			pDissipative_temp[0][2] = 0.;
+			pDissipative_temp[1][0] = 0.;
+			pDissipative_temp[1][1] = 0.;
+			pDissipative_temp[1][2] = 0.;
+			pDissipative_temp[2][0] = 0.;
+			pDissipative_temp[2][1] = 0.;
+			pDissipative_temp[2][2] = 0.;
+
+			// Random
+			pRandom_temp[0][0] = 0.;
+			pRandom_temp[0][1] = 0.;
+			pRandom_temp[0][2] = 0.;
+			pRandom_temp[1][0] = 0.;
+			pRandom_temp[1][1] = 0.;
+			pRandom_temp[1][2] = 0.;
+			pRandom_temp[2][0] = 0.;
+			pRandom_temp[2][1] = 0.;
+			pRandom_temp[2][2] = 0.;
+			#endif
 		}
 
 		//--------------------------------------- g(r) sampling --------------------------------------//
@@ -1128,11 +1124,14 @@ class DPD {
 			//std::cout << "point = " << point  << "\t f = " << f << "\t nf= " << nf << "\t k = " << k << std::endl;
 
 			// correlate data
+			// WARNING: ensure that none of the data is smaller than -9e9
+			// If this is the case, the aCorr[nf][k][j] is discounted, leading to 
+			// wrong correlations. For example: if " > -1" leads to erroneous results
 			for ( i=0 ; i<pCorr2 ; ++i ){
 				j = ( point + pCorr - i - pCorr2 ) % pCorr;			// see report for explanation
 
-				if ( aCorr[nf][k][j] > -5e5 ){
-					fCorr[nf][k][i] += f*aCorr[nf][k][j];
+				if ( aCorr[nf][k][j] > -9e20 ){
+					fCorr[nf][k][i] += f*aCorr[nf + ind][k][j];
 					nCorr[nf][k][i] += 1; 
 				}
 			} // do the correlation only when the array is filled up
@@ -1142,24 +1141,28 @@ class DPD {
 				for ( i=0 ; i<pCorr2-1 ; ++i ){
 		
 					j = ( point + pCorr - i - 1 ) % pCorr;
-					if ( aCorr[nf][1][j] > -5e5 ){
+					if ( aCorr[nf][1][j] > -9e20 ){
 						fCorr[nf][0][i] += aCorr[nf][1][point] * aCorr[nf][1][j];
 						nCorr[nf][0][i] += 1;
 			}}}
 	
-			// shift to next-level : hard-coded to handle only mCorr = 2
+			// shift to next-level : WARNING: Observe that this is hard-coded to handle only mCorr = 2
+			// ideally: (1. / mCorr ) * ( aCorr[nf][k][point] + aCorr[nf][k][point - 1] + ... aCorr[nf][k][point - mCorr + 1] ) -- average over m terms
 			if ( ( (point + 1) % mCorr == 0 ) && k < (corLevels - 1) )
 				recursive_addCorr( (1. / mCorr) * ( aCorr[nf][k][point] + aCorr[nf][k][point - 1] ), nf, k+1);
 			else 
 				return;
 		}
-
 		//--------------------------------------- velocity histogram calculation --------------------------------------//
 		void writeCorr(){
 
-			// std::ofstream corrdata("./data/correlationData.dat"); 
-			std::ofstream corrdata("./data/mycorrelationData_p_128.dat"); 
-
+			std::ofstream corrdata("./data/correlationData.dat"); 
+			#if SACF_TEST
+			std::ofstream corrdata("./cbp7_li_ForLi/thejas/mycorrelationData_p_16.dat"); 
+			#endif
+			
+			// std::cout << "before avg fcorr[0][0][0]= " << fCorr[0][0][0] << std::endl;
+	
 			// data averaging
 			for ( i1=0 ; i1<n_vars ; ++i1 ){
 				for( j1=0; j1<corLevels ; ++j1 ){
@@ -1169,25 +1172,31 @@ class DPD {
 				} // levels
 			} // variables
 
-			normalizeCorr /= ( 1e7 + 1 );
+			for ( i1=0 ; i1<n_vars ; ++i1 )
+				normalizeCorr[i1] /= normalizeCorr_count;
 
 			// writing data -- writing level 0 and other levels separately
 			// Level 0
 			for( k1=0 ; k1<pCorr2-1 ; ++k1 ){
+
+				corrdata << k1+1 << "\t\t";
 				for( i1=0 ; i1<n_vars ; ++i1){
-					corrdata << k1+1 << "\t\t\t" << fCorr[i1][0][k1] << "\t\t\t";
+					corrdata << fCorr[i1][0][k1] << "\t\t" << normalizeCorr[i1] << "\t\t"; 
 				}
-				corrdata << normalizeCorr << std::endl;
+				corrdata << std::endl;
 			}
 	
 			// Level1 to corLevels-1
 			for( j1=1 ; j1<corLevels ; ++j1 ){
 				for( k1=0 ; k1<pCorr2 ; ++k1 ){
+					
+					corrdata << ( pCorr2 + k1 ) * pow(2. , j1 - 1) << "\t\t";
 					for ( i1=0 ; i1<n_vars ; ++i1 ){
-						corrdata << ( pCorr2 + k1 ) * pow(2. , j1 - 1) << "\t\t\t" << fCorr[i1][j1][k1] << "\t\t\t";
+						corrdata << fCorr[i1][j1][k1] << "\t\t" << normalizeCorr[i1] << "\t\t";
 					}
-					corrdata << normalizeCorr << std::endl;
+					corrdata << std::endl;	
 				}
+
 			} 
 			corrdata.close();
 		}

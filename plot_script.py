@@ -20,6 +20,7 @@ VEL_PROFILE	    = 0
 GR		    = 0 
 VEL_DIST	    = 0
 PRESSURE_TENSOR     = 0
+ACF                 = 0
 SACF                = 1
 
 # parameters
@@ -423,7 +424,7 @@ if ( PRESSURE_TENSOR == 1):
 	plt.savefig( './plots/pTens.eps', format='eps', dpi=1200)
 
 # ----------------- AUTOCORRELATION PROFILE -----------------#
-if ( SACF == 1):
+if ( ACF == 1):
 
 	p64dat = np.loadtxt   ( './cbp7_li_ForLi/mycorrelationData_p_64.dat') 
 	p16dat = np.loadtxt   ( './cbp7_li_ForLi/mycorrelationData_p_16.dat') 
@@ -457,5 +458,34 @@ if ( SACF == 1):
 	plt.ylabel( r'$CF$' )
 	plt.legend()
 	plt.title ( r'Correlation function -- Harmonic Oscillator + Brownian' )
+	plt.grid()
+	plt.savefig( './plots/corrData.eps', format='eps', dpi=1200)
+# ----------------- STRESS AUTOCORRELATION PROFILE -----------------#
+if ( SACF == 1):
+
+	data   = np.loadtxt ( './data/correlationData.dat')
+
+	dt     = 1e-3
+	lag    = data[:,0]
+	Sxy    = data[:,1] 
+	#Syz    = data[:,3] / data[0,4]
+	#Szx    = data[:,5] / data[0,6]
+
+	figEnv()
+	plt.plot(    lag * dt,    Sxy / data[0,2], '.' , label=r'$\sigma_{xy}$')	
+	#plt.plot(    lag * dt,    Syz, '-.' , label=r'$\sigma_{yz}$')	
+	#plt.plot(    lag * dt,    Szx, '-.' , label=r'$\sigma_{zx}$')	
+	#plt.xlim( (0. , 2 ) )
+
+	Sxy = np.insert(Sxy, 0, data[0,2] )
+	lag = np.insert(lag, 0, 0 )
+
+	#viscosity  = (216/1.0) * np.trapz( Sxy, lag*dt, dt )
+	#print( 'viscosity=%f'%(viscosity) )
+
+	plt.xlabel( r'$\tau$ (mDPD units)' )
+	plt.ylabel( r'$\langle \sigma_{xy}(0)\sigma_{xy}(\tau) \rangle$ (normalized)' )
+	plt.legend()
+	plt.title ( r'Correlation function -- stress' )
 	plt.grid()
 	plt.savefig( './plots/corrData.eps', format='eps', dpi=1200)
