@@ -9,31 +9,58 @@ for ( n_vars_counter=0 ; n_vars_counter<n_vars ; ++n_vars_counter ){
 */
 
 // calculate components for stress-autocorrelation : 1 instead of pTensCounter
-Sxx  = rho * ( vx2 / npart ) + ( pNonIdeal_temp[0][0] + pDissipative_temp[0][0] + pRandom_temp[0][0] ) / ( 1. * volume );
-Syy  = rho * ( vy2 / npart ) + ( pNonIdeal_temp[1][1] + pDissipative_temp[1][1] + pRandom_temp[1][1] ) / ( 1. * volume );
-Szz  = rho * ( vz2 / npart ) + ( pNonIdeal_temp[2][2] + pDissipative_temp[2][2] + pRandom_temp[2][2] ) / ( 1. * volume );
+// Sxx  = rho * ( vx2 / npart ) + ( pNonIdeal_temp[0][0] + pDissipative_temp[0][0] + pRandom_temp[0][0] ) / ( 1. * volume );
+// Syy  = rho * ( vy2 / npart ) + ( pNonIdeal_temp[1][1] + pDissipative_temp[1][1] + pRandom_temp[1][1] ) / ( 1. * volume );
+// Szz  = rho * ( vz2 / npart ) + ( pNonIdeal_temp[2][2] + pDissipative_temp[2][2] + pRandom_temp[2][2] ) / ( 1. * volume );
 
-Sxy  = ( pNonIdeal_temp[0][1] + pDissipative_temp[0][1] + pRandom_temp[0][1] ) / ( 1. * volume );
-Syz  = ( pNonIdeal_temp[1][2] + pDissipative_temp[1][2] + pRandom_temp[1][2] ) / ( 1. * volume );
-Szx  = ( pNonIdeal_temp[2][0] + pDissipative_temp[2][0] + pRandom_temp[2][0] ) / ( 1. * volume );
+SxyC   =  pNonIdeal_temp[0][1]     / ( volume );		// conservative force contribution to Sxy
+SxyR   =  pRandom_temp[0][1]       / ( volume );		// random force contribution to Sxy
+SxyD   =  pDissipative_temp[0][1]  / ( volume );		// dissipative force contribution to Sxy
+SxyVxy =  vxvy / volume;					// sum of v_{i,x} * v_{i,y} / volume
 
-Nxy  = Sxx - Syy;
-Nyz  = Syy - Szz;
-Nzx  = Szz - Sxx;
+// Syz  = ( pNonIdeal_temp[1][2] + pDissipative_temp[1][2] + pRandom_temp[1][2] ) / ( 1. * volume );
+// Szx  = ( pNonIdeal_temp[2][0] + pDissipative_temp[2][0] + pRandom_temp[2][0] ) / ( 1. * volume );
 
-//if ( step % 20000 == 0 ){
-//	std::cout << "Sxx= " << Sxx << ", Sxy= " << Sxy << ", Sxz= " << Szx << ", Syy=" << Syy << ", Syz= " << Syz << ", Szz= " << Szz << ", Nxy= " << Nxy << ", Nyz= " << Nyz << ", Nzx= " << Nzx << std::endl;
-//}
+// Nxy  = Sxx - Syy;
+// Nyz  = Syy - Szz;
+// Nzx  = Szz - Sxx;
+
+// std::cout << "Sxx= " << Sxx << ", Sxy= " << Sxy << ", Sxz= " << Szx << ", Syy=" << Syy << ", Syz= " << Syz << ", Szz= " << Szz << ", Nxy= " << Nxy << ", Nyz= " << Nyz << ", Nzx= " << Nzx << std::endl;
+// std::cout << SxyC << "\t" << SxyR << "\t" << SxyD << std::endl;
+
+
+//		Sxy	=	| Sxy_CC	Sxy_CR		Sxy_CD	|	Sxy matrix with all stress components
+//				| Sxy_RC	Sxy_RR		Sxy_RD	|
+//				| Sxy_DC	Sxy_DR		Sxy_DD	|			
 
 // call the auto-correlation function
-recursive_addCorr( Sxy, 0, 0, 1 );
+recursive_addCorr( SxyC,   0, 1 );
+recursive_addCorr( SxyR,   1, 1 );
+recursive_addCorr( SxyD,   2, 1 );
+//recursive_addCorr( Sxyvxy, 3, 1 );
+
 //recursive_addCorr( Syz, 1, 1 );
 //recursive_addCorr( Szx, 2, 1 );
 //recursive_addCorr( Nxy, 3, 1 );
 //recursive_addCorr( Nyz, 4, 1 );
 //recursive_addCorr( Nzx, 5, 1 );
 
-normalizeCorr[0] += Sxy * Sxy;
+// cyclic order - C->R->D->C
+
+normalizeCorr[0] += SxyC * SxyC;
+normalizeCorr[1] += SxyC * SxyR;
+normalizeCorr[2] += SxyC * SxyD;
+
+normalizeCorr[3] += SxyR * SxyR;
+normalizeCorr[4] += SxyR * SxyD;
+normalizeCorr[5] += SxyR * SxyC;
+
+normalizeCorr[6] += SxyD * SxyD;
+normalizeCorr[7] += SxyD * SxyC;
+normalizeCorr[8] += SxyD * SxyR;
+
+//normalizeCorr[9] += SxyVxy * SxyVxy;
+
 //normalizeCorr[1] += Syz * Syz;
 //normalizeCorr[2] += Szx * Szx;
 //normalizeCorr[3] += Nxy * Nxy;
