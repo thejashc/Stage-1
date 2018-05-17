@@ -373,9 +373,14 @@ unsigned int pCorr2;	// pCorr/2
 unsigned int mCorr;	// number of blocks over data is averaged
 unsigned int point;	// pointer in the aCorr array
 unsigned int normalizeCorr_count;
+unsigned int nf1;
+unsigned int nf2;
+unsigned int n_base;
 
 double Sxx;
-double Sxy;
+double SxyC;
+double SxyR;
+double SxyD;
 double Sxz;
 
 double Syx;
