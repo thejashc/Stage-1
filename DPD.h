@@ -398,24 +398,33 @@ class DPD {
 
 			#if SACF
 			// multi-tau correlation matrix definition
-			fCorr.resize(n_vars);		// fcor stores the calculated correlation at a given level
+			fCorr.resize(n_vars * n_vars);	// fcor stores the calculated correlation at a given level
+			nCorr.resize(n_vars * n_vars);		// ncor stores the number of samples used for averaging the correlation
+			normalizeCorr.resize(n_vars * n_vars);	// normalized values for every stress vector element
+
 			aCorr.resize(n_vars);		// acor stores the data used to calculate correlation
-			nCorr.resize(n_vars);		// ncor stores the number of samples used for averaging the correlation
 			pointCorr.resize(n_vars);	// pointcor stores the array-indes at which the last data was stored
-			normalizeCorr.resize(n_vars);	// normalized values for every stress vector element
 
 			// fCorr matrix initialize
+			for ( i=0 ; i<n_vars*n_vars ; ++i ) {
+
+				fCorr[i].resize( corLevels );
+				nCorr[i].resize( corLevels );
+
+				for (  j=0 ; j<corLevels ; ++j ){
+					fCorr[i][j].resize( pCorr2 );
+					nCorr[i][j].resize( pCorr2 );
+				}// j
+			}// i
+
+			// aCorr, pointCorr, nCorr matrix initialize
 			for ( i=0 ; i<n_vars ; ++i ) {
 
 				aCorr[i].resize( corLevels );
-				fCorr[i].resize( corLevels );
-				nCorr[i].resize( corLevels );
 				pointCorr[i].resize( corLevels );
 
-				for (  j = 0 ; j < corLevels ; ++j ){
+				for (  j=0 ; j<corLevels ; ++j ){
 					aCorr[i][j].resize( pCorr );
-					fCorr[i][j].resize( pCorr2 );
-					nCorr[i][j].resize( pCorr2 );
 				}// j
 			}// i
 
@@ -428,13 +437,13 @@ class DPD {
 						aCorr[i][j][k] = -10e20;
 
 			// initialize fCorr
-			for ( i=0 ; i<n_vars ; ++i )
+			for ( i=0 ; i<n_vars*n_vars ; ++i )
 				for ( j=0 ; j<corLevels ; ++j )
 					for( k=0 ; k<pCorr2 ; ++k )
 						fCorr[i][j][k] = 0.;
 
 			// initialize norr
-			for ( i=0 ; i<n_vars ; ++i )
+			for ( i=0 ; i<n_vars*n_vars ; ++i )
 				for ( j=0 ; j<corLevels ; ++j )
 					for( k=0 ; k<pCorr2 ; ++k )
 						nCorr[i][j][k] = 0;
@@ -445,7 +454,7 @@ class DPD {
 					pointCorr[i][j] = -1;
 
 			// initialize normalizeCorr
-			for ( i=0 ; i<n_vars ; ++i )
+			for ( i=0 ; i<n_vars*n_vars ; ++i )
 					normalizeCorr[i] = 0.;
 
 			// initialize sacpunt
@@ -866,9 +875,10 @@ class DPD {
 				#endif
 
 				// calculate the kinetic energy
-				vx2 += particles[i].v.X * particles[i].v.X;
-				vy2 += particles[i].v.Y * particles[i].v.Y;
-				vz2 += particles[i].v.Z * particles[i].v.Z;
+				vx2  += particles[i].v.X * particles[i].v.X;
+				vy2  += particles[i].v.Y * particles[i].v.Y;
+				vz2  += particles[i].v.Z * particles[i].v.Z;
+				vxvy += particles[i].v.X * particles[i].v.Y;
 
 				// calculate momentum
 				momX += particles[i].v.X;
@@ -927,7 +937,7 @@ class DPD {
 
 			// calculate auto-correlation
 			#if SACF
-			if ( step > 5e4 ){
+			if ( step > 1e4 ){
 				#include "ACF.h"
 			}
 			#endif
@@ -945,17 +955,18 @@ class DPD {
 		//--------------------------------------- Resetting variables--------------------------------------//
 		void resetVar(){
 			// energy reset to zero
-			pot_en = 0.0;
-			kin_en = 0.0;
-			tot_en = 0.0;
-			vx2 = 0.0;
-			vy2 = 0.0;
-			vz2 = 0.0;
-			v2 = 0.0;
+			pot_en   = 0.0;
+			kin_en   = 0.0;
+			tot_en   = 0.0;
+			vx2      = 0.0;
+			vy2      = 0.0;
+			vz2      = 0.0;
+			v2       = 0.0;
+			vxvy     = 0.0;
 			pressure = 0.0;
-			momX = 0.0;
-			momY = 0.0;
-			momZ = 0.0;
+			momX     = 0.0;
+			momY     = 0.0;
+			momZ     = 0.0;
 	
 			// simProg << " fi[0], fi[fluidCount - 1], fluidCount " << fluid_index[0] << " " << fluid_index[1] << " " << fluidCount << std::endl;	
 			for ( i = 0; i < npart ; ++i )
@@ -1128,12 +1139,27 @@ class DPD {
 			// If this is the case, the aCorr[nf][k][j] is discounted, leading to 
 			// wrong correlations. For example: if " > -1" leads to erroneous results
 			for ( i=0 ; i<pCorr2 ; ++i ){
+
 				j = ( point + pCorr - i - pCorr2 ) % pCorr;			// see report for explanation
 
-				if ( aCorr[nf][k][j] > -9e20 ){
-					fCorr[nf][k][i] += f*aCorr[nf + ind][k][j];
-					nCorr[nf][k][i] += 1; 
+				n_base = n_vars * nf;
+				if ( aCorr[nf][k][j] > -9e20 ){					// nf+0 -- SxyC(t) * SxyC(0) / SxyR(t) * SxyR(0) / SxyD(t) * SxyD(0)
+					fCorr[n_base][k][i] += f*aCorr[nf][k][j];
+					nCorr[n_base][k][i] += 1; 
 				}
+			
+				nf1 = (nf+1) % n_vars;	
+				if ( aCorr[nf1][k][j] > -9e20 ){				// nf+1 -- SxyC(t) * SxyR(0) / SxyR(t) * SxyD(0) / SxyD(t) * SxyC(0)
+					fCorr[n_base + 1][k][i] += f*aCorr[nf1][k][j];
+					nCorr[n_base + 1][k][i] += 1; 
+				}
+								
+				nf2 = (nf+2) % n_vars;	
+				if ( aCorr[nf2][k][j] > -9e20 ){				// nf+2 -- SxyC(t) * SxyD(0) / SxyR(t) * SxyC(0) / SxyD(t) * SxyR(0)
+					fCorr[n_base + 2][k][i] += f*aCorr[nf2][k][j];
+					nCorr[n_base + 2][k][i] += 1; 
+				}
+
 			} // do the correlation only when the array is filled up
 			
 			// putting in 0 missing values -- from 1 to pCorr2-1
@@ -1141,10 +1167,26 @@ class DPD {
 				for ( i=0 ; i<pCorr2-1 ; ++i ){
 		
 					j = ( point + pCorr - i - 1 ) % pCorr;
+				
+					n_base = n_vars * nf;
 					if ( aCorr[nf][1][j] > -9e20 ){
-						fCorr[nf][0][i] += aCorr[nf][1][point] * aCorr[nf][1][j];
-						nCorr[nf][0][i] += 1;
-			}}}
+						fCorr[n_base][0][i] += aCorr[nf][1][point] * aCorr[nf][1][j];
+						nCorr[n_base][0][i] += 1;
+					}
+
+					nf1 = (nf+1) % n_vars;	
+					if ( aCorr[nf1][1][j] > -9e20 ){			
+						fCorr[n_base + 1][0][i] += aCorr[nf][1][point] * aCorr[nf1][k][j];
+						nCorr[n_base + 1][0][i] += 1; 
+					}
+									
+					nf2 = (nf+2) % n_vars;	
+					if ( aCorr[nf2][1][j] > -9e20 ){				
+						fCorr[n_base + 2][0][i] += aCorr[nf][1][point] * aCorr[nf2][k][j];
+						nCorr[n_base + 2][0][i] += 1; 
+					}
+				}
+			}
 	
 			// shift to next-level : WARNING: Observe that this is hard-coded to handle only mCorr = 2
 			// ideally: (1. / mCorr ) * ( aCorr[nf][k][point] + aCorr[nf][k][point - 1] + ... aCorr[nf][k][point - mCorr + 1] ) -- average over m terms
@@ -1164,7 +1206,7 @@ class DPD {
 			// std::cout << "before avg fcorr[0][0][0]= " << fCorr[0][0][0] << std::endl;
 	
 			// data averaging
-			for ( i1=0 ; i1<n_vars ; ++i1 ){
+			for ( i1=0 ; i1<n_vars*n_vars ; ++i1 ){
 				for( j1=0; j1<corLevels ; ++j1 ){
 					for( k1=0; k1<pCorr2 ; ++k1 ){
 						fCorr[i1][j1][k1] /= nCorr[i1][j1][k1];
@@ -1172,7 +1214,7 @@ class DPD {
 				} // levels
 			} // variables
 
-			for ( i1=0 ; i1<n_vars ; ++i1 )
+			for ( i1=0 ; i1<n_vars*n_vars ; ++i1 )
 				normalizeCorr[i1] /= normalizeCorr_count;
 
 			// writing data -- writing level 0 and other levels separately
@@ -1180,7 +1222,7 @@ class DPD {
 			for( k1=0 ; k1<pCorr2-1 ; ++k1 ){
 
 				corrdata << k1+1 << "\t\t";
-				for( i1=0 ; i1<n_vars ; ++i1){
+				for( i1=0 ; i1<n_vars*n_vars ; ++i1){
 					corrdata << fCorr[i1][0][k1] << "\t\t" << normalizeCorr[i1] << "\t\t"; 
 				}
 				corrdata << std::endl;
@@ -1191,7 +1233,7 @@ class DPD {
 				for( k1=0 ; k1<pCorr2 ; ++k1 ){
 					
 					corrdata << ( pCorr2 + k1 ) * pow(2. , j1 - 1) << "\t\t";
-					for ( i1=0 ; i1<n_vars ; ++i1 ){
+					for ( i1=0 ; i1<n_vars*n_vars ; ++i1 ){
 						corrdata << fCorr[i1][j1][k1] << "\t\t" << normalizeCorr[i1] << "\t\t";
 					}
 					corrdata << std::endl;	
