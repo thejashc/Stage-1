@@ -28,7 +28,7 @@ sigma               6.0			# dissipation coeffecient
 dim                 3			# dimensions
 #
 dt                  0.001		# time parameters	
-stepMax             500000
+stepMax             3000000
 saveCount           10000
 psaveCount          50000
 #
@@ -55,7 +55,7 @@ rhor_rdelta         0.05
 #
 gammaDot            0.13		# homogeneous shear-rate 
 #
-n_vars              1			# values for the auto-correlation function
-corLevels           7 
+n_vars              3			# values for the auto-correlation function
+corLevels           20
 pCorr               64
 mCorr               2
