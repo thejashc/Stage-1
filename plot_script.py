@@ -21,7 +21,7 @@ GR		    = 0
 VEL_DIST	    = 0
 PRESSURE_TENSOR     = 0
 ACF                 = 0
-SACF                = 1
+SACF_GK             = 1
 
 # parameters
 nFluid 		= 4374
@@ -461,31 +461,77 @@ if ( ACF == 1):
 	plt.grid()
 	plt.savefig( './plots/corrData.eps', format='eps', dpi=1200)
 # ----------------- STRESS AUTOCORRELATION PROFILE -----------------#
-if ( SACF == 1):
+if ( SACF_GK == 1):
 
-	data   = np.loadtxt ( './data/correlationData.dat')
+	#Sxy   = np.loadtxt ( './data/correlationData.dat')
+	Sxy   = np.loadtxt ( './autocrossmatlabCompare/correlationData.dat')
 
+	# add the zer-correlation data to Sxy
+	newRow = [0]
+	for i in np.arange(2, 20, 2):
+		newRow.append(Sxy[0,i])
+		newRow.append(Sxy[0,i])
+
+	Sxy    = np.vstack([newRow, Sxy])
 	dt     = 1e-3
-	lag    = data[:,0]
-	Sxy    = data[:,1] 
-	#Syz    = data[:,3] / data[0,4]
-	#Szx    = data[:,5] / data[0,6]
+	lag    = Sxy[:,0] 
+	volume = 216
+	kbT    = 1.0
+
+	Ar     = np.zeros( (Sxy.shape[0], 9) );
+
+	# find sum of correlations
+	for j in np.arange(1,19,2):
+		for i in np.arange(0, Sxy.shape[0], 1):
+			Ar[i, int( (j-1)/2 ) ] = np.trapz( Sxy[0:i,j], Sxy[0:i, 0] * dt, dt)
+
+	etaInf = ( volume / kbT ) * ( dt / 2. ) * Sxy[0,8]
+	eta1   = ( volume / kbT ) *  np.sum( Ar, axis=1 )
+	eta2   = ( volume / kbT ) * ( Ar[:,0] + Ar[:,7] - Ar[:,2] - Ar[:,6] ) + etaInf			# Ernst
+	eta3   = ( volume / kbT ) * ( Ar[:,0] + Ar[:,6] )						# Espanol
+	eta4   = ( volume / kbT ) * ( Ar[:,0] + Ar[:,6] ) + etaInf					# Espanol + EtaInf
 
 	figEnv()
-	plt.plot(    lag * dt,    Sxy / data[0,2], '.' , label=r'$\sigma_{xy}$')	
-	#plt.plot(    lag * dt,    Syz, '-.' , label=r'$\sigma_{yz}$')	
-	#plt.plot(    lag * dt,    Szx, '-.' , label=r'$\sigma_{zx}$')	
-	#plt.xlim( (0. , 2 ) )
+	plt.semilogx(     lag,    eta1,   '.-', label=r'$\eta$ - GK = %f'%(eta1[196]), ms=2.5, mfc="none" )
+	plt.semilogx(     lag,    eta2,   '^-', label=r'$\eta$ - Ernst = %f'%(eta2[196]), ms=2.5 , mfc="none")
+	plt.semilogx(     lag,    eta3,   'o-', label=r'$\eta$ - Espanol = %f'%(eta3[196]), ms=2.5, mfc="none" )
+	plt.semilogx(     lag,    eta4,   's-', label=r'$\eta$ - Espanol + $\eta_{\infty}$=%f'%(eta4[196]), ms=2.5, mfc="none" )
 
-	Sxy = np.insert(Sxy, 0, data[0,2] )
-	lag = np.insert(lag, 0, 0 )
-
-	#viscosity  = (216/1.0) * np.trapz( Sxy, lag*dt, dt )
 	#print( 'viscosity=%f'%(viscosity) )
 
 	plt.xlabel( r'$\tau$ (mDPD units)' )
-	plt.ylabel( r'$\langle \sigma_{xy}(0)\sigma_{xy}(\tau) \rangle$ (normalized)' )
+	#plt.ylabel( r'$\langle \sigma_{xy}(0)\sigma_{xy}(\tau) \rangle$ (normalized)' )
 	plt.legend()
-	plt.title ( r'Correlation function -- stress' )
+	#plt.title ( r'Correlation function -- stress' )
 	plt.grid()
-	plt.savefig( './plots/corrData.eps', format='eps', dpi=1200)
+	plt.savefig( './plots/corrData_velCorr1.eps', format='eps', dpi=1200)
+
+	plt.rcParams.update({'font.size': 4})
+	# individual elements
+	f, ((ax1, ax2 ), (ax3, ax4),  ( ax5, ax6)) = plt.subplots(3, 2)
+	ax1.semilogx(lag, Sxy[:,1], label=r'$S_{xy}^{CC}$')
+	ax1.legend()
+	ax1.grid()
+	ax2.semilogx(lag, Sxy[:,7], label=r'$S_{xy}^{RR}$')
+	ax2.legend()
+	ax2.grid()
+	ax3.semilogx(lag, Sxy[:,13], label=r'$S_{xy}^{DD}$')
+	ax3.legend()
+	ax3.grid()
+
+	ax4.semilogx(lag, Sxy[:,3], label=r'$S_{xy}^{CR}$')
+	ax4.semilogx(lag, Sxy[:,11], label=r'$S_{xy}^{RC}$')
+	ax4.legend()
+	ax4.grid()
+
+	ax5.semilogx(lag, Sxy[:,5], label=r'$S_{xy}^{CD}$')
+	ax5.semilogx(lag, Sxy[:,15], label=r'$S_{xy}^{DC}$')
+	ax5.legend()
+	ax5.grid()
+
+	ax6.semilogx(lag, Sxy[:,9], label=r'$S_{xy}^{RD}$')
+	ax6.semilogx(lag, Sxy[:,17], label=r'$S_{xy}^{DR}$')
+	ax6.legend()
+	ax6.grid()
+
+	plt.savefig( './plots/individualCorr1.eps', format='eps', dpi=1200)
