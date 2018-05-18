@@ -1160,6 +1160,12 @@ class DPD {
 					nCorr[n_base + 2][k][i] += 1; 
 				}
 
+				nf3 = (nf+3) % n_vars;	
+				if ( aCorr[nf3][k][j] > -9e20 ){				// nf+2 -- SxyC(t) * SxyD(0) / SxyR(t) * SxyC(0) / SxyD(t) * SxyR(0)
+					fCorr[n_base + 3][k][i] += f*aCorr[nf3][k][j];
+					nCorr[n_base + 3][k][i] += 1; 
+				}
+
 			} // do the correlation only when the array is filled up
 			
 			// putting in 0 missing values -- from 1 to pCorr2-1
@@ -1184,6 +1190,12 @@ class DPD {
 					if ( aCorr[nf2][1][j] > -9e20 ){				
 						fCorr[n_base + 2][0][i] += aCorr[nf][1][point] * aCorr[nf2][k][j];
 						nCorr[n_base + 2][0][i] += 1; 
+					}
+					
+					nf3 = (nf+3) % n_vars;	
+					if ( aCorr[nf3][1][j] > -9e20 ){				
+						fCorr[n_base + 3][0][i] += aCorr[nf][1][point] * aCorr[nf3][k][j];
+						nCorr[n_base + 3][0][i] += 1; 
 					}
 				}
 			}

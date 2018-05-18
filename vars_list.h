@@ -29,6 +29,7 @@ double kin_en;				// system kinetic energy
 double vx2;				// square of the x-velocity
 double vy2;				// square of the y-velocity
 double vz2;				// square of the z-velocity
+double vxvy;				// product of vx*vy
 double v2;				// square of the velocity vector
 double pair_pot_en;			// total pair potential energy
 double tot_en;				// system total energy
@@ -375,12 +376,14 @@ unsigned int point;	// pointer in the aCorr array
 unsigned int normalizeCorr_count;
 unsigned int nf1;
 unsigned int nf2;
+unsigned int nf3;
 unsigned int n_base;
 
 double Sxx;
 double SxyC;
 double SxyR;
 double SxyD;
+double SxyVxy;
 double Sxz;
 
 double Syx;

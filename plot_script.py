@@ -463,12 +463,12 @@ if ( ACF == 1):
 # ----------------- STRESS AUTOCORRELATION PROFILE -----------------#
 if ( SACF_GK == 1):
 
-	#Sxy   = np.loadtxt ( './data/correlationData.dat')
-	Sxy   = np.loadtxt ( './autocrossmatlabCompare/correlationData.dat')
+	Sxy   = np.loadtxt ( './data/correlationData.dat')
+	#Sxy   = np.loadtxt ( './autocrossmatlabCompare/correlationData.dat')
 
 	# add the zer-correlation data to Sxy
 	newRow = [0]
-	for i in np.arange(2, 20, 2):
+	for i in np.arange(2, 34, 2):
 		newRow.append(Sxy[0,i])
 		newRow.append(Sxy[0,i])
 
@@ -478,18 +478,18 @@ if ( SACF_GK == 1):
 	volume = 216
 	kbT    = 1.0
 
-	Ar     = np.zeros( (Sxy.shape[0], 9) );
+	Ar     = np.zeros( (Sxy.shape[0], 16) );
 
 	# find sum of correlations
-	for j in np.arange(1,19,2):
+	for j in np.arange(1,33,2):
 		for i in np.arange(0, Sxy.shape[0], 1):
 			Ar[i, int( (j-1)/2 ) ] = np.trapz( Sxy[0:i,j], Sxy[0:i, 0] * dt, dt)
 
 	etaInf = ( volume / kbT ) * ( dt / 2. ) * Sxy[0,8]
 	eta1   = ( volume / kbT ) *  np.sum( Ar, axis=1 )
-	eta2   = ( volume / kbT ) * ( Ar[:,0] + Ar[:,7] - Ar[:,2] - Ar[:,6] ) + etaInf			# Ernst
-	eta3   = ( volume / kbT ) * ( Ar[:,0] + Ar[:,6] )						# Espanol
-	eta4   = ( volume / kbT ) * ( Ar[:,0] + Ar[:,6] ) + etaInf					# Espanol + EtaInf
+	eta2   = ( volume / kbT ) * ( Ar[:,0] + Ar[:,13] + Ar[:,10] + Ar[:,3] + Ar[:,12] + Ar[:,9] - Ar[:,2] - Ar[:,15] - Ar[:,8] ) + etaInf			# Ernst
+	eta3   = ( volume / kbT ) * ( Ar[:,0] + Ar[:,13] + Ar[:,3] + Ar[:,12] + Ar[:,8] )									# Espanol
+	eta4   = eta3 + etaInf																	# Espanol + EtaInf
 
 	figEnv()
 	plt.semilogx(     lag,    eta1,   '.-', label=r'$\eta$ - GK = %f'%(eta1[196]), ms=2.5, mfc="none" )
@@ -504,34 +504,82 @@ if ( SACF_GK == 1):
 	plt.legend()
 	#plt.title ( r'Correlation function -- stress' )
 	plt.grid()
-	plt.savefig( './plots/corrData_velCorr1.eps', format='eps', dpi=1200)
+	plt.savefig( './plots/viscosity.eps', format='eps', dpi=1200)
 
-	plt.rcParams.update({'font.size': 4})
+	plt.rcParams.update({'font.size': 5.0})
 	# individual elements
-	f, ((ax1, ax2 ), (ax3, ax4),  ( ax5, ax6)) = plt.subplots(3, 2)
-	ax1.semilogx(lag, Sxy[:,1], label=r'$S_{xy}^{CC}$')
+	lt = 1.5
+	f, ((ax1, ax2 ), (ax3, ax4),  ( ax5, ax6), (ax7, ax8), (ax9, ax10), (ax11, ax12),(ax13, ax14),(ax15, ax16)) = plt.subplots(8, 2, figsize=(12, 42) )
+	
+	ax1.semilogx(lag, Sxy[:,1], label=r'$S_{xy}^{C1\ C1}$', lw=lt)
+	ax2.semilogx(lag, Sxy[:,3], label=r'$S_{xy}^{R\ C1}$', lw=lt)
+	ax3.semilogx(lag, Sxy[:,5], label=r'$S_{xy}^{R\ C1}$', lw=lt)
+	ax4.semilogx(lag, Sxy[:,7], label=r'$S_{xy}^{C2\ C1}$', lw=lt)
+
+	ax5.semilogx(lag, Sxy[:,9], label=r'$S_{xy}^{R\ R}$', lw=lt)
+	ax6.semilogx(lag, Sxy[:,11], label=r'$S_{xy}^{D\ R}$', lw=lt)
+	ax7.semilogx(lag, Sxy[:,13], label=r'$S_{xy}^{C2\ R}$', lw=lt)
+	ax8.semilogx(lag, Sxy[:,15], label=r'$S_{xy}^{C1\ R}$', lw=lt)
+
+	ax9.semilogx(lag, Sxy[:,17], label=r'$S_{xy}^{D\ D}$', lw=lt)
+	ax10.semilogx(lag, Sxy[:,19], label=r'$S_{xy}^{C2\ D}$', lw=lt)
+	ax11.semilogx(lag, Sxy[:,21], label=r'$S_{xy}^{C1\ D}$', lw=lt)
+	ax12.semilogx(lag, Sxy[:,23], label=r'$S_{xy}^{R\ D}$', lw=lt)
+
+	ax13.semilogx(lag, Sxy[:,25], label=r'$S_{xy}^{C2\ C2}$', lw=lt)
+	ax14.semilogx(lag, Sxy[:,27], label=r'$S_{xy}^{C1\ C2}$', lw=lt)
+	ax15.semilogx(lag, Sxy[:,29], label=r'$S_{xy}^{R\ C2}$', lw=lt)
+	ax16.semilogx(lag, Sxy[:,31], label=r'$S_{xy}^{D\ C2}$', lw=lt)
+
+	axt1 = ax1.twinx()
+	axt2 = ax2.twinx()
+	axt3 = ax3.twinx()
+	axt4 = ax4.twinx()
+	axt5 = ax5.twinx()
+	axt6 = ax6.twinx()
+	axt7 = ax7.twinx()
+	axt8 = ax8.twinx()
+	axt9 = ax9.twinx()
+	axt10 = ax10.twinx()
+	axt11 = ax11.twinx()
+	axt12 = ax12.twinx()
+	axt13 = ax13.twinx()
+	axt14 = ax14.twinx()
+	axt15 = ax15.twinx()
+	axt16 = ax16.twinx()
+
+	axt1.semilogx(lag, (volume / kbT) * Ar[:,0], 'r-', lw=lt)
+	axt2.semilogx(lag, (volume / kbT) * Ar[:,1], 'r-', lw=lt)
+	axt3.semilogx(lag, (volume / kbT) * Ar[:,2], 'r-', lw=lt)
+	axt4.semilogx(lag, (volume / kbT) * Ar[:,3], 'r-', lw=lt)
+	axt5.semilogx(lag, (volume / kbT) * Ar[:,4], 'r-', lw=lt)
+	axt6.semilogx(lag, (volume / kbT) * Ar[:,5], 'r-', lw=lt)
+	axt7.semilogx(lag, (volume / kbT) * Ar[:,6], 'r-', lw=lt)
+	axt8.semilogx(lag, (volume / kbT) * Ar[:,7], 'r-', lw=lt)
+	axt9.semilogx(lag, (volume / kbT) * Ar[:,8], 'r-', lw=lt)
+	axt10.semilogx(lag, (volume / kbT) * Ar[:,9], 'r-', lw=lt)
+	axt11.semilogx(lag, (volume / kbT) * Ar[:,10], 'r-', lw=lt)
+	axt12.semilogx(lag, (volume / kbT) * Ar[:,11], 'r-', lw=lt)
+	axt13.semilogx(lag, (volume / kbT) * Ar[:,12], 'r-', lw=lt)
+	axt14.semilogx(lag, (volume / kbT) * Ar[:,13], 'r-', lw=lt)
+	axt15.semilogx(lag, (volume / kbT) * Ar[:,14], 'r-', lw=lt)
+	axt16.semilogx(lag, (volume / kbT) * Ar[:,15], 'r-', lw=lt)
+
 	ax1.legend()
-	ax1.grid()
-	ax2.semilogx(lag, Sxy[:,7], label=r'$S_{xy}^{RR}$')
 	ax2.legend()
-	ax2.grid()
-	ax3.semilogx(lag, Sxy[:,13], label=r'$S_{xy}^{DD}$')
 	ax3.legend()
-	ax3.grid()
-
-	ax4.semilogx(lag, Sxy[:,3], label=r'$S_{xy}^{CR}$')
-	ax4.semilogx(lag, Sxy[:,11], label=r'$S_{xy}^{RC}$')
 	ax4.legend()
-	ax4.grid()
-
-	ax5.semilogx(lag, Sxy[:,5], label=r'$S_{xy}^{CD}$')
-	ax5.semilogx(lag, Sxy[:,15], label=r'$S_{xy}^{DC}$')
 	ax5.legend()
-	ax5.grid()
-
-	ax6.semilogx(lag, Sxy[:,9], label=r'$S_{xy}^{RD}$')
-	ax6.semilogx(lag, Sxy[:,17], label=r'$S_{xy}^{DR}$')
 	ax6.legend()
-	ax6.grid()
+	ax7.legend()
+	ax8.legend()
+	ax9.legend()
+	ax10.legend()
+	ax11.legend()
+	ax12.legend()
+	ax13.legend()
+	ax14.legend()
+	ax15.legend()
+	ax16.legend()
 
-	plt.savefig( './plots/individualCorr1.eps', format='eps', dpi=1200)
+	plt.savefig( './plots/individualCorr.eps', format='eps', dpi=1200)

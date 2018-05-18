@@ -55,7 +55,7 @@ rhor_rdelta         0.05
 #
 gammaDot            0.13		# homogeneous shear-rate 
 #
-n_vars              3			# values for the auto-correlation function
+n_vars              4			# values for the auto-correlation function
 corLevels           20
 pCorr               64
 mCorr               2
