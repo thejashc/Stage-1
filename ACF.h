@@ -37,7 +37,7 @@ SxyVxy =  vxvy / volume;					// sum of v_{i,x} * v_{i,y} / volume
 recursive_addCorr( SxyC,   0, 1 );
 recursive_addCorr( SxyR,   1, 1 );
 recursive_addCorr( SxyD,   2, 1 );
-//recursive_addCorr( Sxyvxy, 3, 1 );
+recursive_addCorr( SxyVxy, 3, 1 );
 
 //recursive_addCorr( Syz, 1, 1 );
 //recursive_addCorr( Szx, 2, 1 );
@@ -45,21 +45,27 @@ recursive_addCorr( SxyD,   2, 1 );
 //recursive_addCorr( Nyz, 4, 1 );
 //recursive_addCorr( Nzx, 5, 1 );
 
-// cyclic order - C->R->D->C
+// cyclic order - C->R->D->Vxy->C
 
-normalizeCorr[0] += SxyC * SxyC;
-normalizeCorr[1] += SxyC * SxyR;
-normalizeCorr[2] += SxyC * SxyD;
+normalizeCorr[0]   +=  SxyC * SxyC;
+normalizeCorr[1]   +=  SxyC * SxyR;
+normalizeCorr[2]   +=  SxyC * SxyD;
+normalizeCorr[3]   +=  SxyC * SxyVxy;
 
-normalizeCorr[3] += SxyR * SxyR;
-normalizeCorr[4] += SxyR * SxyD;
-normalizeCorr[5] += SxyR * SxyC;
+normalizeCorr[4]   +=  SxyR * SxyR;
+normalizeCorr[5]   +=  SxyR * SxyD;
+normalizeCorr[6]   +=  SxyR * SxyVxy;
+normalizeCorr[7]   +=  SxyR * SxyC;
 
-normalizeCorr[6] += SxyD * SxyD;
-normalizeCorr[7] += SxyD * SxyC;
-normalizeCorr[8] += SxyD * SxyR;
+normalizeCorr[8]   +=  SxyD * SxyD;
+normalizeCorr[9]   +=  SxyD * SxyVxy;
+normalizeCorr[10]  +=  SxyD * SxyC;
+normalizeCorr[11]  +=  SxyD * SxyR;
 
-//normalizeCorr[9] += SxyVxy * SxyVxy;
+normalizeCorr[12]  +=  SxyVxy * SxyVxy;
+normalizeCorr[13]  +=  SxyVxy * SxyC;
+normalizeCorr[14]  +=  SxyVxy * SxyR;
+normalizeCorr[15]  +=  SxyVxy * SxyD;
 
 //normalizeCorr[1] += Syz * Syz;
 //normalizeCorr[2] += Szx * Szx;
