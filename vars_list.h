@@ -148,6 +148,9 @@ int dmCell4;
 
 double zeroTol = 1e-7;
 double strainRate;
+
+int i2;
+int i3;
 #endif
 
 int dm[13][3] = {	
