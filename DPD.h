@@ -37,11 +37,14 @@
 #define STYLE_MERCURY_DPM                0
 
 // CORRELATION FUNCTIONS
-#define SACF                             1 
+#define SACF                             0 
 #define SACF_TEST                        0
 
 // LEES-EDWARDS BOUNDARY CONDITION
-#define LEES_EDWARDS_BC                  0
+#define LEES_EDWARDS_BC                  1
+
+// DENSITY CALCULATION
+#define DENS_EXACT			 0
 
 //declare DPD solver
 class DPD {
@@ -61,7 +64,9 @@ class DPD {
 
 			// parameters declaration
 			pTensCounter            = 0;
+			#if SACF
 			normalizeCorr_count     = 0;
+			#endif
 			step 			= 1;
 			temp 			= 0.0;
 			tempSum 		= 0.0;
@@ -138,7 +143,9 @@ class DPD {
 			while (step<stepMax) {
 
 				createGridList();
-                		// dens_calculation();
+				#if DENS_EXACT
+                		dens_calculation();
+				#endif
 				forceCalc();
 
 				integrateEOM();
@@ -971,9 +978,14 @@ class DPD {
 			// simProg << " fi[0], fi[fluidCount - 1], fluidCount " << fluid_index[0] << " " << fluid_index[1] << " " << fluidCount << std::endl;	
 			for ( i = 0; i < npart ; ++i )
 			{
+
+			
+				#if DENS_EXACT	
+				particles[i].dens = 0.0;
+				#else
 				particles[i].dens = particles[i].dens_new;
 				particles[i].dens_new = 0.;
-				// particles[i].dens = 0.0;
+				#endif
 				particles[i].rhoBar = 0.0;
 				particles[i].fC.setZero();
 		
@@ -1125,6 +1137,7 @@ class DPD {
 		}
 
 		//---------------------------------------- Auto-correlation function calculation------------------------------//
+		#if SACF
 		void recursive_addCorr(double f, unsigned int nf, unsigned int k){
 
 			// shift-pointer and put in f
@@ -1254,6 +1267,7 @@ class DPD {
 			} 
 			corrdata.close();
 		}
+		#endif
 
 		//--------------------------------------- Parameter file writing--------------------------------------//
 		void paraWrite(std::ofstream& paraInfo){
