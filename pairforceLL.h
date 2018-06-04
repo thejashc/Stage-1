@@ -47,10 +47,12 @@ if ( r2 <= rc2 ) {
 		term2 = Bll * ( particles[i].dens + particles[j].dens ) * wDij;
 
 		wDij2 = wDij * wDij; 
-		rho_temp = fifteen_by_twopi_by_rd * wDij2;
 
+		#if !(DENS_EXACT)
+		rho_temp = fifteen_by_twopi_by_rd * wDij2;
 		particles[i].dens_new += rho_temp;
 		particles[j].dens_new += rho_temp;
+		#endif
 	}
 
 	term1 = All * wCij;
