@@ -20,13 +20,13 @@
 #define CYLINDER_DROPLET                 0
 #define PLANAR_SLAB                      0
 #define CRYSTAL	                         1
-#define RESTART	                         0 
+#define RESTART	                         0
 
 // WALL flags
 #define WALL_ON                          0
-#define LOWER_WALL_ON                    1
-#define UPPER_WALL_ON                    1
-#define FCC_WALL                         1
+#define LOWER_WALL_ON                    0
+#define UPPER_WALL_ON                    0
+#define FCC_WALL                         0
 #define ROUGH_WALL                       0
 
 // POISEUILLE flow
@@ -37,11 +37,11 @@
 #define STYLE_MERCURY_DPM                0
 
 // CORRELATION FUNCTIONS
-#define SACF                             0 
+#define SACF                             0
 #define SACF_TEST                        0
 
 // LEES-EDWARDS BOUNDARY CONDITION
-#define LEES_EDWARDS_BC                  1
+#define LEES_EDWARDS_BC                  0
 
 // DENSITY CALCULATION
 #define DENS_EXACT			 0
@@ -60,7 +60,6 @@ class DPD {
 			simProg.open ( "./simProg.txt", std::ios::out );
 			simProg << " Proccess ID : " << getpid() << std::endl;
 			// initialize position, velocity, hoc, ll
-			init();
 
 			// parameters declaration
 			pTensCounter            = 0;
@@ -68,6 +67,7 @@ class DPD {
 			normalizeCorr_count     = 0;
 			#endif
 			step 			= 1;
+			init();
 			temp 			= 0.0;
 			tempSum 		= 0.0;
 		    	#if WALL_ON
@@ -140,7 +140,7 @@ class DPD {
 			}
 			#endif //SACF_TEST
 
-			while (step<stepMax) {
+			while (step<= stepMax) {
 
 				createGridList();
 				#if DENS_EXACT
@@ -166,6 +166,14 @@ class DPD {
 				// for (Particle& p : particles)
 				//	simProg << "Position: " << p.r << ", Density: " << p.dens <<", conservative force: " << p.fC << std::endl;
 
+				if ( step % rstrtFwrtFreq == 0 ){
+					// write position velocity stats 
+					std::ofstream writeConfig;
+					writeConfig.open ( "./restart/posvelrestartfile.dat", std::ios::binary | std::ios::out );	// example binary file
+					finalposvelWrite( writeConfig );	
+					writeConfig.close();
+				}
+
 				step += 1;						// increment time step
 
 				// if ( step % 1000 == 0 )
@@ -173,13 +181,6 @@ class DPD {
 
 			}//end time loop
 
-			#if RESTART
-			// write position velocity stats 
-			std::ofstream writeConfig;
-			writeConfig.open ( "./restart/posvelrestartfile.dat", std::ios::binary | std::ios::out );	// example binary file
-			finalposvelWrite( writeConfig );	
-			writeConfig.close();
-			#endif
 
 			// post-processing
 			// grCalc();	 
@@ -234,7 +235,7 @@ class DPD {
 			for (i=0; i < gR_nElem ; ++i){
 				gR_nCount.push_back(0.0);
 			}	
-
+			
 			// Initialize the velocity histogram array
 			for (i=0; i < velHist_bins ; ++i){
 				velHistX.push_back(0);
@@ -254,7 +255,6 @@ class DPD {
 					rhor.push_back(0.0);
 				}	
 			#endif
-
 
 			// initializing NrCells[3], scale	
 			for ( i = 0 ; i < 3 ; i++ )
@@ -326,6 +326,16 @@ class DPD {
 			pNonIdeal[2][0] = 0.0;
 			pNonIdeal[2][1] = 0.0;
 			pNonIdeal[2][2] = 0.0;
+
+			pNonIdealKin[0][0] = 0.0;
+			pNonIdealKin[0][1] = 0.0;
+			pNonIdealKin[0][2] = 0.0;
+			pNonIdealKin[1][0] = 0.0;
+			pNonIdealKin[1][1] = 0.0;
+			pNonIdealKin[1][2] = 0.0;
+			pNonIdealKin[2][0] = 0.0;
+			pNonIdealKin[2][1] = 0.0;
+			pNonIdealKin[2][2] = 0.0;
 
 			pDissipative[0][0] = 0.0;
 			pDissipative[0][1] = 0.0;
@@ -885,7 +895,8 @@ class DPD {
 				vx2  += particles[i].v.X * particles[i].v.X;
 				vy2  += particles[i].v.Y * particles[i].v.Y;
 				vz2  += particles[i].v.Z * particles[i].v.Z;
-				vxvy += particles[i].v.X * particles[i].v.Y;
+
+				#include "pNonIdealKinCalc.h"	
 
 				// calculate momentum
 				momX += particles[i].v.X;
@@ -944,7 +955,7 @@ class DPD {
 
 			// calculate auto-correlation
 			#if SACF
-			if ( step > 1e4 ){
+			if ( step > 5e4 ){
 				#include "ACF.h"
 			}
 			#endif
@@ -1013,6 +1024,16 @@ class DPD {
 			pNonIdeal_temp[2][0] = 0.;
 			pNonIdeal_temp[2][1] = 0.;
 			pNonIdeal_temp[2][2] = 0.;
+	
+			pNonIdealKin_temp[0][0] = 0.;
+			pNonIdealKin_temp[0][1] = 0.;
+			pNonIdealKin_temp[0][2] = 0.;
+			pNonIdealKin_temp[1][0] = 0.;
+			pNonIdealKin_temp[1][1] = 0.;
+			pNonIdealKin_temp[1][2] = 0.;
+			pNonIdealKin_temp[2][0] = 0.;
+			pNonIdealKin_temp[2][1] = 0.;
+			pNonIdealKin_temp[2][2] = 0.;
 
 			#if RANDOM_DISSIPATIVE
 			// Dissipative
@@ -1374,7 +1395,79 @@ class DPD {
 			paraInfo << "---------------------------" << std::endl;
 			paraInfo << "---------------------------" << std::endl;
 			paraInfo << "---------------------------" << std::endl;
-			
+
+
+			/******************************* FLAGS ***************************************/
+			flagList.open ( "./flagList.txt", std::ios::out );
+			#if RANDOM_DISSIPATIVE           
+			flagList << "RANDOM_DISSIPATIVE FLAG                :            " << "ON" << std::endl;  
+			#endif
+			#if SPHERICAL_DROPLET                
+			flagList << "SPHERICAL_DROPLET FLAG                 :            " << "ON" << std::endl;  
+			#endif
+			#if SPHERICAL_CAP                    
+			flagList << "SPHERICAL_CAP FLAG                     :            " << "ON" << std::endl;  
+			#endif
+			#if CYLINDER_DROPLET                 
+			flagList << "CYLINDER_DROPLET FLAG                  :            " << "ON" << std::endl;  
+			#endif
+			#if PLANAR_SLAB                      
+			flagList << "PLANAR_SLAB FLAG                       :            " << "ON" << std::endl;  
+			#endif
+			#if CRYSTAL	                         
+			flagList << "CRYSTAL FLAG                           :            " << "ON" << std::endl;  
+			#endif
+			#if RESTART	                          
+			flagList << "RESTART FLAG                           :            " << "ON" << std::endl;  
+			#endif
+
+			// WALL flags
+			#if WALL_ON                          
+			flagList << "WALL_ON FLAG" << "\t\t" << "ON" << std::endl;  
+			#if LOWER_WALL_ON                    
+			flagList << "LOWER_WALL_ON FLAG                     :            " << "ON" << std::endl;  
+			#endif
+			#if UPPER_WALL_ON                    
+			flagList << "UPPER_WALL_ON FLAG                     :            " << "ON" << std::endl;  
+			#endif
+			#if FCC_WALL                         
+			flagList << "FCC_WALL FLAG                          :            " << "ON" << std::endl;  
+			#endif
+			#if ROUGH_WALL                       
+			flagList << "ROUGH_WALL FLAG                        :            " << "ON" << std::endl;  
+			#endif
+			#endif
+
+			// POISEUILLE flow
+			#if BODY_FORCE                       
+			flagList << "BODY_FORCE FLAG                        :            " << "ON" << std::endl;  
+			#endif
+
+			// FILE_WRITE
+			#if STYLE_VMD                        
+			flagList << "STYLE_VMD FLAG                         :            " << "ON" << std::endl;  
+			#endif
+			#if STYLE_MERCURY_DPM                
+			flagList << "STYLE_MERCURY_DPM FLAG                 :            " << "ON" << std::endl;  
+			#endif
+
+			// CORRELATION FUNCTIONS
+			#if SACF                              
+			flagList << "SACF FLAG                              :            " << "ON" << std::endl;  
+			#endif
+			#if SACF_TEST                        
+			flagList << "SACF_TEST FLAG                         :            " << "ON" << std::endl;  
+			#endif
+
+			// LEES-EDWARDS BOUNDARY CONDITION
+			#if LEES_EDWARDS_BC                  
+			flagList << "LEES_EDWARDS_BC FLAG                   :            " << "ON" << std::endl;  
+			#endif
+
+			// DENSITY CALCULATION
+			#if DENS_EXACT			 
+			flagList << "DENS_EXACT FLAG                        :            " << "ON" << std::endl;  
+			#endif
 
 		}
 
@@ -1401,6 +1494,7 @@ class DPD {
 				        	<<  pIdeal[2][0]		 << " "
 	        				<<  pIdeal[2][1]		 << " "
 		        			<<  pIdeal[2][2]		 << " "
+
 			        		<<  pNonIdeal[0][0]		 << " " 
 				        	<<  pNonIdeal[0][1]		 << " " 
         					<<  pNonIdeal[0][2]		 << " "
@@ -1410,6 +1504,17 @@ class DPD {
 			        		<<  pNonIdeal[2][0]		 << " "
 		        			<<  pNonIdeal[2][1]		 << " "
 			        		<<  pNonIdeal[2][2]		 << " " 
+
+				        	<<  pNonIdealKin[0][0]		 << " " 
+				        	<<  pNonIdealKin[0][1]		 << " " 
+        					<<  pNonIdealKin[0][2]		 << " "
+	        				<<  pNonIdealKin[1][0]		 << " "
+		        			<<  pNonIdealKin[1][1]		 << " "
+		        			<<  pNonIdealKin[1][2]		 << " "
+			        		<<  pNonIdealKin[2][0]		 << " "
+		        			<<  pNonIdealKin[2][1]		 << " "
+			        		<<  pNonIdealKin[2][2]		 << " " 
+
 			        		<<  pDissipative[0][0]	         << " " 
 				        	<<  pDissipative[0][1]	         << " " 
         					<<  pDissipative[0][2]	         << " "
@@ -1419,6 +1524,7 @@ class DPD {
 			        		<<  pDissipative[2][0]	         << " "
 		        			<<  pDissipative[2][1]	         << " "
 			        		<<  pDissipative[2][2]	         << " " 
+
 			        		<<  pRandom[0][0]                << " " 
 				        	<<  pRandom[0][1]                << " " 
         					<<  pRandom[0][2]                << " "
@@ -1642,6 +1748,7 @@ class DPD {
 		void finalposvelWrite( std::ofstream& writeConfig ){
 
 			writeConfig.write( reinterpret_cast< const char * >( &npart ), sizeof( npart ) );
+			writeConfig.write( reinterpret_cast< const char * >( &step ), sizeof( step ) );
 
 			for (Particle& p : particles){
 				writeConfig.write( reinterpret_cast< const char * >( &p.r.X ), sizeof( p.r.X ) );
