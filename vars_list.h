@@ -23,7 +23,8 @@ double dim;				// dimension of system
 double dof;				// degrees of freedom
 
 int step;				// counter for number of steps 
-double stepMax;				// total number of steps
+int stepMax;				// total number of steps
+int rstrtFwrtFreq;			// The frequency of writing a restart file ( writes positions and mid-step velocities )
 double pot_en;				// system potential energy
 double kin_en;				// system kinetic energy
 double vx2;				// square of the x-velocity
@@ -35,10 +36,12 @@ double pair_pot_en;			// total pair potential energy
 double tot_en;				// system total energy
 double pressure;			// pressure
 double pIdeal[3][3];			// Ideal component of pressure tensor
-double pNonIdeal[3][3];			// Non Ideal component of pressure tensor
-double pDissipative[3][3];			// Non Ideal component of pressure tensor
-double pRandom[3][3];			// Non Ideal component of pressure tensor
-double pNonIdeal_temp[3][3];		// Non Ideal component of pressure tensor
+double pNonIdeal[3][3];			// Conservative - Interactions
+double pNonIdealKin[3][3];		// Conservative - Kinetic
+double pDissipative[3][3];		// Dissipative
+double pRandom[3][3];			// Random
+double pNonIdeal_temp[3][3];		// NonIdeal interactions
+double pNonIdealKin_temp[3][3];		// NonIdeal Kinetic
 double pDissipative_temp[3][3];		// Dissipative component of pressure tensor
 double pRandom_temp[3][3];		// Random component of pressure tensor
 unsigned int pTensCounter;
@@ -456,14 +459,15 @@ std::vector<Cell> ll; //linked list is a 2D vector
 
 // Gaussian random numbers
 // random device class instance, source of 'true' randomness for initializing random seed
-std::default_random_engine rd;
+std::default_random_engine seed;
 // Mersenne twister PRNG, initialized with seed from previous random device instance
 // usage d{mean, std}
 // std::normal_distribution<double> d{0,1};
-std::uniform_real_distribution<double> d{0.0,1.0};
+std::uniform_real_distribution<double> randNumGen{0.0,1.0};
 
 // File streams
 std::string buffer;
 std::string emptyLine;
 	
 std::ofstream simProg;
+std::ofstream flagList;
