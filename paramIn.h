@@ -78,34 +78,35 @@ readParam >> emptyLine;			readParam.ignore(256,'\n');		// L29
 simProg << "Reading Time Parameters" << std::endl;
 readParam >> buffer >> dt;		readParam.ignore(256,'\n');		// L30
 readParam >> buffer >> stepMax;		readParam.ignore(256,'\n');		// L31
-readParam >> buffer >> saveCount;	readParam.ignore(256,'\n');		// L32
-readParam >> buffer >> psaveCount;	readParam.ignore(256,'\n');		// L33
+readParam >> buffer >> rstrtFwrtFreq;	readParam.ignore(256,'\n');		// L32
+readParam >> buffer >> saveCount;	readParam.ignore(256,'\n');		// L33
+readParam >> buffer >> psaveCount;	readParam.ignore(256,'\n');		// L34
 
-readParam >>  emptyLine;		readParam.ignore(256,'\n');		// L34
+readParam >>  emptyLine;		readParam.ignore(256,'\n');		// L35
 
 simProg << "Reading Structure Factor Parameters" << std::endl;
-readParam >> buffer >> gR_radMin;	readParam.ignore(256,'\n');		// L35
-readParam >> buffer >> gR_radDelta;	readParam.ignore(256,'\n');		// L36
-readParam >> buffer >> gR_tStart;	readParam.ignore(256,'\n');		// L37
-readParam >> buffer >> gR_tDelta;	readParam.ignore(256,'\n');		// L38
+readParam >> buffer >> gR_radMin;	readParam.ignore(256,'\n');		// L36
+readParam >> buffer >> gR_radDelta;	readParam.ignore(256,'\n');		// L37
+readParam >> buffer >> gR_tStart;	readParam.ignore(256,'\n');		// L38
+readParam >> buffer >> gR_tDelta;	readParam.ignore(256,'\n');		// L39
 
-readParam >> emptyLine;			readParam.ignore(256,'\n');		// L39
+readParam >> emptyLine;			readParam.ignore(256,'\n');		// L40
 
 simProg << "Reading Velocity Distribution Parameters" << std::endl;
-readParam >> buffer >> velHist_velMin;		readParam.ignore(256,'\n');	// L40
-readParam >> buffer >> velHist_velDelta;	readParam.ignore(256,'\n');	// L41
-readParam >> buffer >> velHist_velMax;		readParam.ignore(256,'\n');	// L42
-readParam >> buffer >> velHist_tStart;		readParam.ignore(256,'\n');	// L43
-readParam >> buffer >> velHist_tDelta;		readParam.ignore(256,'\n');	// L44
+readParam >> buffer >> velHist_velMin;		readParam.ignore(256,'\n');	// L41
+readParam >> buffer >> velHist_velDelta;	readParam.ignore(256,'\n');	// L42
+readParam >> buffer >> velHist_velMax;		readParam.ignore(256,'\n');	// L43
+readParam >> buffer >> velHist_tStart;		readParam.ignore(256,'\n');	// L44
+readParam >> buffer >> velHist_tDelta;		readParam.ignore(256,'\n');	// L45
 
-readParam >> emptyLine;			readParam.ignore(256,'\n');		// L45
+readParam >> emptyLine;			readParam.ignore(256,'\n');		// L46
 #if PLANAR_SLAB
 simProg << "Reading Planar Slab Parameters" << std::endl;
-readParam >> buffer >> slabWidth;	readParam.ignore(256,'\n');		// L46
-readParam >> buffer >> rhoZ_Zmin;	readParam.ignore(256,'\n');		// L47
-readParam >> buffer >> rhoZ_Zdelta;	readParam.ignore(256,'\n');		// L48
+readParam >> buffer >> slabWidth;	readParam.ignore(256,'\n');		// L47
+readParam >> buffer >> rhoZ_Zmin;	readParam.ignore(256,'\n');		// L48
+readParam >> buffer >> rhoZ_Zdelta;	readParam.ignore(256,'\n');		// L49
 #if WALL_ON
-	readParam >> buffer >> segPlane_zDelta;	readParam.ignore(256,'\n');	// L49
+	readParam >> buffer >> segPlane_zDelta;	readParam.ignore(256,'\n');	// L50
 #else
 	readParam.ignore(256, '\n');
 #endif
@@ -116,13 +117,13 @@ readParam.ignore(256, '\n');
 readParam.ignore(256, '\n');
 #endif
 
-readParam >> emptyLine;			readParam.ignore(256,'\n');		// L50
+readParam >> emptyLine;			readParam.ignore(256,'\n');		// L51
 #if CYLINDER_DROPLET
 simProg << "Reading Cylindrical Slab Parameters" << std::endl;
-readParam >> buffer >> cylRad;		readParam.ignore(256,'\n');		// L51
-readParam >> buffer >> cylHeight;	readParam.ignore(256,'\n');		// L52
-readParam >> buffer >> rhor_rmin;	readParam.ignore(256,'\n');		// L53
-readParam >> buffer >> rhor_rdelta;	readParam.ignore(256,'\n');		// L54
+readParam >> buffer >> cylRad;		readParam.ignore(256,'\n');		// L52
+readParam >> buffer >> cylHeight;	readParam.ignore(256,'\n');		// L53
+readParam >> buffer >> rhor_rmin;	readParam.ignore(256,'\n');		// L54
+readParam >> buffer >> rhor_rdelta;	readParam.ignore(256,'\n');		// L55
 #else
 readParam.ignore(256, '\n');
 readParam.ignore(256, '\n');
@@ -130,21 +131,21 @@ readParam.ignore(256, '\n');
 readParam.ignore(256, '\n');
 #endif 
 
-readParam >> emptyLine;			readParam.ignore(256,'\n');		// L55
+readParam >> emptyLine;			readParam.ignore(256,'\n');		// L56
 #if LEES_EDWARDS_BC
 	simProg << "Reading homogeneous-shear parameters (Lees-Edwards)" << std::endl;
-	readParam >> buffer >> gammaDot;	readParam.ignore(256,'\n');		// L56
+	readParam >> buffer >> gammaDot;	readParam.ignore(256,'\n');	// L57
 #else
 	readParam.ignore(256, '\n');
 #endif // LEES_EDWARDS_BC
-readParam >> emptyLine;			readParam.ignore(256,'\n');		// L57
+readParam >> emptyLine;			readParam.ignore(256,'\n');		// L58
 
 #if SACF
 	simProg << "Reading parameters for the calculation of stress-autocorrelation" << std::endl;	
-	readParam >> buffer >> n_vars;		readParam.ignore(256,'\n');		// L58
-	readParam >> buffer >> corLevels;	readParam.ignore(256,'\n');		// L59
-	readParam >> buffer >> pCorr;		readParam.ignore(256,'\n');		// L60
-	readParam >> buffer >> mCorr;		readParam.ignore(256,'\n');		// L61
+	readParam >> buffer >> n_vars;		readParam.ignore(256,'\n');		// L59
+	readParam >> buffer >> corLevels;	readParam.ignore(256,'\n');		// L60
+	readParam >> buffer >> pCorr;		readParam.ignore(256,'\n');		// L61
+	readParam >> buffer >> mCorr;		readParam.ignore(256,'\n');		// L62
 #endif
 
 readParam.close();
