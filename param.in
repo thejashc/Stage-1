@@ -3,8 +3,8 @@ boxEdgeY            6.0
 boxEdgeZ            6.0
 initRho             6.00
 #
-All                 -40.0		# liquid-liquid interaction parameters
-Bll                 25.0		
+All                 0.0		# liquid-liquid interaction parameters
+Bll                 0.0		
 rcutoff             1.0		
 rd_cutoff           0.75
 #
@@ -28,8 +28,9 @@ sigma               6.0			# dissipation coeffecient
 dim                 3			# dimensions
 #
 dt                  0.001		# time parameters	
-stepMax             3000000
-saveCount           10000
+stepMax             800
+rstrtFWrtFreq       100
+saveCount           100
 psaveCount          50000
 #
 gR_radMin           0.0			# g(r) calculation
@@ -53,7 +54,7 @@ cylHeight           10.0
 rhor_rmin           0.00
 rhor_rdelta         0.05
 #
-gammaDot            0.13		# homogeneous shear-rate 
+gammaDot            0.06		# homogeneous shear-rate 
 #
 n_vars              4			# values for the auto-correlation function
 corLevels           20
