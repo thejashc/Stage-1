@@ -20,6 +20,17 @@ pNonIdeal[2][0] = 0.;
 pNonIdeal[2][1] = 0.;
 pNonIdeal[2][2] = 0.;
 
+// non-ideal
+pNonIdealKin[0][0] = 0.;
+pNonIdealKin[0][1] = 0.;
+pNonIdealKin[0][2] = 0.;
+pNonIdealKin[1][0] = 0.;
+pNonIdealKin[1][1] = 0.;
+pNonIdealKin[1][2] = 0.;
+pNonIdealKin[2][0] = 0.;
+pNonIdealKin[2][1] = 0.;
+pNonIdealKin[2][2] = 0.;
+
 // Dissipative
 pDissipative[0][0] = 0.;
 pDissipative[0][1] = 0.;
