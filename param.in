@@ -28,9 +28,9 @@ sigma               6.0			# dissipation coeffecient
 dim                 3			# dimensions
 #
 dt                  0.001		# time parameters	
-stepMax             800
-rstrtFWrtFreq       100
-saveCount           100
+stepMax             5000
+rstrtFWrtFreq       1000
+saveCount           1000
 psaveCount          50000
 #
 gR_radMin           0.0			# g(r) calculation
