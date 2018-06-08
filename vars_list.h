@@ -460,6 +460,10 @@ std::vector<Cell> ll; //linked list is a 2D vector
 // Gaussian random numbers
 // random device class instance, source of 'true' randomness for initializing random seed
 std::default_random_engine seed;
+#if RESTART
+std::default_random_engine seedRstrt;
+#endif
+
 // Mersenne twister PRNG, initialized with seed from previous random device instance
 // usage d{mean, std}
 // std::normal_distribution<double> d{0,1};
