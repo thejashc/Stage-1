@@ -91,16 +91,25 @@ class DPD {
 			counter 		= 0;						// initialize time, counter for file writing
 			pcounter 		= 0;						// initialize time, counter for file writing
 
+			#if !(RESTART)
 			createGridList();
             		dens_calculation();
 			forceCalc();
-	
+			
 			resetVar();
-		
-			std::ofstream enStats 		( "./data/en_data.dat"	);	// Kinetic, Potential and total energy
-			std::ofstream eosStats		( "./data/eos_data.dat"	);	// Mean Pressure and temperature data
-			std::ofstream pTensStats	( "./data/pTens.dat"	);	// Pressure tensor data
-			std::ofstream momStats		( "./data/mom_data.dat"	);	// pressure and temperature data
+			#endif
+
+			#if RESTART	
+				std::ofstream enStats 		( "./data/en_data.dat"	, std::ios_base::app);	// Kinetic, Potential and total energy
+				std::ofstream eosStats		( "./data/eos_data.dat"	, std::ios_base::app);	// Mean Pressure and temperature data
+				std::ofstream pTensStats	( "./data/pTens.dat"	, std::ios_base::app);	// Pressure tensor data
+				std::ofstream momStats		( "./data/mom_data.dat"	, std::ios_base::app);	// pressure and temperature data
+			#else
+				std::ofstream enStats 		( "./data/en_data.dat"	);	// Kinetic, Potential and total energy
+				std::ofstream eosStats		( "./data/eos_data.dat"	);	// Mean Pressure and temperature data
+				std::ofstream pTensStats	( "./data/pTens.dat"	);	// Pressure tensor data
+				std::ofstream momStats		( "./data/mom_data.dat"	);	// pressure and temperature data
+			#endif
 
 			// write parameters and initial configuration
 			vtkFileWritePosVel();
@@ -1749,6 +1758,7 @@ class DPD {
 
 			writeConfig.write( reinterpret_cast< const char * >( &npart ), sizeof( npart ) );
 			writeConfig.write( reinterpret_cast< const char * >( &step ), sizeof( step ) );
+			writeConfig.write( reinterpret_cast< const char * >( &seed ), sizeof( std::default_random_engine ) );
 
 			for (Particle& p : particles){
 				writeConfig.write( reinterpret_cast< const char * >( &p.r.X ), sizeof( p.r.X ) );
