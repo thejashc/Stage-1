@@ -10,6 +10,9 @@ if ( ! readConfig ) { simProg << "*** The restart file could not be opened/ does
 
 readConfig.read ( ( char * ) &npart,		sizeof( int ) );
 readConfig.read ( ( char * ) &step,		sizeof( int ) );
+readConfig.read ( ( char * ) &seedRstrt,	sizeof( std::default_random_engine ) );
+
+seed = seedRstrt;	// setting the seed for the uniform random number generation
 
 for ( j = 1 ; j <= npart ; ++ j ){	
 
@@ -30,4 +33,4 @@ readConfig.close();
 
 step++; // the simulation input should be used time-step of step + 1
 
-simProg << "\n Restarting simulation from " << step << ". Maximum number of steps is " << stepMax << std::endl;
+simProg << "\n Restarting simulation from " << step << ". The seed of the random number generator is  " << seed << std::endl;
