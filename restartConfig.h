@@ -24,7 +24,7 @@ for ( j = 1 ; j <= npart ; ++ j ){
 	readConfig.read ( ( char * ) &rand_gen_velz,	sizeof ( double ) );
 
 	particles.push_back( {1.0 ,1.0 , {xind, yind, zind} ,{rand_gen_velx, rand_gen_vely, rand_gen_velz}, 1} );
-	simProg << xind << " " << yind << " " << zind << " " << rand_gen_velx << " " << rand_gen_vely << " " << rand_gen_velz << std::endl;
+	// simProg << xind << " " << yind << " " << zind << " " << rand_gen_velx << " " << rand_gen_vely << " " << rand_gen_velz << std::endl;
 }
 
 simProg << "\n  " << npart << " particles positions and velocities are initialized" << std::endl;
