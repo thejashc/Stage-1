@@ -11,7 +11,7 @@ for ( n_vars_counter=0 ; n_vars_counter<n_vars ; ++n_vars_counter ){
 SxyC   =  pNonIdeal_temp[0][1]     / volume;		// conservative force contribution to Sxy
 SxyR   =  pRandom_temp[0][1]       / volume;		// random force contribution to Sxy
 SxyD   =  pDissipative_temp[0][1]  / volume;		// dissipative force contribution to Sxy
-SxyVxy =  pNonIdealKin_temp[0][1]  / volume;					// sum of v_{i,x} * v_{i,y} / volume
+SxyVxy =  pNonIdealKin_temp[0][1]  / volume;		// sum of v_{i,x} * v_{i,y} / volume
 
 // Syz  = ( pNonIdeal_temp[1][2] + pDissipative_temp[1][2] + pRandom_temp[1][2] ) / ( 1. * volume );
 // Szx  = ( pNonIdeal_temp[2][0] + pDissipative_temp[2][0] + pRandom_temp[2][0] ) / ( 1. * volume );
