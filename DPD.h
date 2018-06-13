@@ -37,7 +37,7 @@
 #define STYLE_MERCURY_DPM                0
 
 // CORRELATION FUNCTIONS
-#define SACF                             0
+#define SACF                             1
 #define SACF_TEST                        0
 
 // LEES-EDWARDS BOUNDARY CONDITION
@@ -183,6 +183,10 @@ class DPD {
 					writeConfig.close();
 				}
 
+				#if SACF 
+				if ( step % 100000 == 0 ) { writeCorr(); }
+				#endif
+
 				step += 1;						// increment time step
 
 				// if ( step % 1000 == 0 )
@@ -190,13 +194,10 @@ class DPD {
 
 			}//end time loop
 
-
 			// post-processing
 			// grCalc();	 
 			// velHistCalc();
-			#if SACF 
-			writeCorr();
-			#endif
+
 
 			// enStats.close();	// close file-streams
 			// eosStats.close();
@@ -424,9 +425,13 @@ class DPD {
 
 			#if SACF
 			// multi-tau correlation matrix definition
-			fCorr.resize(n_vars * n_vars);	// fcor stores the calculated correlation at a given level
+			fCorr.resize(n_vars * n_vars);		// fcor stores the calculated correlation at a given level
 			nCorr.resize(n_vars * n_vars);		// ncor stores the number of samples used for averaging the correlation
-			normalizeCorr.resize(n_vars * n_vars);	// normalized values for every stress vector element
+			
+			fCorrAv.resize(n_vars * n_vars);	// used for file-writing purpose at intermediate times
+
+			normalizeCorr.resize(n_vars * n_vars);		// normalized values for every stress vector element
+			normalizeCorrAv.resize(n_vars * n_vars);	// used for file-writing purpose at intermediate times
 
 			aCorr.resize(n_vars);		// acor stores the data used to calculate correlation
 			pointCorr.resize(n_vars);	// pointcor stores the array-indes at which the last data was stored
@@ -436,10 +441,12 @@ class DPD {
 
 				fCorr[i].resize( corLevels );
 				nCorr[i].resize( corLevels );
+				fCorrAv[i].resize( corLevels );
 
 				for (  j=0 ; j<corLevels ; ++j ){
 					fCorr[i][j].resize( pCorr2 );
 					nCorr[i][j].resize( pCorr2 );
+					fCorrAv[i][j].resize( pCorr2 );
 				}// j
 			}// i
 
@@ -480,8 +487,10 @@ class DPD {
 					pointCorr[i][j] = -1;
 
 			// initialize normalizeCorr
-			for ( i=0 ; i<n_vars*n_vars ; ++i )
+			for ( i=0 ; i<n_vars*n_vars ; ++i ){
 					normalizeCorr[i] = 0.;
+					normalizeCorrAv[i] = 0.;}
+					
 
 			// initialize sacpunt
 			sacpunt = 0;
@@ -908,9 +917,9 @@ class DPD {
 				#include "pNonIdealKinCalc.h"	
 
 				// calculate momentum
-				momX += particles[i].v.X;
-				momY += particles[i].v.Y;
-				momZ += particles[i].v.Z;
+				momX += particles[i].w.X;
+				momY += particles[i].w.Y;
+				momZ += particles[i].w.Z;
 
 			}
 
@@ -1264,13 +1273,15 @@ class DPD {
 			for ( i1=0 ; i1<n_vars*n_vars ; ++i1 ){
 				for( j1=0; j1<corLevels ; ++j1 ){
 					for( k1=0; k1<pCorr2 ; ++k1 ){
-						fCorr[i1][j1][k1] /= nCorr[i1][j1][k1];
+						fCorrAv[i1][j1][k1] = fCorr[i1][j1][k1] / nCorr[i1][j1][k1];
+						// fCorr[i1][j1][k1] /= nCorr[i1][j1][k1];
 					} // blocks
 				} // levels
 			} // variables
 
 			for ( i1=0 ; i1<n_vars*n_vars ; ++i1 )
-				normalizeCorr[i1] /= normalizeCorr_count;
+				normalizeCorrAv[i1] = normalizeCorr[i1] / normalizeCorr_count;
+				// normalizeCorr[i1] /= normalizeCorr_count;
 
 			// writing data -- writing level 0 and other levels separately
 			// Level 0
@@ -1278,7 +1289,7 @@ class DPD {
 
 				corrdata << k1+1 << "\t\t";
 				for( i1=0 ; i1<n_vars*n_vars ; ++i1){
-					corrdata << fCorr[i1][0][k1] << "\t\t" << normalizeCorr[i1] << "\t\t"; 
+					corrdata << fCorrAv[i1][0][k1] << "\t\t" << normalizeCorrAv[i1] << "\t\t"; 
 				}
 				corrdata << std::endl;
 			}
@@ -1289,7 +1300,7 @@ class DPD {
 					
 					corrdata << ( pCorr2 + k1 ) * pow(2. , j1 - 1) << "\t\t";
 					for ( i1=0 ; i1<n_vars*n_vars ; ++i1 ){
-						corrdata << fCorr[i1][j1][k1] << "\t\t" << normalizeCorr[i1] << "\t\t";
+						corrdata << fCorrAv[i1][j1][k1] << "\t\t" << normalizeCorrAv[i1] << "\t\t";
 					}
 					corrdata << std::endl;	
 				}
