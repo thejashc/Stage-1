@@ -367,9 +367,11 @@ double fBodyX;
 #if SACF
 std::vector<std::vector<std::vector<double>>> aCorr;	// raw-data on which the correlation will be performed
 std::vector<std::vector<std::vector<double>>> fCorr;	// the correlated data
+std::vector<std::vector<std::vector<double>>> fCorrAv;	// the averaged correlated data -- used for writing data
 std::vector<std::vector<std::vector<double>>> nCorr;	// the number of samples over which the data is correlated 
 std::vector<std::vector<int>> pointCorr;		// points to the latest element added 
 std::vector<double> normalizeCorr;		// used for normalizing the first point
+std::vector<double> normalizeCorrAv;		// used for normalizing the first point -- average value -- used for writing data
 
 unsigned int sacpunt;
 unsigned int n_vars;	// number of elements over which the correlation should be considered 
