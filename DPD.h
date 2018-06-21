@@ -37,11 +37,11 @@
 #define STYLE_MERCURY_DPM                0
 
 // CORRELATION FUNCTIONS
-#define SACF                             1
+#define SACF                             0
 #define SACF_TEST                        0
 
 // LEES-EDWARDS BOUNDARY CONDITION
-#define LEES_EDWARDS_BC                  0
+#define LEES_EDWARDS_BC                  1
 
 // DENSITY CALCULATION
 #define DENS_EXACT			 0
@@ -421,6 +421,11 @@ class DPD {
 
 			for ( i = solid_index[0] ; i <= solid_index[solidCount - 1] ; ++i )
 				particles[i].w -= velAvg;
+			#endif
+
+			#if LEES_EDWARDS_BC
+			dissipativeWork = 0.0;
+			randomWork      = 0.0;
 			#endif
 
 			#if SACF
@@ -866,6 +871,11 @@ class DPD {
 
 				// calculate velocity (integral time step)
 				particles[i].v = 0.5*( particles[i].w_old + particles[i].w );
+			
+				#if LEES_EDWARDS_BC
+					dissipativeWork += Vec3D::dot( particles[i].w, particles[i].fD ) * ( ( particles[i].r.Y >= 0.25 * boxEdge[y] ) && ( particles[i].r.Y <= 0.75 * boxEdge[y] ) );
+					randomWork      += Vec3D::dot( particles[i].w, particles[i].fR * inv_sqrt_dt );
+				#endif
 
 				// distribute velocities into velocity bins
 				if ( (step > velHist_tStart) && (step % velHist_tDelta == 0) ) {
@@ -991,18 +1001,22 @@ class DPD {
 		//--------------------------------------- Resetting variables--------------------------------------//
 		void resetVar(){
 			// energy reset to zero
-			pot_en   = 0.0;
-			kin_en   = 0.0;
-			tot_en   = 0.0;
-			vx2      = 0.0;
-			vy2      = 0.0;
-			vz2      = 0.0;
-			v2       = 0.0;
-			vxvy     = 0.0;
-			pressure = 0.0;
-			momX     = 0.0;
-			momY     = 0.0;
-			momZ     = 0.0;
+			pot_en		= 0.0;
+			kin_en		= 0.0;
+			tot_en		= 0.0;
+			vx2		= 0.0;
+			vy2		= 0.0;
+			vz2		= 0.0;
+			v2		= 0.0;
+			vxvy		= 0.0;
+			pressure	= 0.0;
+			momX		= 0.0;
+			momY		= 0.0;
+			momZ		= 0.0;
+			#if LEES_EDWARDS_BC
+			dissipativeWork = 0.0;
+			randomWork	= 0.0;
+			#endif
 	
 			// simProg << " fi[0], fi[fluidCount - 1], fluidCount " << fluid_index[0] << " " << fluid_index[1] << " " << fluidCount << std::endl;	
 			for ( i = 0; i < npart ; ++i )
@@ -1567,9 +1581,17 @@ class DPD {
 				vtkFileWritePosVel();
 
 				// Energy
+						#if LEES_EDWARDS_BC
+				enStats 	<< std::setw(20) << std::setprecision(15) << pot_en << "\t" 
+					        << std::setw(20) << std::setprecision(15) << kin_en << "\t" 
+				        	<< std::setw(20) << std::setprecision(15) << tot_en << "\t"
+				        	<< std::setw(20) << std::setprecision(15) << dissipativeWork << "\t"
+				        	<< std::setw(20) << std::setprecision(15) << randomWork << std::endl;
+						#else
 				enStats 	<< std::setw(20) << std::setprecision(15) << pot_en << "\t" 
 					        << std::setw(20) << std::setprecision(15) << kin_en << "\t" 
 				        	<< std::setw(20) << std::setprecision(15) << tot_en << std::endl;
+						#endif
 
 				// Density, Temperature, Average Pressure
 				eosStats 	<< std::setw(20) << std::setprecision(15) << rho 	<< "\t" 
