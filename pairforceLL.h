@@ -79,7 +79,6 @@ if ( r2 <= rc2 ) {
 	thetaij = std::sqrt(12.0)*(uniRand-0.5); 
 	magRand = sigma * wCij * thetaij;
 	
-	
 	// std::cout << uniRand << std::endl;
 	
 	fRij.X = magRand * capRij.X;
