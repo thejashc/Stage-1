@@ -41,7 +41,7 @@ if ( r2 <= rc2 ) {
 
 	#if RANDOM_DISSIPATIVE
 	// random force	
-	uniRand = d(rd); 
+	uniRand = randNumGen(seed);
 	thetaij = std::sqrt(12.0)*( uniRand-0.5 ); 
 	magRand = sigma * wCij * thetaij;
 	

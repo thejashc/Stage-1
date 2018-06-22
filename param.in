@@ -1,25 +1,25 @@
-boxEdgeX            6.0		# box dimensions
-boxEdgeY            6.0
-boxEdgeZ            6.0
+boxEdgeX            50.0		# box dimensions
+boxEdgeY            50.0
+boxEdgeZ            100.0
 initRho             6.00
 #
-All                 0.0		# liquid-liquid interaction parameters
-Bll                 0.0		
+All                 -40.0		# liquid-liquid interaction parameters
+Bll                 25.0		
 rcutoff             1.0		
 rd_cutoff           0.75
 #
-Ass                 -40.0		# solid-solid interaction parameters
+Ass                 -40.0		# WALL_ON 
 Bss                 25.0		
-kWall               3.0
+kWall               12.5
 #
-Asl                 -10.0		# solid-liquid interaction paramters
+Asl                 -10.0		# WALL_ON 
 Bsl                 +25.0
-Brep                +00.0
+Brep                +20.0
 wallPenetration     0.25
 rcWcutoff           1.0	 
 rdWcutoff           0.75
 #
-wallHeight          2.0			# wall geometrical parameters
+wallHeight          2.0			# WALL_ON
 initWallRho         6.51
 fBodyX              0.1
 #
@@ -28,9 +28,9 @@ sigma               6.0			# dissipation coeffecient
 dim                 3			# dimensions
 #
 dt                  0.001		# time parameters	
-stepMax             5000
-rstrtFWrtFreq       1000
-saveCount           1000
+stepMax             1000
+rstrtFWrtFreq       10000
+saveCount           100
 psaveCount          50000
 #
 gR_radMin           0.0			# g(r) calculation
@@ -44,19 +44,25 @@ velHist_velMax       25.0
 velHist_tStart       50000
 velHist_tDelta       100
 #
-slabWidth           25.0		# density distribution parameters
+slabWidth           25.0		# PLANAR_SLAB
 rhoZ_Zmin           0.00		
 rhoZ_Zdelta         0.05	
 segPlane_zDelta     0.05
 #
-cylRad              4.0			# reading cylindrical droplet parameters
+cylRad              4.0			# CYLINDRICAL_SLAB 
 cylHeight           10.0
 rhor_rmin           0.00
 rhor_rdelta         0.05
 #
-gammaDot            0.06		# homogeneous shear-rate 
+gammaDot            0.06		# LEES_EDWARDS_BC
 #
-n_vars              4			# values for the auto-correlation function
+n_vars              4			# SACF 
 corLevels           20
 pCorr               64
 mCorr               2
+#
+bufferLength        10.0
+capLen              50.0
+capRad              10.0
+capWallWdth         1.5
+resWdth             15.0

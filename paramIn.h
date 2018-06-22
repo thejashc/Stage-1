@@ -146,6 +146,21 @@ readParam >> emptyLine;			readParam.ignore(256,'\n');		// L58
 	readParam >> buffer >> corLevels;	readParam.ignore(256,'\n');		// L60
 	readParam >> buffer >> pCorr;		readParam.ignore(256,'\n');		// L61
 	readParam >> buffer >> mCorr;		readParam.ignore(256,'\n');		// L62
+#else
+	readParam.ignore(256, '\n');
+	readParam.ignore(256, '\n');
+	readParam.ignore(256, '\n');
+	readParam.ignore(256, '\n');
+#endif
+readParam >> emptyLine;			readParam.ignore(256,'\n');			// L63
+
+#if CAPILLARY_TUBE
+	simProg << "Reading parameters for the capillary tube" << std::endl;	
+	readParam >> buffer >> bufferLen;	readParam.ignore(256,'\n');		// L64 
+	readParam >> buffer >> capLen;		readParam.ignore(256,'\n');		// L64 
+	readParam >> buffer >> capRad;		readParam.ignore(256,'\n');		// L64 
+	readParam >> buffer >> capWallWdth;	readParam.ignore(256,'\n');		// L64 
+	readParam >> buffer >> resWdth;		readParam.ignore(256,'\n');		// L64 
 #endif
 
 readParam.close();

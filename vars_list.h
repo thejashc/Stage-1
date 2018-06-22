@@ -87,14 +87,13 @@ double xCOM;
 double yCOM;
 double zCOM;
 
-double pCount;
 #elif PLANAR_SLAB
 double slabWidth;
 double xCOM;
 double yCOM;
 double zCOM;
 
-double pCount;
+unsigned int pCount;
 #endif
 
 // Cell list variables
@@ -253,160 +252,184 @@ int ig;		// index for r
 
 // rhoZ calculation-- liquid density calculation
 #if PLANAR_SLAB
-double rhoZ_Zmin;		// minimum Z for rhoZ
-double rhoZ_Zdelta;		// thickness of differential slab 
-double rhoZ_Zmax;		// maximum Z for rhoZ
-double vol;			// volume of differential slab
+	double rhoZ_Zmin;		// minimum Z for rhoZ
+	double rhoZ_Zdelta;		// thickness of differential slab 
+	double rhoZ_Zmax;		// maximum Z for rhoZ
+	double vol;			// volume of differential slab
+	
+	int rhoZ_bins;			// number of bins for rhoZ
+	
+	std::vector<double> rhoZ;// keeps count of rhoZ at given Z
+	
+	int iRhoZ;			// index -- bookkeeping
+	
+	double Zpos;
+	
+	char filename[40];		// filename for data writing
 
-int rhoZ_bins;			// number of bins for rhoZ
-
-std::vector<double> rhoZ;// keeps count of rhoZ at given Z
-
-int iRhoZ;			// index -- bookkeeping
-
-double Zpos;
-
-char filename[40];		// filename for data writing
-#if WALL_ON
-double segPlane_zMin;
-double segPlane_zMax;
-double segPlane_zDelta;
-int segPlane_bins;
-int segPlane_ind;
-
-double Brep;
-double wallLowPos;
-double wallTopPos;
-double wallLowDist;
-double wallTopDist;
-double wallPenetration;
-double kWall;
-double wallTemp;
-
-unsigned int solidCount;
-
-std::vector<double> segPlane_xCOM;
-std::vector<double> segPlane_zCOM;
-std::vector<int> segPlane_count;
-
-#endif
 #elif CYLINDER_DROPLET
-double rhor_rmin;
-double rhor_rdelta;
-double rhor_rmax;
-double vol;
-
-int rhor_bins;
-
-std::vector<double> rhor;
-
-int iRhor;
-double radPos;
-
-char filename[40];
-#endif
+	double rhor_rmin;
+	double rhor_rdelta;
+	double rhor_rmax;
+	double vol;
+	
+	int rhor_bins;
+	
+	std::vector<double> rhor;
+	
+	int iRhor;
+	double radPos;
+	
+	char filename[40];
+#endif // PLANAR_SLAB
 
 // defining wall
 #if WALL_ON
-double wallHeight;
-double initWallRho;
+	double wallHeight;
+	double initWallRho;
+	
+	//double capRad;
+	//double capRadSqr;
+	double capSphXc;
+	double capSphYc;
+	double capSphZc;
+	
+	double fSL;
+	double w1P;
+	double w2P;
+	double root2;
+	double Ass;
+	double Bss;
+	double Asl;
+	double Bsl;
+	double fWallcutoff;
+	
+	double rcWcutoff;
+	double rdWcutoff;
+	double rcW2;
+	double rdW2;
+	double rcWby2;
+	double rdWby2;
+	
+	Vec3D fCWij;
+	Vec3D fCW;
+	
+	std::vector<std::vector<int>> nZ;
+	int nZ_indz;
+	int nZ_indx;
+	double nZ_zbinWidth;
+	double nZ_xbinWidth;
+	int nZ_xbins;
+	int nZ_zbins;
+	
+	double nZ_xMin;
+	double nZ_xMax;
+	double nZ_zMin;
+	double nZ_zMax;
+	
+	double nZ_tStart;
+	
+	double segPlane_zMin;
+	double segPlane_zMax;
+	double segPlane_zDelta;
+	int segPlane_bins;
+	int segPlane_ind;
 
-double capRad;
-double capRadSqr;
-double capSphXc;
-double capSphYc;
-double capSphZc;
+	double Brep;
+	double wallLowPos;
+	double wallTopPos;
+	double wallLowDist;
+	double wallTopDist;
+	double wallPenetration;
+	double kWall;
+	double wallTemp;
 
-double fSL;
-double w1P;
-double w2P;
-double root2;
-double Ass;
-double Bss;
-double Asl;
-double Bsl;
-double fWallcutoff;
+	unsigned int solidCount;
 
-double rcWcutoff;
-double rdWcutoff;
-double rcW2;
-double rdW2;
-double rcWby2;
-double rdWby2;
+	std::vector<double> segPlane_xCOM;
+	std::vector<double> segPlane_zCOM;
+	std::vector<int> segPlane_count;
 
-Vec3D fCWij;
-Vec3D fCW;
+	#if LOWER_WALL_ON
+		double zindLW_min;
+		double zindLW_max;
+	
+		unsigned int lwp;					// counts the number of lower wall particles
+		
+		double zOld;
+		double tApp;
+		double tSep;
+	#endif
+	#if UPPER_WALL_ON
+		double zindUW_min;
+		double zindUW_max;
+		
+		unsigned int uwp;					// counts the number of upper wall particles
+	#endif
 
-std::vector<std::vector<int>> nZ;
-int nZ_indz;
-int nZ_indx;
-double nZ_zbinWidth;
-double nZ_xbinWidth;
-int nZ_xbins;
-int nZ_zbins;
+	#if CAPILLARY_TUBE
+		double cylCenterX;
+		double cylCenterY;
+		double bufferLen;
+		double capRad;
+		double capLen;
+		double capWallWdth;
+		double resWdth;
+		double capThick;
 
-double nZ_xMin;
-double nZ_xMax;
-double nZ_zMin;
-double nZ_zMax;
+		bool innerRadius;					// to define the region within the inner cylinder
+		bool outerRadius;
 
-double nZ_tStart;
+		unsigned int pCount;
+	#endif
 
-#if LOWER_WALL_ON
-double zindLW_min;
-double zindLW_max;
-#endif
-#if UPPER_WALL_ON
-double zindUW_min;
-double zindUW_max;
-#endif
-#endif
+#endif // WALL_ON
 
 #if BODY_FORCE
-double fBodyX;
+	double fBodyX;
 #endif
 
 #if SACF
-std::vector<std::vector<std::vector<double>>> aCorr;	// raw-data on which the correlation will be performed
-std::vector<std::vector<std::vector<double>>> fCorr;	// the correlated data
-std::vector<std::vector<std::vector<double>>> fCorrAv;	// the averaged correlated data -- used for writing data
-std::vector<std::vector<std::vector<double>>> nCorr;	// the number of samples over which the data is correlated 
-std::vector<std::vector<int>> pointCorr;		// points to the latest element added 
-std::vector<double> normalizeCorr;		// used for normalizing the first point
-std::vector<double> normalizeCorrAv;		// used for normalizing the first point -- average value -- used for writing data
-
-unsigned int sacpunt;
-unsigned int n_vars;	// number of elements over which the correlation should be considered 
-unsigned int n_vars_counter;	// number of elements over which the correlation should be considered 
-unsigned int corLevels; // number of levels in the multi-tau correlator
-unsigned int pCorr;	// number of blocks within a level
-unsigned int pCorr2;	// pCorr/2 
-unsigned int mCorr;	// number of blocks over data is averaged
-unsigned int point;	// pointer in the aCorr array
-unsigned int normalizeCorr_count;
-unsigned int nf1;
-unsigned int nf2;
-unsigned int nf3;
-unsigned int n_base;
-
-double Sxx;
-double SxyC;
-double SxyR;
-double SxyD;
-double SxyVxy;
-double Sxz;
-
-double Syx;
-double Syy;
-double Syz;
-
-double Szx;
-double Szy;
-double Szz;
-
-double Nxy;
-double Nyz;
-double Nzx;
+	std::vector<std::vector<std::vector<double>>> aCorr;	// raw-data on which the correlation will be performed
+	std::vector<std::vector<std::vector<double>>> fCorr;	// the correlated data
+	std::vector<std::vector<std::vector<double>>> fCorrAv;	// the averaged correlated data -- used for writing data
+	std::vector<std::vector<std::vector<double>>> nCorr;	// the number of samples over which the data is correlated 
+	std::vector<std::vector<int>> pointCorr;		// points to the latest element added 
+	std::vector<double> normalizeCorr;		// used for normalizing the first point
+	std::vector<double> normalizeCorrAv;		// used for normalizing the first point -- average value -- used for writing data
+	
+	unsigned int sacpunt;
+	unsigned int n_vars;	// number of elements over which the correlation should be considered 
+	unsigned int n_vars_counter;	// number of elements over which the correlation should be considered 
+	unsigned int corLevels; // number of levels in the multi-tau correlator
+	unsigned int pCorr;	// number of blocks within a level
+	unsigned int pCorr2;	// pCorr/2 
+	unsigned int mCorr;	// number of blocks over data is averaged
+	unsigned int point;	// pointer in the aCorr array
+	unsigned int normalizeCorr_count;
+	unsigned int nf1;
+	unsigned int nf2;
+	unsigned int nf3;
+	unsigned int n_base;
+	
+	double Sxx;
+	double SxyC;
+	double SxyR;
+	double SxyD;
+	double SxyVxy;
+	double Sxz;
+	
+	double Syx;
+	double Syy;
+	double Syz;
+	
+	double Szx;
+	double Szy;
+	double Szz;
+	
+	double Nxy;
+	double Nyz;
+	double Nzx;
 #endif
 
 // momentum calculation

@@ -1,22 +1,19 @@
-capRad = 10.0;
-capRadSqr = pow(capRad, 2.);
-pCount = 0;
-
-// co-ordinates of center of spherical Cap
-capSphXc = boxEdge[x] / 2.;
-capSphYc = boxEdge[y] / 2.;
-capSphZc = wallHeight;
-
-// Droplet Initialization	
+// Set max and min dimensions of boxy
 xind_min = 0.;
 yind_min = 0.;
-zind_min = wallHeight;
+zind_min = bufferLen + capLen + capWallWdth; 
 xind_max = boxEdge[x];
 yind_max = boxEdge[y];
-zind_max = wallHeight + capRad;
+zind_max = boxEdge[z] - resWdth;
+
+pCount = 0;
+
+aCube = pow( 1. / initRho, 1./3. );
+
+xind = xind_min;
 
 simProg << "***************************************************" << std::endl;
-simProg << "Started initialization of the spherical cap of fluid " << std::endl;
+simProg << "Started initialization of the reservoir" << std::endl;
 
 simProg << "The minimum x-coord of fluid particle is: "<< xind_min << std::endl;
 simProg << "The minimum y-coord of fluid particle is: "<< yind_min << std::endl;
@@ -25,11 +22,6 @@ simProg << "The minimum z-coord of fluid particle is: "<< zind_min << std::endl;
 simProg << "The maximum x-coord of fluid particle is: "<< xind_max << std::endl;
 simProg << "The maximum y-coord of fluid particle is: "<< yind_max << std::endl;
 simProg << "The maximum z-coord of fluid particle is: "<< zind_max << std::endl;
-
-simProg << "The radius of the spherical cap is:       "<< capRad << std::endl;
-
-xind = xind_min;
-aCube = pow( 1. / initRho, 1./3. );
 
 // Particle position intialization in a crystal structure 
 while ( xind < xind_max){
@@ -42,18 +34,18 @@ while ( xind < xind_max){
 			rand_gen_vely = ((double) rand() / (RAND_MAX));
 			rand_gen_velz = ((double) rand() / (RAND_MAX));
 
-			// initializing particle radius, mass, position and velocity and type
-			// check if ( x - xp )^2 + ( y - yp )^2 + ( z - zp )^2 <= capRadSqr
-			if ( pow( xind - capSphXc , 2. ) + pow( yind - capSphYc, 2. ) + pow( zind - capSphZc , 2. ) <= capRadSqr )
-				particles.push_back({0.5,1.0,{xind, yind, zind},{rand_gen_velx, rand_gen_vely, rand_gen_velz},1});
-				pCount++;
+			// initializing particle radius, mass, position and velocity
+			particles.push_back({1.0,1.0,{xind, yind, zind},{rand_gen_velx, rand_gen_vely, rand_gen_velz}, 1});
+			pCount++;
 
 			// update zind
 			zind += aCube * rcutoff;
+
 		}// end of zind
 		yind += aCube * rcutoff;
 	}// end of yind			
 	xind += aCube * rcutoff;
 }// end of xind
+
 simProg << "finished initialization of  " << pCount << std::endl;
 simProg << "***************************************************" << std::endl;
