@@ -289,7 +289,8 @@ int ig;		// index for r
 	double initWallRho;
 	
 	//double capRad;
-	//double capRadSqr;
+	//double capRadSqr;	
+	double strength;
 	double capSphXc;
 	double capSphYc;
 	double capSphZc;
