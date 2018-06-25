@@ -4,7 +4,7 @@ yind_min = 0.;
 zind_min = bufferLen + capLen + capWallWdth; 
 xind_max = boxEdge[x];
 yind_max = boxEdge[y];
-zind_max = boxEdge[z] - resWdth;
+zind_max = bufferLen + capLen + capWallWdth + resWdth;
 
 pCount = 0;
 
