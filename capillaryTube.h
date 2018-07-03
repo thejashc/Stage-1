@@ -1,6 +1,5 @@
 cylCenterX		= boxEdge[x] / 2.;
 cylCenterY		= boxEdge[y] / 2.;
-capRad			= boxEdge[x] / 10.;
 capThick		= 2.;
 pCount = 0;
 
@@ -39,7 +38,8 @@ while ( zind < zind_max ){
 
 				// initializing particle radius, mass, position and velocity
 				// if ( xind*xind + yind*yind + zind*zind <= radSqr )
-				particles.push_back({0.5,1.0,{xind, yind, zind},{0., 0., 0.},0});
+				particles.push_back( { 1.0, 1.0, {xind, yind, zind}, {0., 0., 0.}, 0} );
+				Asl.push_back( { -5.0 } );	// lyophobic capillary
 				pCount++;
 
 			}// inside cylinder
@@ -81,17 +81,18 @@ while ( xind < xind_max){
 			if ( !(outerRadius) ){
 				// initializing particle radius, mass, position and velocity
 				particles.push_back({0.5,1.0,{xind, yind, zind},{0., 0., 0.},0});
+				Asl.push_back( { asl } );	// lyophilic wall 
 				pCount++;
 			}
 
 			// update zind
 			zind += aCube * rcutoff;
 
-		}// end of zind
+		} // end of zind
 		yind += aCube * rcutoff;
-	}// end of yind			
+	} // end of yind			
 	xind += aCube * rcutoff;
-}// end of xind
+} // end of xind
 
 simProg << "finished initialization of  " << pCount << std::endl;
 simProg << "***************************************************" << std::endl;
