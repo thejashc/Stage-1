@@ -3,24 +3,82 @@ for ( i = fluid_index[0] ; i <= fluid_index[fluidCount-1] ; ++i ) {
 	particles[i].w_old = particles[i].w;
 
 	#if WALL_ON
-		// additional force from soft potential to avoid particles from entering into wall
-		wallLowDist = particles[i].r.Z - ( wallLowPos - wallPenetration );
-		wallTopDist = particles[i].r.Z - ( wallTopPos + wallPenetration );
 
-		if ( wallLowDist < 0. ){
-			strength = 0.5 * ( 1 + tanh( ( step - 2e4 ) / 5e3 ) );  
-			particles[i].fext.Z = -Brep * wallLowDist * ( strength );		// Lower wall -- act on particles below threshold: wallHeight + tolerance
-		}
-		else if ( wallTopDist > 0. ){
-			strength = 0.5 * ( 1 + tanh( ( step - 2e4 ) / 5e3 ) );  
-			particles[i].fext.Z = -Brep * wallTopDist * ( strength );		// Upper wall -- act on particles above threshold: wallHeight - tolerance
-		}
+		#if UPPER_WALL && LOWER_WALL
 
-		//simProg << "step = " << step << ", ( step > 50 ) " << ( step > 50 ) << ", particles[i].fext.Z " << particles[i].fext.Z << std::endl;
+			// additional force from soft potential to avoid particles from entering into wall
+			wallLowDist = particles[i].r.Z - ( wallLowPos - wallPenetration );
+			wallTopDist = particles[i].r.Z - ( wallTopPos + wallPenetration );
 
-		// no external force in X and Y directions : ** Buggy : this should be calculated for the wall-normal direction ** 
-		particles[i].fext.X = 0.; 
-		particles[i].fext.Y = 0.;
+			if ( wallLowDist < 0. ){
+				strength = 0.5 * ( 1 + tanh( ( step - 2e4 ) / 5e3 ) );  
+				particles[i].fext.Z = -Brep * wallLowDist * ( strength );		// Lower wall -- act on particles below threshold: wallHeight + tolerance
+			}
+			else if ( wallTopDist > 0. ){
+				strength = 0.5 * ( 1 + tanh( ( step - 2e4 ) / 5e3 ) );  
+				particles[i].fext.Z = -Brep * wallTopDist * ( strength );		// Upper wall -- act on particles above threshold: wallHeight - tolerance
+			}
+
+			//simProg << "step = " << step << ", ( step > 50 ) " << ( step > 50 ) << ", particles[i].fext.Z " << particles[i].fext.Z << std::endl;
+
+			// no external force in X and Y directions : ** Buggy : this should be calculated for the wall-normal direction ** 
+			particles[i].fext.X = 0.; 
+			particles[i].fext.Y = 0.;
+
+		#elif !(UPPER_WALL) && LOWER_WALL
+
+			// additional force from soft potential to avoid particles from entering into wall
+			wallLowDist = particles[i].r.Z - ( wallLowPos - wallPenetration );
+
+			if ( wallLowDist < 0. ){
+				strength = 0.5 * ( 1 + tanh( ( step - 2e4 ) / 5e3 ) );  
+				particles[i].fext.Z = -Brep * wallLowDist * ( strength );		// Lower wall -- act on particles below threshold: wallHeight + tolerance
+			}
+
+			//simProg << "step = " << step << ", ( step > 50 ) " << ( step > 50 ) << ", particles[i].fext.Z " << particles[i].fext.Z << std::endl;
+
+			// no external force in X and Y directions : ** Buggy : this should be calculated for the wall-normal direction ** 
+			particles[i].fext.X = 0.; 
+			particles[i].fext.Y = 0.;
+
+		#elif CAPILLARY_TUBE
+			
+			// (1)  wall force can be in the region where the reservoir separating wall is present
+			wallLowDist = particles[i].r.Z - ( wallLowPos - wallPenetration );
+
+			Rij.X	=  ( cylCenterX - particles[i].r.X );		// Finding the inward normal to the cylinder
+			Rij.Y	=  ( cylCenterY - particles[i].r.Y );
+			Rij.Z	=  0.;
+
+			r2	= Rij.getLengthSquared();
+			dist	= std::sqrt( r2 );
+			
+			rInner	= capRad + wallPenetration;
+			rOuter  = capRad + capThick; 
+
+			penDist = dist - rInner;	// distance penetrated
+			perDist = dist - rOuter;	// distance from the capillary tube periphery
+			inCapTube   = ( ( particles[i].r.Z > capTubeStart ) && ( particles[i].r.Z < capTubeEnd ) );
+			notInPoreEntry = dist > capRad;
+
+			// the force acts only: (1.1) if it has penetrated beyond wallPenetration inside capillary tube [if]
+			// 		   	(1.2) if it is inside the wall region next to capillary [else if]
+			if ( wallLowDist < 0. && particles[i].r.Z > ( wallLowPos - capWallWdth ) && notInPoreEntry ){
+
+				particles[i].fext.X = 0;
+				particles[i].fext.Y = 0;
+				particles[i].fext.Z = -Brep * wallLowDist ; 
+			}
+			else if ( ( innerRadius >= 0 ) && ( outerRadius < 0 ) && inCapTube ){
+
+				capRij =  Rij / dist;
+
+				particles[i].fext.X = Brep * innerRadius * capRij.X ;
+				particles[i].fext.Y = Brep * innerRadius * capRij.Y ;
+				particles[i].fext.Z =  0.;
+			}
+
+		#endif
 	#endif // WALL_ON
 
 	// update velocities (mid-step)
