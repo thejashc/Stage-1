@@ -1,6 +1,6 @@
 Rij = particles[i].r - ( particles[j].r + dR );	
 #if RANDOM_DISSIPATIVE
-wij = particles[i].w - particles[j].w;
+	wij = particles[i].w - particles[j].w;
 #endif
 r2 = Rij.getLengthSquared();
 
