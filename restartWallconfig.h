@@ -14,8 +14,10 @@ for ( j = 1 ; j <= npart ; ++ j ){
 	readConfig.read ( ( char * ) &rand_gen_vely, sizeof ( double ) );
 	readConfig.read ( ( char * ) &rand_gen_velz, sizeof ( double ) );
 
-	if ( zind <= wallHeight || zind >= boxEdge[z] - wallHeight )
+	if ( zind <= wallHeight || zind >= boxEdge[z] - wallHeight ) {
 		particles.push_back( { 1.0 ,1.0 , {xind, yind, zind} ,{0., 0., 0.} } );
+		Asl.push_back( { asl } );	// lyophilic wall 
+	}
 	// std::cout << xind << " " << yind << " " << zind << " " << rand_gen_velx << " " << rand_gen_vely << " " << rand_gen_velz << std::endl;
 }
 
