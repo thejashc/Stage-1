@@ -28,7 +28,7 @@ readParam >> buffer >> kWall;		readParam.ignore(256,'\n');		// L13
 readParam >> emptyLine ;		readParam.ignore(256,'\n');		// L14
 
 simProg << "Reading Solid Liquid Interaction Parameters" << std::endl;
-readParam >> buffer >> Asl;		readParam.ignore(256,'\n');		// L15
+readParam >> buffer >> asl;		readParam.ignore(256,'\n');		// L15
 readParam >> buffer >> Bsl;		readParam.ignore(256,'\n');		// L16
 readParam >> buffer >> Brep;		readParam.ignore(256,'\n');		// L17
 readParam >> buffer >> wallPenetration;	readParam.ignore(256,'\n');		// L18
@@ -157,10 +157,10 @@ readParam >> emptyLine;			readParam.ignore(256,'\n');			// L63
 #if CAPILLARY_TUBE
 	simProg << "Reading parameters for the capillary tube" << std::endl;	
 	readParam >> buffer >> bufferLen;	readParam.ignore(256,'\n');		// L64 
-	readParam >> buffer >> capLen;		readParam.ignore(256,'\n');		// L64 
-	readParam >> buffer >> capRad;		readParam.ignore(256,'\n');		// L64 
-	readParam >> buffer >> capWallWdth;	readParam.ignore(256,'\n');		// L64 
-	readParam >> buffer >> resWdth;		readParam.ignore(256,'\n');		// L64 
+	readParam >> buffer >> capLen;		readParam.ignore(256,'\n');		// L65 
+	readParam >> buffer >> capRad;		readParam.ignore(256,'\n');		// L66 
+	readParam >> buffer >> capWallWdth;	readParam.ignore(256,'\n');		// L67 
+	readParam >> buffer >> resWdth;		readParam.ignore(256,'\n');		// L68 
 #endif
 
 readParam.close();
@@ -186,11 +186,20 @@ rc2 = pow( rcutoff , 2);	// square of cut-off distance
 rd2 = pow( rd_cutoff,2);	// square of cut-off distance
 
 #if WALL_ON
-rcW2 = pow( rcWcutoff , 2.);	// square of cut-off distance for solid liquid interactions -- attractive
-rdW2 = pow( rdWcutoff , 2.);	// square of cut-off distance for solid-liquid interactions -- repulsive
+	rcW2 = pow( rcWcutoff , 2.);	// square of cut-off distance for solid liquid interactions -- attractive
+	rdW2 = pow( rdWcutoff , 2.);	// square of cut-off distance for solid-liquid interactions -- repulsive
 
-wallLowPos = wallHeight;
-wallTopPos = boxEdge[z] - wallHeight;
+	#if UPPER_WALL_ON && LOWER_WALL_ON
+		wallLowPos = wallHeight;
+		wallTopPos = boxEdge[z] - wallHeight;
+	#elif LOWER_WALL_ON && !(UPPER_WALL_ON)
+		wallLowPos = wallHeight;
+	#elif CAPILLARY_TUBE
+		wallLowPos   = bufferLen + capLen + capWallWdth;
+		capTubeStart = bufferLen;
+		capTubeEnd   = bufferLen + capLen;
+
+	#endif
 #endif
 
 //*****************************************************************************************//
