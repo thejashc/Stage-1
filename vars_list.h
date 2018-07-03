@@ -301,7 +301,8 @@ int ig;		// index for r
 	double root2;
 	double Ass;
 	double Bss;
-	double Asl;
+	double asl;
+	std::vector<double> Asl;	// Asl is a vector offering variable wettabilities 
 	double Bsl;
 	double fWallcutoff;
 	
@@ -380,8 +381,23 @@ int ig;		// index for r
 
 		bool innerRadius;					// to define the region within the inner cylinder
 		bool outerRadius;
+		bool inCapTube;
+		bool notInPoreEntry;
 
 		unsigned int pCount;
+
+		double capTubeStart;
+		double capTubeEnd;
+		double penDist;
+		double perDist;
+
+		double zOld;
+		double tApp;
+		double tSep;
+
+
+		double rInner;
+		double rOuter;
 	#endif
 
 #endif // WALL_ON
@@ -487,7 +503,9 @@ std::vector<Cell> ll; //linked list is a 2D vector
 
 // Gaussian random numbers
 // random device class instance, source of 'true' randomness for initializing random seed
-std::default_random_engine seed;
+// std::default_random_engine seed;
+std::random_device rdev{};
+std::default_random_engine seed{rdev()};
 #if RESTART
 std::default_random_engine seedRstrt;
 #endif
