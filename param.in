@@ -1,7 +1,7 @@
 boxEdgeX            50.0		# box dimensions
 boxEdgeY            50.0
 boxEdgeZ            100.0
-initRho             6.00
+initRho             5.00
 #
 All                 -40.0		# liquid-liquid interaction parameters
 Bll                 25.0		
@@ -12,25 +12,25 @@ Ass                 -40.0		# WALL_ON
 Bss                 25.0		
 kWall               12.5
 #
-Asl                 -10.0		# WALL_ON 
-Bsl                 +25.0
+asl                 -10.0		# WALL_ON 
+bsl                 +25.0
 Brep                +20.0
 wallPenetration     0.25
 rcWcutoff           1.0	 
 rdWcutoff           0.75
 #
 wallHeight          2.0			# WALL_ON
-initWallRho         6.51
+initWallRho         5.00
 fBodyX              0.1
 #
 kBT                 1.0 		# temperature	
 sigma               6.0			# dissipation coeffecient
 dim                 3			# dimensions
 #
-dt                  0.001		# time parameters	
-stepMax             1000
+dt                  0.01		# time parameters	
+stepMax             5
 rstrtFWrtFreq       10000
-saveCount           100
+saveCount           1
 psaveCount          50000
 #
 gR_radMin           0.0			# g(r) calculation
@@ -62,7 +62,7 @@ pCorr               64
 mCorr               2
 #
 bufferLength        10.0
-capLen              50.0
+capLen              25.0
 capRad              10.0
 capWallWdth         1.5
-resWdth             15.0
+resWdth             10.0
