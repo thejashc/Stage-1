@@ -26,7 +26,11 @@ if ( r2 <= rcW2 ) {
 		particles[j].dens_new += rho_temp;
 	}
 
-	term1 = Asl * wCij;
+	if ( particles[i].type == 0 ) 
+		term1 = Asl[i] * wCij;
+	else
+		term1 = Asl[j] * wCij;
+
 	term3 = term1 + term2; 
 	fCWij.X = term3 * capRij.X; 
 	fCWij.Y = term3 * capRij.Y; 
