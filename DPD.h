@@ -165,6 +165,14 @@ class DPD {
 					if ( step % 100000 == 0 ) { writeCorr(); }
 				#endif
 
+				// change wettability of the capillary tube
+				// from lyophobic to lyophilic
+				#if CAPILLARY_TUBE
+					if ( step == 40000) 
+						for ( i = solid_index[0] ; i <= solid_index[solidCount-1] ; ++i )
+							Asl[i] = asl;
+				#endif 
+
 				step += 1;						// increment time step
 
 				// if ( step % 1 == 0 )
@@ -675,15 +683,15 @@ class DPD {
 								// simProg << "j1 "<<  mi[x] << " " << mi[y] << " " << mi[z] << " " << jj << " " << j << std::endl;
 
 								#if WALL_ON
-								if ( particles[i].type == 1 && particles[j].type == 1 ){
-										#include "pairforceLL.h"
-								} // liquid liquid interaction
-								else if ( particles[i].type == 0 && particles[j].type == 0 ){
-										 #include "pairforceSS.h"
-								} // solid solid interaction
-								else{
-										#include "pairforceSL.h"
-								} // solid liquid interaction
+									if ( particles[i].type == 1 && particles[j].type == 1 ){
+											#include "pairforceLL.h"
+									} // liquid liquid interaction
+									else if ( particles[i].type == 0 && particles[j].type == 0 ){
+											 #include "pairforceSS.h"
+									} // solid solid interaction
+									else{
+											#include "pairforceSL.h"
+									} // solid liquid interaction
 								#else
 										#include "pairforceLL.h"
 								#endif
@@ -818,9 +826,9 @@ class DPD {
 
 			// calculate auto-correlation
 			#if SACF
-			if ( step > 5e4 ){
-				#include "ACF.h"
-			}
+				if ( step > 5e4 ){
+					#include "ACF.h"
+				}
 			#endif
 
 		} // run over all fluid particles
@@ -1213,7 +1221,7 @@ class DPD {
 			paraInfo << "Wall density (initWallRho)                 :           " << initWallRho << std::endl;
 			paraInfo << "Solid-Solid Attraction Strength   (Ass)    :           " << Ass << std::endl;
 			paraInfo << "Solid-Solid Repulsion  Strength   (Bss)    :           " << Bss << std::endl;
-			paraInfo << "Solid-Liquid Attraction Strength   (Asl)   :           " << Asl << std::endl;
+			paraInfo << "Solid-Liquid Attraction Strength   (asl)   :           " << asl << std::endl;
 			paraInfo << "Solid-Liquid Repulsion  Strength   (Bsl)   :           " << Bsl << std::endl;
 			paraInfo << "Soft Repulsive force Strength   (Brep)     :           " << Brep << std::endl;
 			paraInfo << "Penetration tolerance (wallPenetration)    :           " << wallPenetration << std::endl;
