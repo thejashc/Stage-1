@@ -42,6 +42,7 @@
 					//           		 (4) mid step velocity 
 					//			 (5) particle type
 					particles.push_back( { 1.0, 1.0, {xind, yind, zind}, {0., 0., 0.}, 0} );
+					Asl.push_back( { asl } );	// lyophilic wall 
 					lwp++;
 
 					// update zind
@@ -76,6 +77,7 @@
 
 					// initializing particle radius, mass, position and velocity
 					particles.push_back({1.0,1.0,{xind, yind, zind},{0., 0., 0.}, 0});
+					Asl.push_back( { asl } );	// lyophilic wall 
 					uwp++;
 
 					// update zind
