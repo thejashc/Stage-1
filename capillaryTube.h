@@ -50,6 +50,9 @@ while ( zind < zind_max ){
 	zind += aCube * rcutoff;
 }// zind
 
+simProg << "finished initialization of  " << pCount << " particles inside capillary tube" << std::endl;
+simProg << "***************************************************" << std::endl;
+
 // Set max and min dimensions of boxy
 xind_min = 0.;
 yind_min = 0.;
@@ -57,6 +60,8 @@ zind_min = bufferLen + capLen;
 xind_max = boxEdge[x];
 yind_max = boxEdge[y];
 zind_max = zind_min + capWallWdth;
+
+pCount	 = 0;
 
 simProg << "***************************************************" << std::endl;
 simProg << "Started initialization of the wall adjacent to reservoir" << std::endl;
@@ -94,5 +99,5 @@ while ( xind < xind_max){
 	xind += aCube * rcutoff;
 } // end of xind
 
-simProg << "finished initialization of  " << pCount << std::endl;
+simProg << "finished initialization of  " << pCount << " particles inside wall adj. capillary" << std::endl;
 simProg << "***************************************************" << std::endl;
