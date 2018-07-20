@@ -49,7 +49,7 @@ if ( r2 <= rc2 ) {
 	fRij.Y = magRand * capRij.Y;
 	fRij.Z = magRand * capRij.Z;
 
-	sumForce = fRij*inv_sqrt_dt;
+	sumForce = fRij;			// inv_sqrt_dt is taken care by scaled value of sigma 
 	particles[i].fR += sumForce;
 	particles[j].fR -= sumForce;
 

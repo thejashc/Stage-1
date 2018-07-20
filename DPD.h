@@ -82,7 +82,6 @@ class DPD {
 			npart 			= particles.size();				// number of particles
 			rho 			= npart/volume;					// density of system 
 			dof 			= dim*(npart - 1);				// total degrees of freedom (momentum only, no energy conservation)
-			inv_sqrt_dt 		= 1.0/std::sqrt(dt);				// inverse of square root of the time step
 			half_dt 		= 0.5*dt;					// 0.5*dt to be used in the integrateEOM()
 			half_dt_sqr 		= half_dt*dt;					// 0.5*dt*dt to be used in the integrateEOM()
 
@@ -1264,7 +1263,8 @@ class DPD {
 				paraInfo << "Random & Dissipative Force " << std::endl;
 				paraInfo << "---------------------------" << std::endl;
 				paraInfo << "Set temperature (kbT)                      :           " << kBT << std::endl;
-				paraInfo << "Noise level (sigma)                        :           " << sigma << std::endl;
+				paraInfo << "Rescaled Noise level (sigma/sqrt(dt))      :           " << sigma << std::endl;
+				paraInfo << "Actual Noise level (sigma)                 :           " << sigma/( inv_sqrt_dt) << std::endl;
 				paraInfo << "Friction parameter (gamma)                 :           " << gamma << std::endl;
 			#endif 
 			

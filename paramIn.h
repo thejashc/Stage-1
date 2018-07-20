@@ -166,17 +166,20 @@ readParam >> emptyLine;			readParam.ignore(256,'\n');			// L63
 readParam.close();
 
 // Half box size
-boxHalve[x] = boxEdge[x] / 2.0;
-boxHalve[y] = boxEdge[y] / 2.0;
-boxHalve[z] = boxEdge[z] / 2.0;
+boxHalve[x] 	= boxEdge[x] / 2.0;
+boxHalve[y] 	= boxEdge[y] / 2.0;
+boxHalve[z] 	= boxEdge[z] / 2.0;
 
 // Reciprocal box size
-boxRecip[x] = 1.0 / boxEdge[x];
-boxRecip[y] = 1.0 / boxEdge[y];
-boxRecip[z] = 1.0 / boxEdge[z];
+boxRecip[x] 	= 1.0 / boxEdge[x];
+boxRecip[y] 	= 1.0 / boxEdge[y];
+boxRecip[z] 	= 1.0 / boxEdge[z];
 
 #if RANDOM_DISSIPATIVE
-gamma = pow( sigma,2.0 )/( 2.0 * kBT ); // DPD dissipative force parameter
+gamma 		= pow( sigma,2.0 )/( 2.0 * kBT ); 		// DPD dissipative force parameter
+
+inv_sqrt_dt 	= 1.0 / std::sqrt(dt);				// Rescale sigma after calculating gamma
+sigma 		= sigma * inv_sqrt_dt;				// inverse of square root of the time step
 #endif
 
 // Cutoff distances for liquid-liquid and solid-liquid interactions

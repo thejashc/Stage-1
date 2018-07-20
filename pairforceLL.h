@@ -85,7 +85,7 @@ if ( r2 <= rc2 ) {
 	fRij.Y = magRand * capRij.Y;
 	fRij.Z = magRand * capRij.Z;
 
-	sumForce = fRij*inv_sqrt_dt;
+	sumForce = fRij;			// inv_sqrt_dt is taken care by scaled value of sigma 
 	particles[i].fR += sumForce;
 	particles[j].fR -= sumForce;
 
@@ -129,17 +129,17 @@ if ( r2 <= rc2 ) {
 		pDissipative_temp[2][2] 	+= Rij.Z * fDij.Z;
 
 		// Non-Ideal contribution to pressure -- Random forces
-		pRandom_temp[0][0] 		+= Rij.X * fRij.X * inv_sqrt_dt;
-		pRandom_temp[0][1] 		+= Rij.X * fRij.Y * inv_sqrt_dt;
-		pRandom_temp[0][2] 		+= Rij.X * fRij.Z * inv_sqrt_dt;
+		pRandom_temp[0][0] 		+= Rij.X * fRij.X;
+		pRandom_temp[0][1] 		+= Rij.X * fRij.Y;
+		pRandom_temp[0][2] 		+= Rij.X * fRij.Z;
 
-		pRandom_temp[1][0] 		+= Rij.Y * fRij.X * inv_sqrt_dt;
-		pRandom_temp[1][1] 		+= Rij.Y * fRij.Y * inv_sqrt_dt;
-		pRandom_temp[1][2] 		+= Rij.Y * fRij.Z * inv_sqrt_dt;
+		pRandom_temp[1][0] 		+= Rij.Y * fRij.X;
+		pRandom_temp[1][1] 		+= Rij.Y * fRij.Y;
+		pRandom_temp[1][2] 		+= Rij.Y * fRij.Z;
 
-		pRandom_temp[2][0] 		+= Rij.Z * fRij.X * inv_sqrt_dt;
-		pRandom_temp[2][1] 		+= Rij.Z * fRij.Y * inv_sqrt_dt;
-		pRandom_temp[2][2] 		+= Rij.Z * fRij.Z * inv_sqrt_dt;	
+		pRandom_temp[2][0] 		+= Rij.Z * fRij.X;
+		pRandom_temp[2][1] 		+= Rij.Z * fRij.Y;
+		pRandom_temp[2][2] 		+= Rij.Z * fRij.Z;	
 	#endif
 
 	pTensCounter += 1;	
