@@ -104,6 +104,8 @@
 	}// end of xind
 	simProg << "finished initializing the planar slab" << std::endl;
 
+	/*
+	************ BUGGY : have to choose the correct indices for fluid particles **********
 	// normalizing the center of mass
 	xCOM /= pCount;
 	yCOM /= pCount;
@@ -116,4 +118,5 @@
 		particles[i].r.Y += - yCOM + ( boxEdge[y] / 2.0 );
 		particles[i].r.Z += - zCOM + ( boxEdge[z] / 2.0 );
 	}
+	*/
 #endif
