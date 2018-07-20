@@ -87,6 +87,8 @@ double xCOM;
 double yCOM;
 double zCOM;
 
+unsigned int pCount;
+
 #elif PLANAR_SLAB
 double slabWidth;
 double xCOM;
@@ -398,6 +400,17 @@ int ig;		// index for r
 
 		double rInner;
 		double rOuter;
+		#if PISTON
+			double pistonStart;
+			double pistonEnd;
+			double forceOnPiston;
+			double distInPiston;
+		#endif
+
+		double BslMin;
+		double BslMax;
+		double BslW;
+		double BslT0;
 	#endif
 
 #endif // WALL_ON
