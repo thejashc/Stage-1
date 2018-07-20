@@ -26,10 +26,12 @@ if ( r2 <= rcW2 ) {
 		particles[j].dens_new += rho_temp;
 	}
 
-	if ( particles[i].type == 0 ) 
+	if ( particles[i].type == 0 ){						
 		term1 = Asl[i] * wCij;
-	else
+	}
+	else{									// if i^{th} particle is not solid, then j^{th} particle is solid
 		term1 = Asl[j] * wCij;
+	}
 
 	term3 = term1 + term2; 
 	fCWij.X = term3 * capRij.X; 
