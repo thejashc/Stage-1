@@ -1,30 +1,43 @@
+// ****************** WORD OF CAUTION : Whenever a new for loop or while loop is created, make sure that the 
+// ****************** loop variable is not i. i is the loop variable for counting fluid particles
+
+
 // integrate equations of motion for wall -- using leap-frog algorithm
 #if WALL_ON
 	vx2 = 0.;
 	vy2 = 0.;
 	vz2 = 0.;
-	
-	for ( i = solid_index[0] ; i <= solid_index[solidCount-1] ; ++i ) {
+
+	i = 0;
+	while ( i < solidCount ){
 		
-		particles[i].w_old = particles[i].w;		
+		particles[solid_index[i]].w_old = particles[solid_index[i]].w;		
 	
 		#include "fHarmonic.h"
 	
 		// switch on all the forces including force due to fluid particles starting from step = 50000
-		particles[i].w += ( particles[i].fCW + particles[i].fC + particles[i].fHarmonic +  particles[i].fD + particles[i].fR ) * ( dt/ particles[i].m );
+		particles[solid_index[i]].w += ( particles[solid_index[i]].fCW + particles[solid_index[i]].fC + particles[solid_index[i]].fHarmonic +  particles[solid_index[i]].fD + particles[solid_index[i]].fR ) * ( dt/ particles[solid_index[i]].m );
 	
-		particles[i].r += particles[i].w * dt;
+		particles[solid_index[i]].r += particles[solid_index[i]].w * dt;
 	
-		particles[i].v = 0.5*( particles[i].w + particles[i].w_old );
+		particles[solid_index[i]].v = 0.5*( particles[solid_index[i]].w + particles[solid_index[i]].w_old );
 	
 		
 		// implement periodic boundary condition -- replace with special boundary conditions for the wall
 		#include "pbcWall.h"
 	
 		// calculate the kinetic energy
-		vx2 += particles[i].v.X * particles[i].v.X;
-		vy2 += particles[i].v.Y * particles[i].v.Y;
-		vz2 += particles[i].v.Z * particles[i].v.Z;
+		vx2 += particles[solid_index[i]].v.X * particles[solid_index[i]].v.X;
+		vy2 += particles[solid_index[i]].v.Y * particles[solid_index[i]].v.Y;
+		vz2 += particles[solid_index[i]].v.Z * particles[solid_index[i]].v.Z;
+
+		#if PISTON
+			if ( particles[solid_index[i]].r.Z >= pistonStart )						// if i^{th} particle is solid
+				forceOnPiston += particles[solid_index[i]].fC.Z + particles[solid_index[i]].fCW.Z;	// z-component of force on the piston due to fluid, the conservative force cancels out because
+		#endif													// it is an internal force
+
+		// update counter for solid particles
+		i++;
 	}
 	
 	// temperature calculation	
@@ -34,9 +47,9 @@
 #endif // WALL_ON
 
 //********** DEBUG STATEMENTS ****************//
-// simProg << " i= " << i << ", r0 = " << particles[i].r0 << ", w = " << particles[i].w << ", dist = " << dist << std::endl;  	
-// simProg << "conservative force on particle[i] is " << particles[i].fC.X << "\t" << particles[i].fC.Y << "\t" << particles[i].fC.Z << std::endl;
+// simProg << " i= " << i << ", r0 = " << particles[solid_index[i]].r0 << ", w = " << particles[solid_index[i]].w << ", dist = " << dist << std::endl;  	
+// simProg << "conservative force on particle[i] is " << particles[solid_index[i]].fC.X << "\t" << particles[solid_index[i]].fC.Y << "\t" << particles[solid_index[i]].fC.Z << std::endl;
 
-// particles[i].w += ( particles[i].fCW + particles[i].fC + particles[i].fHarmonic +  particles[i].fD + particles[i].fR ) * ( dt/ particles[i].m ) * ( step > 20000 );	// conservative + dissipative
-// particles[i].w += ( particles[i].fCW + particles[i].fC + particles[i].fHarmonic ) * ( dt/ particles[i].m ) * ( step > 20000 );	// only conservative forces
-// std::cout << " i= " << i << ", r0 = " << particles[i].r0 << ", r = " << particles[i].r << ", dist = " << dist << std::endl;  	
+// particles[solid_index[i]].w += ( particles[solid_index[i]].fCW + particles[solid_index[i]].fC + particles[solid_index[i]].fHarmonic +  particles[solid_index[i]].fD + particles[solid_index[i]].fR ) * ( dt/ particles[solid_index[i]].m ) * ( step > 20000 );	// conservative + dissipative
+// particles[solid_index[i]].w += ( particles[solid_index[i]].fCW + particles[solid_index[i]].fC + particles[solid_index[i]].fHarmonic ) * ( dt/ particles[solid_index[i]].m ) * ( step > 20000 );	// only conservative forces
+// std::cout << " i= " << i << ", r0 = " << particles[solid_index[i]].r0 << ", r = " << particles[solid_index[i]].r << ", dist = " << dist << std::endl;  	
