@@ -195,10 +195,14 @@ rd2 = pow( rd_cutoff,2);	// square of cut-off distance
 	#elif LOWER_WALL_ON && !(UPPER_WALL_ON)
 		wallLowPos = wallHeight;
 	#elif CAPILLARY_TUBE
-		wallLowPos   = bufferLen + capLen + capWallWdth;
 		capTubeStart = bufferLen;
-		capTubeEnd   = bufferLen + capLen;
+		capTubeEnd   = capTubeStart + capLen;
+		wallLowPos   = capTubeEnd + capWallWdth;
 
+		#if PISTON
+			pistonStart	= wallLowPos + resWdth; 
+			pistonEnd 	= pistonStart + capWallWdth;	// thickness of piston is same as that of the wall adjacent to capillary
+		#endif
 	#endif
 #endif
 
