@@ -49,9 +49,9 @@ if ( r2 <= rc2 ) {
 		wDij2 = wDij * wDij; 
 
 		#if !(DENS_EXACT)
-		rho_temp = fifteen_by_twopi_by_rd * wDij2;
-		particles[i].dens_new += rho_temp;
-		particles[j].dens_new += rho_temp;
+			rho_temp = fifteen_by_twopi_by_rd * wDij2;
+			particles[i].dens_new += rho_temp;
+			particles[j].dens_new += rho_temp;
 		#endif
 	}
 
@@ -115,31 +115,31 @@ if ( r2 <= rc2 ) {
 	pNonIdeal_temp[2][2] 		+= Rij.Z * fCij.Z;
 
 	#if RANDOM_DISSIPATIVE
-	// Non-Ideal contribution to pressure -- Dissipative forces
-	pDissipative_temp[0][0] 	+= Rij.X * fDij.X;
-	pDissipative_temp[0][1] 	+= Rij.X * fDij.Y;
-	pDissipative_temp[0][2] 	+= Rij.X * fDij.Z;
+		// Non-Ideal contribution to pressure -- Dissipative forces
+		pDissipative_temp[0][0] 	+= Rij.X * fDij.X;
+		pDissipative_temp[0][1] 	+= Rij.X * fDij.Y;
+		pDissipative_temp[0][2] 	+= Rij.X * fDij.Z;
 
-	pDissipative_temp[1][0]	        += Rij.Y * fDij.X;
-	pDissipative_temp[1][1] 	+= Rij.Y * fDij.Y;
-	pDissipative_temp[1][2] 	+= Rij.Y * fDij.Z;
+		pDissipative_temp[1][0]	        += Rij.Y * fDij.X;
+		pDissipative_temp[1][1] 	+= Rij.Y * fDij.Y;
+		pDissipative_temp[1][2] 	+= Rij.Y * fDij.Z;
 
-	pDissipative_temp[2][0] 	+= Rij.Z * fDij.X;
-	pDissipative_temp[2][1] 	+= Rij.Z * fDij.Y;
-	pDissipative_temp[2][2] 	+= Rij.Z * fDij.Z;
+		pDissipative_temp[2][0] 	+= Rij.Z * fDij.X;
+		pDissipative_temp[2][1] 	+= Rij.Z * fDij.Y;
+		pDissipative_temp[2][2] 	+= Rij.Z * fDij.Z;
 
-	// Non-Ideal contribution to pressure -- Random forces
-	pRandom_temp[0][0] 		+= Rij.X * fRij.X * inv_sqrt_dt;
-	pRandom_temp[0][1] 		+= Rij.X * fRij.Y * inv_sqrt_dt;
-	pRandom_temp[0][2] 		+= Rij.X * fRij.Z * inv_sqrt_dt;
+		// Non-Ideal contribution to pressure -- Random forces
+		pRandom_temp[0][0] 		+= Rij.X * fRij.X * inv_sqrt_dt;
+		pRandom_temp[0][1] 		+= Rij.X * fRij.Y * inv_sqrt_dt;
+		pRandom_temp[0][2] 		+= Rij.X * fRij.Z * inv_sqrt_dt;
 
-	pRandom_temp[1][0] 		+= Rij.Y * fRij.X * inv_sqrt_dt;
-	pRandom_temp[1][1] 		+= Rij.Y * fRij.Y * inv_sqrt_dt;
-	pRandom_temp[1][2] 		+= Rij.Y * fRij.Z * inv_sqrt_dt;
+		pRandom_temp[1][0] 		+= Rij.Y * fRij.X * inv_sqrt_dt;
+		pRandom_temp[1][1] 		+= Rij.Y * fRij.Y * inv_sqrt_dt;
+		pRandom_temp[1][2] 		+= Rij.Y * fRij.Z * inv_sqrt_dt;
 
-	pRandom_temp[2][0] 		+= Rij.Z * fRij.X * inv_sqrt_dt;
-	pRandom_temp[2][1] 		+= Rij.Z * fRij.Y * inv_sqrt_dt;
-	pRandom_temp[2][2] 		+= Rij.Z * fRij.Z * inv_sqrt_dt;	
+		pRandom_temp[2][0] 		+= Rij.Z * fRij.X * inv_sqrt_dt;
+		pRandom_temp[2][1] 		+= Rij.Z * fRij.Y * inv_sqrt_dt;
+		pRandom_temp[2][2] 		+= Rij.Z * fRij.Z * inv_sqrt_dt;	
 	#endif
 
 	pTensCounter += 1;	
