@@ -29,7 +29,8 @@
 #define FCC_WALL			0
 #define ROUGH_WALL			0
 
-#define CAPILLARY_TUBE			1
+#define CAPILLARY_CYLINDER		0
+#define CAPILLARY_SQUARE		1
 #define PISTON				0
 
 // POISEUILLE flow
@@ -163,17 +164,16 @@ class DPD {
 					writeConfig.close();
 				}
 
-				
 				#if SACF 
 					if ( step % 100000 == 0 ) { writeCorr(); }
 				#endif
 
 				// change wettability of the capillary tube
 				// from lyophobic to lyophilic
-				#if CAPILLARY_TUBE
+				#if CAPILLARY_CYLINDER || CAPILLARY_SQUARE
 					if ( step == 25000){ 
 
-						simProg << " Changing the wettability of pore from hydrophobic to hydrophilic  " << std::endl;
+						simProg << " Changing the wettability of pore from hydrophobic to hydrophilic with Asl =  " << asl << std::endl;
 						i = 0;
 						while ( i < solidCount ){
 							Asl[i] = asl;
@@ -217,8 +217,11 @@ class DPD {
 					#include "cylDropInit.h"
 				#elif PLANAR_SLAB
 					#include "planarSlabInit.h" 
-				#elif CAPILLARY_TUBE
+				#elif CAPILLARY_CYLINDER
 					#include "capillaryTube.h"
+					#include "reservoir.h"
+				#elif CAPILLARY_SQUARE
+					#include "squarecapillaryTube.h"
 					#include "reservoir.h"
 				#endif
 			#else
@@ -539,7 +542,7 @@ class DPD {
 			// simProg << "pointCorr [" << pointCorr.size() << "][" << pointCorr[0].size() << "]" << std::endl;
 			#endif
 
-			#if CAPILLARY_TUBE
+			#if CAPILLARY_CYLINDER
 				BslMax	= Bsl;
 				BslMin	= 5.0;
 				BslW	= 2000.0;
@@ -703,7 +706,7 @@ class DPD {
 		//--------------------------------------- Force Calculation --------------------------------------//
 		void forceCalc(){
 
-			#if CAPILLARY_TUBE
+			#if CAPILLARY_CYLINDER
 				Bsl = BslMin + BslMax * ( 0.5 * ( 1.0 + tanh( (step - BslT0) / BslW ) ) );	// increase the repulsive forces slowly to reduce abrupt forces
 
 				//std::cout << Bsl << std::endl;
@@ -923,7 +926,7 @@ class DPD {
 
 			} // set density equal to zero for solid type particles
 
-			#if CAPILLARY_TUBE
+			#if CAPILLARY_CYLINDER
 				#if PISTON
 					forceOnPiston = 0.;
 				#endif
@@ -1315,13 +1318,22 @@ class DPD {
 				paraInfo << "Blocks in a level (pCorr)                  :            " << pCorr << std::endl;
 				paraInfo << "Average length in a level (mCorr)          :            " << mCorr << std::endl;
 			#endif
-			#if CAPILLARY_TUBE
+			#if CAPILLARY_CYLINDER
 				paraInfo << "-------------------------------" << std::endl;
-				paraInfo << "Capillary imbibition           " << std::endl;
+				paraInfo << "Capillary cylinder             " << std::endl;
 				paraInfo << "-------------------------------" << std::endl;
 				paraInfo << "Buffer length left of capillary (bufferLen):            " << bufferLen << std::endl;	
 				paraInfo << "Capillary tube length ( capLen )           :            " << capLen << std::endl;
 				paraInfo << "Capillary radius ( capRad )                :            " << capRad << std::endl;
+				paraInfo << "Wall width adj. to capillary (capWallWdth) :            " << capWallWdth << std::endl;
+				paraInfo << "Initial width of reservoir (resWdth)       :            " << resWdth << std::endl;
+			#elif CAPILLARY_SQUARE
+				paraInfo << "-------------------------------" << std::endl;
+				paraInfo << "Capillary Square               " << std::endl;
+				paraInfo << "-------------------------------" << std::endl;
+				paraInfo << "Buffer length left of capillary (bufferLen):            " << bufferLen << std::endl;	
+				paraInfo << "Capillary tube length ( capLen )           :            " << capLen << std::endl;
+				paraInfo << "Inner-edge-length of capillary ( sqEdge )  :            " << sqEdge << std::endl;
 				paraInfo << "Wall width adj. to capillary (capWallWdth) :            " << capWallWdth << std::endl;
 				paraInfo << "Initial width of reservoir (resWdth)       :            " << resWdth << std::endl;
 			#endif
@@ -1403,8 +1415,14 @@ class DPD {
 			#endif
 			
 			// CAPILLARY IMBIBITION
-			#if CAPILLARY_TUBE		 
-			flagList << "CAPILLARY TUBE FLAG                    :            " << "ON" << std::endl;  
+			#if CAPILLARY_CYLINDER		 
+			flagList << "CAPILLARY CYLINDER FLAG                :            " << "ON" << std::endl;  
+			#if PISTON
+			flagList << "PISTON FLAG                            :            " << "ON" << std::endl;  
+			#endif
+			#endif
+			#if CAPILLARY_SQUARE		 
+			flagList << "CAPILLARY SQUARE FLAG                  :            " << "ON" << std::endl;  
 			#if PISTON
 			flagList << "PISTON FLAG                            :            " << "ON" << std::endl;  
 			#endif
@@ -1496,7 +1514,7 @@ class DPD {
 				        	<< std::setw(20) << std::setprecision(15) << randomWork << std::endl;
 						#else
 							#if WALL_ON
-								#if CAPILLARY_TUBE
+								#if CAPILLARY_CYLINDER
 									#if PISTON
 									enStats 	<< std::setw(20) << std::setprecision(15) << pot_en << "\t" 
 											<< std::setw(20) << std::setprecision(15) << kin_en << "\t" 
