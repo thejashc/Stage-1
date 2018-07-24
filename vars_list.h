@@ -371,7 +371,7 @@ int ig;		// index for r
 		unsigned int uwp;					// counts the number of upper wall particles
 	#endif
 
-	#if CAPILLARY_TUBE
+	#if CAPILLARY_CYLINDER
 		double cylCenterX;
 		double cylCenterY;
 		double bufferLen;
@@ -411,6 +411,66 @@ int ig;		// index for r
 		double BslMax;
 		double BslW;
 		double BslT0;
+	#endif
+	#if CAPILLARY_SQUARE
+		double cylCenterX;
+		double cylCenterY;
+		double bufferLen;
+		double capRad;
+		double capLen;
+		double capWallWdth;
+		double resWdth;
+		double capThick;
+
+		bool particleInSquareSmall;
+		bool particleInSquareLarge;
+		bool outerRadius;
+		bool inCapTube;
+		bool notInPoreEntry;
+
+		bool reg1, reg2, reg3, reg4;
+
+		double sqEdge;
+		double sqInnerEdgeXmin;
+		double sqInnerEdgeXmax;
+                double sqInnerEdgeYmin;
+                double sqInnerEdgeYmax;
+
+		double distInLeftWall; 	
+                double distInRightWall; 
+                double distInBottomWall;
+                double distInTopWall;	
+
+		unsigned int pCount;
+
+		double capTubeStart;
+		double capTubeEnd;
+		double penDist;
+		double perDist;
+
+		double zOld;
+		double tApp;
+		double tSep;
+
+
+		double rInner;
+		double rOuter;
+		#if PISTON
+			double pistonStart;
+			double pistonEnd;
+			double forceOnPiston;
+			double distInPiston;
+		#endif
+
+		double BslMin;
+		double BslMax;
+		double BslW;
+		double BslT0;
+
+		double sqXmin;
+		double sqYmin;
+		double sqXmax;
+		double sqYmax;
 	#endif
 
 #endif // WALL_ON
