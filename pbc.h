@@ -35,7 +35,7 @@
 		}
 
 	#endif
-	#if CAPILLARY_TUBE
+	#if CAPILLARY_CYLINDER || CAPILLARY_SQUARE
 		
 		if ( abs(mz) == 1.0 ) {
 
