@@ -154,7 +154,7 @@ readParam >> emptyLine;			readParam.ignore(256,'\n');		// L58
 #endif
 readParam >> emptyLine;			readParam.ignore(256,'\n');			// L63
 
-#if CAPILLARY_TUBE
+#if CAPILLARY_CYLINDER || CAPILLARY_SQUARE
 	simProg << "Reading parameters for the capillary tube" << std::endl;	
 	readParam >> buffer >> bufferLen;	readParam.ignore(256,'\n');		// L64 
 	readParam >> buffer >> capLen;		readParam.ignore(256,'\n');		// L65 
@@ -197,7 +197,7 @@ rd2 = pow( rd_cutoff,2);	// square of cut-off distance
 		wallTopPos = boxEdge[z] - wallHeight;
 	#elif LOWER_WALL_ON && !(UPPER_WALL_ON)
 		wallLowPos = wallHeight;
-	#elif CAPILLARY_TUBE
+	#elif CAPILLARY_CYLINDER || CAPILLARY_SQUARE
 		capTubeStart = bufferLen;
 		capTubeEnd   = capTubeStart + capLen;
 		wallLowPos   = capTubeEnd + capWallWdth;

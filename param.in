@@ -1,9 +1,9 @@
 boxEdgeX            20.0		# box dimensions
 boxEdgeY            20.0
-boxEdgeZ            20.0
+boxEdgeZ            80.0
 initRho             5.00
 #
-All                 -40.0			# liquid-liquid interaction parameters
+All                 -40.0		# liquid-liquid interaction parameters
 Bll                 25.0		
 rcutoff             1.0		
 rd_cutoff           0.75
@@ -61,7 +61,7 @@ corLevels           20
 pCorr               64
 mCorr               2
 #
-bufferLength        10.0
+bufferLength        10.0		# CAPILLARIES
 capLen              35.0
 capRad              5.0
 capWallWdth         1.5
