@@ -45,7 +45,7 @@ while ( i < fluidCount ){
 			particles[fluid_index[i]].fext.X = 0.; 
 			particles[fluid_index[i]].fext.Y = 0.;
 
-		#elif CAPILLARY_TUBE
+		#elif CAPILLARY_CYLINDER
 			
 			// (1)  wall force can be in the region where the reservoir separating wall is present
 			wallLowDist 	= particles[fluid_index[i]].r.Z - ( wallLowPos - wallPenetration );
@@ -85,12 +85,31 @@ while ( i < fluidCount ){
 				particles[fluid_index[i]].fext.Z =  0.;
 			}
 			#if PISTON
-			else if ( distInPiston > 0. ){
+				else if ( distInPiston > 0. ){
+					particles[fluid_index[i]].fext.X = 0;
+					particles[fluid_index[i]].fext.Y = 0;
+					particles[fluid_index[i]].fext.Z = -Brep * distInPiston; 
+				}
+			#endif
+
+		#elif CAPILLARY_SQUARE
+
+			#include "penetrationIntoSquare.h"
+
+			// (1)  wall force can be in the region where the reservoir separating wall is present
+			wallLowDist 	= particles[fluid_index[i]].r.Z - ( wallLowPos - wallPenetration );
+			notInPoreEntry  = ( particles[fluid_index[i]].r.X > sqInnerEdgeXmax ) || 
+					  ( particles[fluid_index[i]].r.X < sqInnerEdgeXmin ) || 
+					  ( particles[fluid_index[i]].r.Y > sqInnerEdgeYmax ) || 
+					  ( particles[fluid_index[i]].r.Y < sqInnerEdgeYmin ); 
+
+			if ( wallLowDist < 0. && particles[fluid_index[i]].r.Z > ( wallLowPos - capWallWdth ) && notInPoreEntry ){
+
 				particles[fluid_index[i]].fext.X = 0;
 				particles[fluid_index[i]].fext.Y = 0;
-				particles[fluid_index[i]].fext.Z = -Brep * distInPiston; 
+				particles[fluid_index[i]].fext.Z = -Brep * wallLowDist ; 
 			}
-			#endif
+
 
 		#endif
 	#endif // WALL_ON
