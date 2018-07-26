@@ -401,10 +401,23 @@ int ig;		// index for r
 		double rInner;
 		double rOuter;
 		#if PISTON
+			unsigned int pistonParticles;
+
 			double pistonStart;
 			double pistonEnd;
 			double forceOnPiston;
 			double distInPiston;
+
+			double pistonArea;
+
+			double pistonT0;
+			double pistonW; 
+
+			double appForce;
+			double appPressure;
+			double vzPist;
+			double vz0Pist;
+			double drPist;
 		#endif
 
 		double BslMin;
@@ -456,10 +469,25 @@ int ig;		// index for r
 		double rInner;
 		double rOuter;
 		#if PISTON
+			unsigned int pistonParticles;
+
 			double pistonStart;
 			double pistonEnd;
 			double forceOnPiston;
 			double distInPiston;
+
+			double pistonArea;
+
+			double pistonT0;
+			double pistonW; 
+
+			double appForce;
+			double appPressure;
+			double vzPist;
+			double vz0Pist;
+			double drPist;
+
+			double delForce;
 		#endif
 
 		double BslMin;
