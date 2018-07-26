@@ -45,11 +45,19 @@
 		xind += aCube * rcutoff;
 	} // end of xind
 
-	simProg << "finished initialization of  " << pCount << " inside piston" << std::endl;
+	pistonParticles = pCount;
+	simProg << "finished initialization of  " << pistonParticles << " inside piston" << std::endl;
 	simProg << "***************************************************" << std::endl;
 #endif
 
 // Set max and min dimensions of boxy
+//xind_min = sqInnerEdgeXmin;
+//yind_min = sqInnerEdgeYmin;
+//zind_min = bufferLen + capLen - 10; 
+//xind_max = sqInnerEdgeXmax;
+//yind_max = sqInnerEdgeYmax;
+//zind_max = bufferLen + capLen;
+
 xind_min = 0.;
 yind_min = 0.;
 zind_min = bufferLen + capLen + capWallWdth; 
