@@ -161,6 +161,16 @@ readParam >> emptyLine;			readParam.ignore(256,'\n');			// L63
 	readParam >> buffer >> capRad;		readParam.ignore(256,'\n');		// L66 
 	readParam >> buffer >> capWallWdth;	readParam.ignore(256,'\n');		// L67 
 	readParam >> buffer >> resWdth;		readParam.ignore(256,'\n');		// L68 
+
+	readParam >> emptyLine;			readParam.ignore(256,'\n');		// L69
+
+	#if PISTON 
+	simProg << "Reading parameters for the capillary tube" << std::endl;	
+	readParam >> buffer >> appPressure;	readParam.ignore(256,'\n');		// L70
+	readParam >> buffer >> pistonT0;	readParam.ignore(256,'\n');		// L71
+	readParam >> buffer >> pistonW;		readParam.ignore(256,'\n');		// L72
+		
+	#endif
 #endif
 
 readParam.close();
@@ -205,6 +215,9 @@ rd2 = pow( rd_cutoff,2);	// square of cut-off distance
 		#if PISTON
 			pistonStart	= wallLowPos + resWdth; 
 			pistonEnd 	= pistonStart + capWallWdth;	// thickness of piston is same as that of the wall adjacent to capillary
+
+			pistonArea 	= boxEdge[x] * boxEdge[y];	// Area over which the piston acts
+			vz0Pist		= 0.;
 		#endif
 	#endif
 #endif

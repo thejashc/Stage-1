@@ -12,7 +12,7 @@ Ass                 -40.0		# WALL_ON
 Bss                 25.0		
 kWall               12.5
 #
-asl                 -40.0		# WALL_ON 
+asl                 -10.0		# WALL_ON 
 bsl                 +25.0
 Brep                +20.0
 wallPenetration     0.25
@@ -66,3 +66,7 @@ capLen              35.0
 capRad              5.0
 capWallWdth         1.5
 resWdth             10.0
+#
+appPressure         10.0
+pistonT0	    10000.0
+pistonW             1000.0
