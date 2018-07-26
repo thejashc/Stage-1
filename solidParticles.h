@@ -32,13 +32,18 @@
 		vz2 += particles[solid_index[i]].v.Z * particles[solid_index[i]].v.Z;
 
 		#if PISTON
-			if ( particles[solid_index[i]].r.Z >= pistonStart )						// if i^{th} particle is solid
-				forceOnPiston += particles[solid_index[i]].fC.Z + particles[solid_index[i]].fCW.Z;	// z-component of force on the piston due to fluid, the conservative force cancels out because
-		#endif													// it is an internal force
+			if ( i >= solidCount - pistonParticles   )						// if i^{th} particle is solid
+				forceOnPiston += particles[solid_index[i]].fCW.Z;				// z-component of force on the piston due to fluid, the conservative force cancels out because internal forces
+		#endif												
 
 		// update counter for solid particles
 		i++;
 	}
+
+	// calculate force deficit
+	#if PISTON
+		#include "movePiston.h"
+	#endif 
 	
 	// temperature calculation	
 	v2 = ( vx2 + vy2 + vz2 ) / ( 3. * solidCount );
