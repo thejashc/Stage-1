@@ -31,7 +31,7 @@
 
 #define CAPILLARY_CYLINDER		0
 #define CAPILLARY_SQUARE		1
-#define PISTON				0
+#define PISTON				1
 
 // POISEUILLE flow
 #define BODY_FORCE			0
@@ -171,7 +171,7 @@ class DPD {
 				// change wettability of the capillary tube
 				// from lyophobic to lyophilic
 				#if CAPILLARY_CYLINDER || CAPILLARY_SQUARE
-					if ( step == 25000){ 
+					if ( step == 10000){ 
 
 						simProg << " Changing the wettability of pore from hydrophobic to hydrophilic with Asl =  " << asl << std::endl;
 						i = 0;
@@ -202,7 +202,6 @@ class DPD {
 			simProg.close();
 
 		} //void solve()
-
 		//--------------------------------------- INITIALIZATION ROUTINE --------------------------------------//
 		void init(){
 
@@ -542,12 +541,14 @@ class DPD {
 			// simProg << "pointCorr [" << pointCorr.size() << "][" << pointCorr[0].size() << "]" << std::endl;
 			#endif
 
-			#if CAPILLARY_CYLINDER
+			/*
+			#if CAPILLARY_CYLINDER || CAPILLARY_SQUARE
 				BslMax	= Bsl;
 				BslMin	= 5.0;
 				BslW	= 2000.0;
 				BslT0 	= 5000.0;
 			#endif
+			*/
 
 		}//init
 
@@ -706,11 +707,13 @@ class DPD {
 		//--------------------------------------- Force Calculation --------------------------------------//
 		void forceCalc(){
 
-			#if CAPILLARY_CYLINDER
+			/*
+			#if CAPILLARY_CYLINDER || CAPILLARY_SQUARE
 				Bsl = BslMin + BslMax * ( 0.5 * ( 1.0 + tanh( (step - BslT0) / BslW ) ) );	// increase the repulsive forces slowly to reduce abrupt forces
 
 				//std::cout << Bsl << std::endl;
 			#endif
+			*/
 
 			for ( mi[x] = 0 ; mi[x] < NrCells[x] ; ++mi[x] )
 				for ( mi[y] = 0 ; mi[y] < NrCells[y] ; ++mi[y] )
@@ -926,7 +929,7 @@ class DPD {
 
 			} // set density equal to zero for solid type particles
 
-			#if CAPILLARY_CYLINDER
+			#if CAPILLARY_CYLINDER || CAPILLARY_SQUARE
 				#if PISTON
 					forceOnPiston = 0.;
 				#endif
@@ -1336,6 +1339,15 @@ class DPD {
 				paraInfo << "Inner-edge-length of capillary ( sqEdge )  :            " << sqEdge << std::endl;
 				paraInfo << "Wall width adj. to capillary (capWallWdth) :            " << capWallWdth << std::endl;
 				paraInfo << "Initial width of reservoir (resWdth)       :            " << resWdth << std::endl;
+
+				#if PISTON
+					paraInfo << "-------------------------------" << std::endl;
+					paraInfo << "PISTON                         " << std::endl;
+					paraInfo << "-------------------------------" << std::endl;
+					paraInfo << "Applied pressure (appPressure)             :            " << appPressure << std::endl;	
+					paraInfo << "Piston force applied from time (pistonT0)  :            " << pistonT0 << std::endl;
+					paraInfo << "Time constant of piston force ( pistonW )  :            " << pistonW << std::endl;
+				#endif
 			#endif
 			paraInfo << "---------------------------" << std::endl;
 			paraInfo << "---------------------------" << std::endl;
@@ -1514,7 +1526,7 @@ class DPD {
 				        	<< std::setw(20) << std::setprecision(15) << randomWork << std::endl;
 						#else
 							#if WALL_ON
-								#if CAPILLARY_CYLINDER
+								#if CAPILLARY_CYLINDER || CAPILLARY_SQUARE
 									#if PISTON
 									enStats 	<< std::setw(20) << std::setprecision(15) << pot_en << "\t" 
 											<< std::setw(20) << std::setprecision(15) << kin_en << "\t" 
