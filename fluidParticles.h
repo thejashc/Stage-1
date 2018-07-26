@@ -98,6 +98,9 @@ while ( i < fluidCount ){
 
 			// (1)  wall force can be in the region where the reservoir separating wall is present
 			wallLowDist 	= particles[fluid_index[i]].r.Z - ( wallLowPos - wallPenetration );
+			#if PISTON
+				distInPiston 	= particles[fluid_index[i]].r.Z - ( pistonStart + wallPenetration );
+			#endif
 			notInPoreEntry  = ( particles[fluid_index[i]].r.X > sqInnerEdgeXmax ) || 
 					  ( particles[fluid_index[i]].r.X < sqInnerEdgeXmin ) || 
 					  ( particles[fluid_index[i]].r.Y > sqInnerEdgeYmax ) || 
@@ -110,6 +113,13 @@ while ( i < fluidCount ){
 				particles[fluid_index[i]].fext.Z = -Brep * wallLowDist ; 
 			}
 
+			#if PISTON
+				else if ( distInPiston > 0. ){
+					particles[fluid_index[i]].fext.X = 0;
+					particles[fluid_index[i]].fext.Y = 0;
+					particles[fluid_index[i]].fext.Z = -Brep * distInPiston; 
+				}
+			#endif
 
 		#endif
 	#endif // WALL_ON
