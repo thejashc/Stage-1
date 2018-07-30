@@ -23,10 +23,11 @@ if ( r2 <= rc2 ) {
 	term1 = 0.0;
 	term2 = 0.0;
 	term3 = 0.0;
-
+	/*
 	if ( particles[i].type != particles[j].type ){
 		simProg << " not a  liquid liquid interaction between i, j:  " << particles[i].type << " " << particles[j].type << std::endl; abort();
 	}
+	*/
 
 	//------ SOFT PAIR POTENTIAL -----//
 	/*
@@ -74,31 +75,31 @@ if ( r2 <= rc2 ) {
 	// simProg << ", fCij = " << fCij  << ", fC = " << particles[i].fC << std::endl; 
 
 	#if RANDOM_DISSIPATIVE
-	// random force	
-	uniRand = randNumGen(seed);
-	thetaij = std::sqrt(12.0)*(uniRand-0.5); 
-	magRand = sigma * wCij * thetaij;
-	
-	// std::cout << uniRand << std::endl;
-	
-	fRij.X = magRand * capRij.X;
-	fRij.Y = magRand * capRij.Y;
-	fRij.Z = magRand * capRij.Z;
+        // random force	
+        uniRand = randNumGen(seed);
+        thetaij = std::sqrt(12.0)*(uniRand-0.5); 
+        magRand = sigma[particles[i].type][particles[j].type] * wCij * thetaij;
+        
+        // std::cout << uniRand << std::endl;
+        
+        fRij.X = magRand * capRij.X;
+        fRij.Y = magRand * capRij.Y;
+        fRij.Z = magRand * capRij.Z;
 
-	sumForce = fRij;			// inv_sqrt_dt is taken care by scaled value of sigma 
-	particles[i].fR += sumForce;
-	particles[j].fR -= sumForce;
+        sumForce = fRij;			// inv_sqrt_dt is taken care by scaled value of sigma 
+        particles[i].fR += sumForce;
+        particles[j].fR -= sumForce;
 
-	// dissipative force -- not calculated here
-	rDotv = Vec3D::dot( capRij, wij );
-	magDiss = -1.0 * gamma * wCij2 *rDotv;
-	
-	fDij.X = magDiss * capRij.X;
-	fDij.Y = magDiss * capRij.Y;
-	fDij.Z = magDiss * capRij.Z;
+        // dissipative force -- not calculated here
+        rDotv = Vec3D::dot( capRij, wij );
+        magDiss = -1.0 * gamma[particles[i].type][particles[j].type] * wCij2 *rDotv;
+        
+        fDij.X = magDiss * capRij.X;
+        fDij.Y = magDiss * capRij.Y;
+        fDij.Z = magDiss * capRij.Z;
 
-	particles[i].fD += fDij;
-	particles[j].fD -= fDij;
+        particles[i].fD += fDij;
+        particles[j].fD -= fDij;
 	#endif
 
 	// Non-Ideal contribution to pressure -- Conservative forces	
@@ -120,7 +121,7 @@ if ( r2 <= rc2 ) {
 		pDissipative_temp[0][1] 	+= Rij.X * fDij.Y;
 		pDissipative_temp[0][2] 	+= Rij.X * fDij.Z;
 
-		pDissipative_temp[1][0]	        += Rij.Y * fDij.X;
+		pDissipative_temp[1][0]	    += Rij.Y * fDij.X;
 		pDissipative_temp[1][1] 	+= Rij.Y * fDij.Y;
 		pDissipative_temp[1][2] 	+= Rij.Y * fDij.Z;
 
