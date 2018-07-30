@@ -70,10 +70,23 @@
 	zind_min = ( boxEdge[z] / 2. ) - ( slabWidth / 2. );
 	xind_max = boxEdge[x];
 	yind_max = boxEdge[y];
-	zind_max = ( boxEdge[z] / 2. ) + ( slabWidth / 2. );
+    zind_max = ( boxEdge[z] / 2. ) + ( slabWidth / 2. );
+    pCount = 0;
 
 	xind = xind_min;
 	aCube = pow( 1. / initRho, 1./3. );
+
+	simProg << "***************************************************" << std::endl;
+	simProg << "Started initialization of the planar slab of fluid " << std::endl;
+
+	simProg << "The minimum x-coord of fluid particle is: "<< xind_min << std::endl;
+	simProg << "The minimum y-coord of fluid particle is: "<< yind_min << std::endl;
+	simProg << "The minimum z-coord of fluid particle is: "<< zind_min << std::endl;
+	
+	simProg << "The maximum x-coord of fluid particle is: "<< xind_max << std::endl;
+	simProg << "The maximum y-coord of fluid particle is: "<< yind_max << std::endl;
+	simProg << "The maximum z-coord of fluid particle is: "<< zind_max << std::endl;
+
 	// Particle position intialization in a crystal structure 
 	while ( xind < xind_max){
 		yind = yind_min;
@@ -102,7 +115,9 @@
 		}// end of yind			
 		xind += aCube*rcutoff;
 	}// end of xind
-	simProg << "finished initializing the planar slab" << std::endl;
+
+	simProg << "finished initialization of  " << pCount << std::endl;
+	simProg << "***************************************************" << std::endl;
 
 	/*
 	************ BUGGY : have to choose the correct indices for fluid particles **********
