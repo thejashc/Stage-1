@@ -15,7 +15,7 @@ if ( r2 <= rc2 ) {
 	term3 = 0.0;
 
 	if ( particles[i].type != particles[j].type ){
-		simProg << " not a  liquid liquid interaction between i, j:  " << i << " " << j << std::endl; abort();
+		simProg << " not a  solid-solid interaction between i, j:  " << i << " " << j << std::endl; abort();
 	}
 
 	if ( r2 <= rd2 ){
@@ -40,29 +40,29 @@ if ( r2 <= rc2 ) {
 	particles[j].fC -= fCij; 
 
 	#if RANDOM_DISSIPATIVE
-	// random force	
-	uniRand = randNumGen(seed);
-	thetaij = std::sqrt(12.0)*( uniRand-0.5 ); 
-	magRand = sigma * wCij * thetaij;
-	
-	fRij.X = magRand * capRij.X;
-	fRij.Y = magRand * capRij.Y;
-	fRij.Z = magRand * capRij.Z;
+        // random force	
+        uniRand = randNumGen(seed);
+        thetaij = std::sqrt(12.0)*( uniRand-0.5 ); 
+        magRand = sigma[particles[i].type][particles[j].type] * wCij * thetaij;
+        
+        fRij.X = magRand * capRij.X;
+        fRij.Y = magRand * capRij.Y;
+        fRij.Z = magRand * capRij.Z;
 
-	sumForce = fRij;			// inv_sqrt_dt is taken care by scaled value of sigma 
-	particles[i].fR += sumForce;
-	particles[j].fR -= sumForce;
+        sumForce = fRij;			// inv_sqrt_dt is taken care by scaled value of sigma 
+        particles[i].fR += sumForce;
+        particles[j].fR -= sumForce;
 
-	// dissipative force
-	rDotv = Vec3D::dot( capRij, wij );
-	magDiss = -1.0 * gamma * wCij2 *rDotv;
-	
-	fDij.X = magDiss * capRij.X;
-	fDij.Y = magDiss * capRij.Y;
-	fDij.Z = magDiss * capRij.Z;
+        // dissipative force
+        rDotv = Vec3D::dot( capRij, wij );
+        magDiss = -1.0 * gamma[particles[i].type][particles[j].type] * wCij2 *rDotv;
+        
+        fDij.X = magDiss * capRij.X;
+        fDij.Y = magDiss * capRij.Y;
+        fDij.Z = magDiss * capRij.Z;
 
-	particles[i].fD += fDij;
-	particles[j].fD -= fDij;
+        particles[i].fD += fDij;
+        particles[j].fD -= fDij;
 	#endif
 
 } // rcutoff
