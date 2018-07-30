@@ -28,12 +28,12 @@ readParam >> buffer >> kWall;		readParam.ignore(256,'\n');		// L13
 readParam >> emptyLine ;		readParam.ignore(256,'\n');		// L14
 
 simProg << "Reading Solid Liquid Interaction Parameters" << std::endl;
-readParam >> buffer >> asl;		readParam.ignore(256,'\n');		// L15
-readParam >> buffer >> Bsl;		readParam.ignore(256,'\n');		// L16
-readParam >> buffer >> Brep;		readParam.ignore(256,'\n');		// L17
+readParam >> buffer >> asl;		        readParam.ignore(256,'\n');		// L15
+readParam >> buffer >> Bsl;		        readParam.ignore(256,'\n');		// L16
+readParam >> buffer >> Brep;		    readParam.ignore(256,'\n');		// L17
 readParam >> buffer >> wallPenetration;	readParam.ignore(256,'\n');		// L18
-readParam >> buffer >> rcWcutoff;	readParam.ignore(256,'\n');		// L19
-readParam >> buffer >> rdWcutoff;	readParam.ignore(256,'\n');		// L20
+readParam >> buffer >> rcWcutoff;	    readParam.ignore(256,'\n');		// L19
+readParam >> buffer >> rdWcutoff;	    readParam.ignore(256,'\n');		// L20
 
 readParam >> emptyLine ;		readParam.ignore(256,'\n');		// L21
 
@@ -45,68 +45,74 @@ readParam >> buffer >> initWallRho;	readParam.ignore(256,'\n');		// L23
 readParam.ignore(256, '\n');
 readParam.ignore(256, '\n');		
 readParam.ignore(256, '\n');		
-readParam >> emptyLine;			readParam.ignore(256,'\n');
+readParam >> emptyLine;			        readParam.ignore(256,'\n');
 readParam.ignore(256, '\n');
 readParam.ignore(256, '\n');		
 readParam.ignore(256, '\n');		
 readParam.ignore(256, '\n');		
 readParam.ignore(256, '\n');		
 readParam.ignore(256, '\n');		
-readParam >> emptyLine;			readParam.ignore(256,'\n');
+readParam >> emptyLine;			        readParam.ignore(256,'\n');
 readParam.ignore(256, '\n');
 readParam.ignore(256, '\n');
 #endif
 #if BODY_FORCE 
-readParam >> buffer >> fBodyX;		readParam.ignore(256,'\n');		// L24
+readParam >> buffer >> fBodyX;		    readParam.ignore(256,'\n');		// L24
 #else
 readParam.ignore(256, '\n');
 #endif
-readParam >> emptyLine;			readParam.ignore(256,'\n');		// L25
+readParam >> emptyLine;			        readParam.ignore(256,'\n');		// L25
 
 #if RANDOM_DISSIPATIVE
 simProg << "Reading Random and Dissipative Parameters" << std::endl;
-readParam >> buffer >> kBT;		readParam.ignore(256,'\n');		// L26
-readParam >> buffer >> sigma;		readParam.ignore(256,'\n');		// L27
+readParam >> buffer >> kBT;		        readParam.ignore(256,'\n');		// L26
+readParam >> buffer >> noise;		    readParam.ignore(256,'\n');		// L27
+	#if MULTI_VISCOSITY_LIQUIDS
+		readParam >> buffer >> noise2;	readParam.ignore(256,'\n');		// L28
+    #else
+        readParam.ignore(256, '\n');		
+	#endif
 #else
 readParam.ignore(256, '\n');		
 readParam.ignore(256, '\n');
+readParam.ignore(256, '\n');
 #endif
-readParam >> buffer >> dim;		readParam.ignore(256,'\n');		// L28
+readParam >> buffer >> dim;		        readParam.ignore(256,'\n');		// L29
 
-readParam >> emptyLine;			readParam.ignore(256,'\n');		// L29
+readParam >> emptyLine;			        readParam.ignore(256,'\n');		// L30
 
 simProg << "Reading Time Parameters" << std::endl;
-readParam >> buffer >> dt;		readParam.ignore(256,'\n');		// L30
-readParam >> buffer >> stepMax;		readParam.ignore(256,'\n');		// L31
-readParam >> buffer >> rstrtFwrtFreq;	readParam.ignore(256,'\n');		// L32
-readParam >> buffer >> saveCount;	readParam.ignore(256,'\n');		// L33
-readParam >> buffer >> psaveCount;	readParam.ignore(256,'\n');		// L34
+readParam >> buffer >> dt;		        readParam.ignore(256,'\n');		// L31
+readParam >> buffer >> stepMax;		    readParam.ignore(256,'\n');		// L32
+readParam >> buffer >> rstrtFwrtFreq;	readParam.ignore(256,'\n');		// L33
+readParam >> buffer >> saveCount;	    readParam.ignore(256,'\n');		// L34
+readParam >> buffer >> psaveCount;	    readParam.ignore(256,'\n');		// L35
 
-readParam >>  emptyLine;		readParam.ignore(256,'\n');		// L35
+readParam >>  emptyLine;		        readParam.ignore(256,'\n');		// L36
 
 simProg << "Reading Structure Factor Parameters" << std::endl;
-readParam >> buffer >> gR_radMin;	readParam.ignore(256,'\n');		// L36
-readParam >> buffer >> gR_radDelta;	readParam.ignore(256,'\n');		// L37
-readParam >> buffer >> gR_tStart;	readParam.ignore(256,'\n');		// L38
-readParam >> buffer >> gR_tDelta;	readParam.ignore(256,'\n');		// L39
+readParam >> buffer >> gR_radMin;	    readParam.ignore(256,'\n');		// L37
+readParam >> buffer >> gR_radDelta;	    readParam.ignore(256,'\n');		// L38
+readParam >> buffer >> gR_tStart;	    readParam.ignore(256,'\n');		// L39
+readParam >> buffer >> gR_tDelta;	    readParam.ignore(256,'\n');		// L40
 
-readParam >> emptyLine;			readParam.ignore(256,'\n');		// L40
+readParam >> emptyLine;			readParam.ignore(256,'\n');		        // L41
 
 simProg << "Reading Velocity Distribution Parameters" << std::endl;
-readParam >> buffer >> velHist_velMin;		readParam.ignore(256,'\n');	// L41
-readParam >> buffer >> velHist_velDelta;	readParam.ignore(256,'\n');	// L42
-readParam >> buffer >> velHist_velMax;		readParam.ignore(256,'\n');	// L43
-readParam >> buffer >> velHist_tStart;		readParam.ignore(256,'\n');	// L44
-readParam >> buffer >> velHist_tDelta;		readParam.ignore(256,'\n');	// L45
+readParam >> buffer >> velHist_velMin;		readParam.ignore(256,'\n');	// L42
+readParam >> buffer >> velHist_velDelta;	readParam.ignore(256,'\n');	// L43
+readParam >> buffer >> velHist_velMax;		readParam.ignore(256,'\n');	// L44
+readParam >> buffer >> velHist_tStart;		readParam.ignore(256,'\n');	// L45
+readParam >> buffer >> velHist_tDelta;		readParam.ignore(256,'\n');	// L46
 
-readParam >> emptyLine;			readParam.ignore(256,'\n');		// L46
+readParam >> emptyLine;			readParam.ignore(256,'\n');		        // L47
 #if PLANAR_SLAB
 simProg << "Reading Planar Slab Parameters" << std::endl;
-readParam >> buffer >> slabWidth;	readParam.ignore(256,'\n');		// L47
-readParam >> buffer >> rhoZ_Zmin;	readParam.ignore(256,'\n');		// L48
-readParam >> buffer >> rhoZ_Zdelta;	readParam.ignore(256,'\n');		// L49
+readParam >> buffer >> slabWidth;	readParam.ignore(256,'\n');		    // L48
+readParam >> buffer >> rhoZ_Zmin;	readParam.ignore(256,'\n');		    // L49
+readParam >> buffer >> rhoZ_Zdelta;	readParam.ignore(256,'\n');		    // L50
 #if WALL_ON
-	readParam >> buffer >> segPlane_zDelta;	readParam.ignore(256,'\n');	// L50
+	readParam >> buffer >> segPlane_zDelta;	readParam.ignore(256,'\n');	// L51
 #else
 	readParam.ignore(256, '\n');
 #endif
@@ -117,13 +123,13 @@ readParam.ignore(256, '\n');
 readParam.ignore(256, '\n');
 #endif
 
-readParam >> emptyLine;			readParam.ignore(256,'\n');		// L51
+readParam >> emptyLine;			readParam.ignore(256,'\n');		        // L52
 #if CYLINDER_DROPLET
 simProg << "Reading Cylindrical Slab Parameters" << std::endl;
-readParam >> buffer >> cylRad;		readParam.ignore(256,'\n');		// L52
-readParam >> buffer >> cylHeight;	readParam.ignore(256,'\n');		// L53
-readParam >> buffer >> rhor_rmin;	readParam.ignore(256,'\n');		// L54
-readParam >> buffer >> rhor_rdelta;	readParam.ignore(256,'\n');		// L55
+readParam >> buffer >> cylRad;		readParam.ignore(256,'\n');		    // L53
+readParam >> buffer >> cylHeight;	readParam.ignore(256,'\n');		    // L54 
+readParam >> buffer >> rhor_rmin;	readParam.ignore(256,'\n');		    // L55
+readParam >> buffer >> rhor_rdelta;	readParam.ignore(256,'\n');		    // L56
 #else
 readParam.ignore(256, '\n');
 readParam.ignore(256, '\n');
@@ -131,45 +137,44 @@ readParam.ignore(256, '\n');
 readParam.ignore(256, '\n');
 #endif 
 
-readParam >> emptyLine;			readParam.ignore(256,'\n');		// L56
+readParam >> emptyLine;			readParam.ignore(256,'\n');		        // L57
 #if LEES_EDWARDS_BC
 	simProg << "Reading homogeneous-shear parameters (Lees-Edwards)" << std::endl;
-	readParam >> buffer >> gammaDot;	readParam.ignore(256,'\n');	// L57
+	readParam >> buffer >> gammaDot;	readParam.ignore(256,'\n');	    // L58
 #else
 	readParam.ignore(256, '\n');
 #endif // LEES_EDWARDS_BC
-readParam >> emptyLine;			readParam.ignore(256,'\n');		// L58
+readParam >> emptyLine;			readParam.ignore(256,'\n');		        // L59
 
 #if SACF
 	simProg << "Reading parameters for the calculation of stress-autocorrelation" << std::endl;	
-	readParam >> buffer >> n_vars;		readParam.ignore(256,'\n');		// L59
-	readParam >> buffer >> corLevels;	readParam.ignore(256,'\n');		// L60
-	readParam >> buffer >> pCorr;		readParam.ignore(256,'\n');		// L61
-	readParam >> buffer >> mCorr;		readParam.ignore(256,'\n');		// L62
+	readParam >> buffer >> n_vars;		readParam.ignore(256,'\n');		// L60
+	readParam >> buffer >> corLevels;	readParam.ignore(256,'\n');		// L61
+	readParam >> buffer >> pCorr;		readParam.ignore(256,'\n');		// L62
+	readParam >> buffer >> mCorr;		readParam.ignore(256,'\n');		// L63
 #else
 	readParam.ignore(256, '\n');
 	readParam.ignore(256, '\n');
 	readParam.ignore(256, '\n');
 	readParam.ignore(256, '\n');
 #endif
-readParam >> emptyLine;			readParam.ignore(256,'\n');			// L63
+readParam >> emptyLine;			readParam.ignore(256,'\n');			    // L64
 
 #if CAPILLARY_CYLINDER || CAPILLARY_SQUARE
 	simProg << "Reading parameters for the capillary tube" << std::endl;	
-	readParam >> buffer >> bufferLen;	readParam.ignore(256,'\n');		// L64 
-	readParam >> buffer >> capLen;		readParam.ignore(256,'\n');		// L65 
-	readParam >> buffer >> capRad;		readParam.ignore(256,'\n');		// L66 
-	readParam >> buffer >> capWallWdth;	readParam.ignore(256,'\n');		// L67 
-	readParam >> buffer >> resWdth;		readParam.ignore(256,'\n');		// L68 
+	readParam >> buffer >> bufferLen;	readParam.ignore(256,'\n');		// L65 
+	readParam >> buffer >> capLen;		readParam.ignore(256,'\n');		// L66 
+	readParam >> buffer >> capRad;		readParam.ignore(256,'\n');		// L67 
+	readParam >> buffer >> capWallWdth;	readParam.ignore(256,'\n');		// L68 
+	readParam >> buffer >> resWdth;		readParam.ignore(256,'\n');		// L69 
 
-	readParam >> emptyLine;			readParam.ignore(256,'\n');		// L69
+	readParam >> emptyLine;			readParam.ignore(256,'\n');		    // L70
 
 	#if PISTON 
 	simProg << "Reading parameters for the capillary tube" << std::endl;	
-	readParam >> buffer >> appPressure;	readParam.ignore(256,'\n');		// L70
-	readParam >> buffer >> pistonT0;	readParam.ignore(256,'\n');		// L71
-	readParam >> buffer >> pistonW;		readParam.ignore(256,'\n');		// L72
-		
+	readParam >> buffer >> appPressure;	readParam.ignore(256,'\n');		// L71
+	readParam >> buffer >> pistonT0;	readParam.ignore(256,'\n');		// L72
+	readParam >> buffer >> pistonW;		readParam.ignore(256,'\n');		// L73
 	#endif
 #endif
 
@@ -186,10 +191,14 @@ boxRecip[y] 	= 1.0 / boxEdge[y];
 boxRecip[z] 	= 1.0 / boxEdge[z];
 
 #if RANDOM_DISSIPATIVE
-gamma 		= pow( sigma,2.0 )/( 2.0 * kBT ); 		// DPD dissipative force parameter
+	inv_sqrt_dt 	= 1.0 / std::sqrt(dt);				    // Rescale sigma after calculating gamma
+	friction	    = pow( noise, 2.0 )/( 2.0 * kBT ); 	    // DPD dissipative force parameter
+	noise	 	    = noise * inv_sqrt_dt;				    // inverse of square root of the time step
 
-inv_sqrt_dt 	= 1.0 / std::sqrt(dt);				// Rescale sigma after calculating gamma
-sigma 		= sigma * inv_sqrt_dt;				// inverse of square root of the time step
+	#if MULTI_VISCOSITY_LIQUIDS
+		friction2	= pow( noise2, 2.0 )/( 2.0 * kBT );     // DPD dissipative force parameter
+		noise2 		= noise2 * inv_sqrt_dt;				    // inverse of square root of the time step
+	#endif
 #endif
 
 // Cutoff distances for liquid-liquid and solid-liquid interactions
@@ -263,14 +272,14 @@ nZ_zbins = round( ( nZ_zMax - nZ_zMin)  / nZ_zbinWidth );
 
 #endif
 #elif CYLINDER_DROPLET
-rhor_rmax 	= boxEdge[x];
-rhor_bins  	= round( ( rhor_rmax - rhor_rmin ) / rhor_rdelta ); // number of elements
+    rhor_rmax 	= boxEdge[x];
+    rhor_bins  	= round( ( rhor_rmax - rhor_rmin ) / rhor_rdelta ); // number of elements
 #endif
 
 #if LEES_EDWARDS_BC
-strainRate = gammaDot * boxEdge[y];
+    strainRate = gammaDot * boxEdge[y];
 #endif
 
 #if SACF
-pCorr2 = pCorr / 2;
+    pCorr2 = pCorr / 2;
 #endif

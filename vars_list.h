@@ -221,13 +221,20 @@ Vec3D fDij;
 Vec3D wij;
 Vec3D sumForce;
 
-double sigma;				// DPD noise level
-double gamma;				// DPD dissipative force parameter
+double noise;			// DPD noise parameter
+double friction;		// DPD friction parameter
+	#if MULTI_VISCOSITY_LIQUIDS
+		double noise2;
+		double friction2;
+	#endif
 double uniRand;
 double thetaij;
 double magRand;
 double rDotv;
 double magDiss;
+	
+std::vector<std::vector<double>> sigma;	// sigma is a 2D vector of random coefficient between different particle types
+std::vector<std::vector<double>> gamma;	// gamma is a 2D vector of friction coefficient for different particle types 
 #endif
 
 // file writing parameters

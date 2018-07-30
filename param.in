@@ -1,6 +1,6 @@
-boxEdgeX            20.0		# box dimensions
-boxEdgeY            20.0
-boxEdgeZ            80.0
+boxEdgeX            10.0		# box dimensions
+boxEdgeY            10.0
+boxEdgeZ            10.0
 initRho             5.00
 #
 All                 -40.0		# liquid-liquid interaction parameters
@@ -24,10 +24,11 @@ initWallRho         5.00
 fBodyX              0.1
 #
 kBT                 1.0 		# temperature	
-sigma               6.0			# dissipation coeffecient
+noise               6.0			# dissipation coeffecient
+noise2              1.0
 dim                 3			# dimensions
 #
-dt                  0.01		# time parameters	
+dt                  0.001		# time parameters	
 stepMax             100000
 rstrtFWrtFreq       10000
 saveCount           500
@@ -44,7 +45,7 @@ velHist_velMax       25.0
 velHist_tStart       50000
 velHist_tDelta       100
 #
-slabWidth           25.0		# PLANAR_SLAB
+slabWidth           5.0		# PLANAR_SLAB
 rhoZ_Zmin           0.00		
 rhoZ_Zdelta         0.05	
 segPlane_zDelta     0.05
@@ -68,5 +69,5 @@ capWallWdth         1.5
 resWdth             10.0
 #
 appPressure         10.0
-pistonT0	    10000.0
+pistonT0	        10000.0
 pistonW             1000.0
