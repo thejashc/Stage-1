@@ -18,37 +18,40 @@
 #define SPHERICAL_DROPLET		0
 #define SPHERICAL_CAP			0
 #define CYLINDER_DROPLET		0
-#define PLANAR_SLAB			0
-#define CRYSTAL				0
-#define RESTART				0
+#define PLANAR_SLAB			    0
+#define CRYSTAL				    1
+#define RESTART				    0
 
 // WALL flags
-#define WALL_ON				1
+#define WALL_ON				    0
 #define LOWER_WALL_ON			0
 #define UPPER_WALL_ON			0
-#define FCC_WALL			0
-#define ROUGH_WALL			0
+#define FCC_WALL			    0
+#define ROUGH_WALL			    0
 
 #define CAPILLARY_CYLINDER		0
-#define CAPILLARY_SQUARE		1
-#define PISTON				1
+#define CAPILLARY_SQUARE		0
+#define PISTON				    0
 
 // POISEUILLE flow
-#define BODY_FORCE			0
+#define BODY_FORCE			    0
 
 // FILE_WRITE
-#define STYLE_VMD			1
+#define STYLE_VMD			    1
 #define STYLE_MERCURY_DPM		0
 
 // CORRELATION FUNCTIONS
-#define SACF				0
-#define SACF_TEST			0
+#define SACF				    0
+#define SACF_TEST			    0
 
 // LEES-EDWARDS BOUNDARY CONDITION
 #define LEES_EDWARDS_BC			0
 
 // DENSITY CALCULATION
-#define DENS_EXACT			0 
+#define DENS_EXACT			    0    
+
+// MULTIVISCOSITY_LIQUIDS
+#define MULTI_VISCOSITY_LIQUIDS	0
 
 //declare DPD solver
 class DPD {
@@ -66,7 +69,7 @@ class DPD {
 			// initialize position, velocity, hoc, ll
 
 			// parameters declaration
-			pTensCounter            = 0;
+			pTensCounter    = 0;
 			#if SACF
 				normalizeCorr_count     = 0;
 			#endif
@@ -74,7 +77,7 @@ class DPD {
 			init();
 			temp 			= 0.0;
 			tempSum 		= 0.0;
-		    	#if WALL_ON
+		    #if WALL_ON
 				wallTemp 		= 0.;
 			#endif
 			tempAv 			= 0.0;
@@ -185,8 +188,9 @@ class DPD {
 				step += 1;						// increment time step
 
 				// if ( step % 1 == 0 )
-				//	simProg << " step= " << step << std::endl;
-
+			    //		simProg << " step= " << step << std::endl;
+                //
+                
 			}//end time loop
 
 			// post-processing
@@ -369,10 +373,17 @@ class DPD {
 				solidCount = 0;
 			#endif
 			for ( i = 0; i < particles.size(); ++i ){
-				if ( particles[i].type == 1 ){
-					fluid_index.push_back(i);
-					fluidCount++;
-				}
+                #if MULTI_VISCOSITY_LIQUIDS
+                    if ( particles[i].type == 1 || particles[i].type == 2 ){
+                        fluid_index.push_back(i);
+                        fluidCount++;
+                    }
+                #else
+                    if ( particles[i].type == 1 ){
+                        fluid_index.push_back(i);
+                        fluidCount++;
+                    }
+                #endif
 				#if WALL_ON
 				else{
 					solid_index.push_back(i);
@@ -383,8 +394,8 @@ class DPD {
 
 			simProg << fluidCount << " fluid particles indexed" << std::endl;
 			#if WALL_ON
-			simProg << solidCount << " solid particles indexed" << std::endl;
-			simProg << fluidCount + solidCount << " total particles indexed " << std::endl;
+                simProg << solidCount << " solid particles indexed" << std::endl;
+                simProg << fluidCount + solidCount << " total particles indexed " << std::endl;
 			#endif
 
 			#if WALL_ON
@@ -404,7 +415,7 @@ class DPD {
 						i++;
 					}
 				#endif	// BODY_FORCE
-			simProg << "\n" << solidCount << " solid particles attached to initial positions by a spring" << std::endl;
+                simProg << "\n" << solidCount << " solid particles attached to initial positions by a spring" << std::endl;
 			#endif // WALL_ON
 			
 			
@@ -463,82 +474,82 @@ class DPD {
 			#endif
 
 			#if SACF
-			// multi-tau correlation matrix definition
-			fCorr.resize(n_vars * n_vars);		// fcor stores the calculated correlation at a given level
-			nCorr.resize(n_vars * n_vars);		// ncor stores the number of samples used for averaging the correlation
-			
-			fCorrAv.resize(n_vars * n_vars);	// used for file-writing purpose at intermediate times
+                // multi-tau correlation matrix definition
+                fCorr.resize(n_vars * n_vars);		// fcor stores the calculated correlation at a given level
+                nCorr.resize(n_vars * n_vars);		// ncor stores the number of samples used for averaging the correlation
+                
+                fCorrAv.resize(n_vars * n_vars);	// used for file-writing purpose at intermediate times
 
-			normalizeCorr.resize(n_vars * n_vars);		// normalized values for every stress vector element
-			normalizeCorrAv.resize(n_vars * n_vars);	// used for file-writing purpose at intermediate times
+                normalizeCorr.resize(n_vars * n_vars);		// normalized values for every stress vector element
+                normalizeCorrAv.resize(n_vars * n_vars);	// used for file-writing purpose at intermediate times
 
-			aCorr.resize(n_vars);		// acor stores the data used to calculate correlation
-			pointCorr.resize(n_vars);	// pointcor stores the array-indes at which the last data was stored
+                aCorr.resize(n_vars);		// acor stores the data used to calculate correlation
+                pointCorr.resize(n_vars);	// pointcor stores the array-indes at which the last data was stored
 
-			// fCorr matrix initialize
-			for ( i=0 ; i<n_vars*n_vars ; ++i ) {
+                // fCorr matrix initialize
+                for ( i=0 ; i<n_vars*n_vars ; ++i ) {
 
-				fCorr[i].resize( corLevels );
-				nCorr[i].resize( corLevels );
-				fCorrAv[i].resize( corLevels );
+                    fCorr[i].resize( corLevels );
+                    nCorr[i].resize( corLevels );
+                    fCorrAv[i].resize( corLevels );
 
-				for (  j=0 ; j<corLevels ; ++j ){
-					fCorr[i][j].resize( pCorr2 );
-					nCorr[i][j].resize( pCorr2 );
-					fCorrAv[i][j].resize( pCorr2 );
-				}// j
-			}// i
+                    for (  j=0 ; j<corLevels ; ++j ){
+                        fCorr[i][j].resize( pCorr2 );
+                        nCorr[i][j].resize( pCorr2 );
+                        fCorrAv[i][j].resize( pCorr2 );
+                    }// j
+                }// i
 
-			// aCorr, pointCorr, nCorr matrix initialize
-			for ( i=0 ; i<n_vars ; ++i ) {
+                // aCorr, pointCorr, nCorr matrix initialize
+                for ( i=0 ; i<n_vars ; ++i ) {
 
-				aCorr[i].resize( corLevels );
-				pointCorr[i].resize( corLevels );
+                    aCorr[i].resize( corLevels );
+                    pointCorr[i].resize( corLevels );
 
-				for (  j=0 ; j<corLevels ; ++j ){
-					aCorr[i][j].resize( pCorr );
-				}// j
-			}// i
+                    for (  j=0 ; j<corLevels ; ++j ){
+                        aCorr[i][j].resize( pCorr );
+                    }// j
+                }// i
 
-			// initialize aCorr -- WARNING : assign large initial negative 
-			// (or positive) values to ensure that the data read is larger(smaller)
-			// than this initial value 
-			for ( i=0 ; i<n_vars ; ++i )
-				for ( j=0 ; j<corLevels ; ++j )
-					for( k=0 ; k<pCorr ; ++k )
-						aCorr[i][j][k] = -10e20;
+                // initialize aCorr -- WARNING : assign large initial negative 
+                // (or positive) values to ensure that the data read is larger(smaller)
+                // than this initial value 
+                for ( i=0 ; i<n_vars ; ++i )
+                    for ( j=0 ; j<corLevels ; ++j )
+                        for( k=0 ; k<pCorr ; ++k )
+                            aCorr[i][j][k] = -10e20;
 
-			// initialize fCorr
-			for ( i=0 ; i<n_vars*n_vars ; ++i )
-				for ( j=0 ; j<corLevels ; ++j )
-					for( k=0 ; k<pCorr2 ; ++k )
-						fCorr[i][j][k] = 0.;
+                // initialize fCorr
+                for ( i=0 ; i<n_vars*n_vars ; ++i )
+                    for ( j=0 ; j<corLevels ; ++j )
+                        for( k=0 ; k<pCorr2 ; ++k )
+                            fCorr[i][j][k] = 0.;
 
-			// initialize norr
-			for ( i=0 ; i<n_vars*n_vars ; ++i )
-				for ( j=0 ; j<corLevels ; ++j )
-					for( k=0 ; k<pCorr2 ; ++k )
-						nCorr[i][j][k] = 0;
+                // initialize norr
+                for ( i=0 ; i<n_vars*n_vars ; ++i )
+                    for ( j=0 ; j<corLevels ; ++j )
+                        for( k=0 ; k<pCorr2 ; ++k )
+                            nCorr[i][j][k] = 0;
 
-			// initialize pointCorr
-			for ( i=0 ; i<n_vars ; ++i )
-				for ( j=0 ; j<corLevels ; ++j )
-					pointCorr[i][j] = -1;
+                // initialize pointCorr
+                for ( i=0 ; i<n_vars ; ++i )
+                    for ( j=0 ; j<corLevels ; ++j )
+                        pointCorr[i][j] = -1;
 
-			// initialize normalizeCorr
-			for ( i=0 ; i<n_vars*n_vars ; ++i ){
-					normalizeCorr[i] = 0.;
-					normalizeCorrAv[i] = 0.;}
-					
+                // initialize normalizeCorr
+                for ( i=0 ; i<n_vars*n_vars ; ++i ){
+                        normalizeCorr[i] = 0.;
+                        normalizeCorrAv[i] = 0.;}
+                        
 
-			// initialize sacpunt
-			sacpunt = 0;
+                // initialize sacpunt
+                sacpunt = 0;
 
-			// finding size of arrays
-			// simProg << "aCorr [" << aCorr.size() << "][" << aCorr[0].size() << "][" << aCorr[0][0].size() << "]" << std::endl;
-			// simProg << "fCorr [" << fCorr.size() << "][" << fCorr[0].size() << "][" << fCorr[0][0].size() << "]" << std::endl;
-			// simProg << "nCorr [" << nCorr.size() << "][" << nCorr[0].size() << "][" << nCorr[0][0].size() << "]" << std::endl;
-			// simProg << "pointCorr [" << pointCorr.size() << "][" << pointCorr[0].size() << "]" << std::endl;
+                // finding size of arrays
+                // simProg << "aCorr [" << aCorr.size() << "][" << aCorr[0].size() << "][" << aCorr[0][0].size() << "]" << std::endl;
+                // simProg << "fCorr [" << fCorr.size() << "][" << fCorr[0].size() << "][" << fCorr[0][0].size() << "]" << std::endl;
+                // simProg << "nCorr [" << nCorr.size() << "][" << nCorr[0].size() << "][" << nCorr[0][0].size() << "]" << std::endl;
+                // simProg << "pointCorr [" << pointCorr.size() << "][" << pointCorr[0].size() << "]" << std::endl;
 			#endif
 
 			/*
@@ -550,6 +561,103 @@ class DPD {
 			#endif
 			*/
 
+			// determine the number of types of particles present
+			#if RANDOM_DISSIPATIVE
+					sigma.resize( 3 );
+					gamma.resize( 3 );
+
+					for ( i=0; i < 3; ++i ){
+						sigma[i].resize( 3 );
+						gamma[i].resize( 3 );
+					}
+
+					// defining the elements of the sigma and gamma array
+					#if MULTI_VISCOSITY_LIQUIDS
+						#if WALL_ON
+							sigma[0][0] 	= noise;						// solid-solid interaction ( type 00 interaction )
+							sigma[0][1] 	= 0.;        
+							sigma[0][2] 	= 0.;        
+							sigma[1][0] 	= 0.;        
+							sigma[1][1] 	= noise;       						// liquid1-liquid1 interaction ( type 11 interaction ) 
+							sigma[1][2] 	= sqrt( 0.5 * ( noise*noise + noise2*noise2 ) ); 
+							sigma[2][0] 	= 0.;
+							sigma[2][1] 	= sqrt( 0.5 * ( noise*noise + noise2*noise2 ) );        				
+							sigma[2][2] 	= noise2;        					// solid-liquid interaction ( type 01 interaction ) 
+
+							gamma[0][0] 	= friction;						// solid-solid interaction ( type 00 interaction )
+							gamma[0][1] 	= 0.;        
+							gamma[0][2] 	= 0.;        
+							gamma[1][0] 	= 0.;        
+							gamma[1][1] 	= friction;       					// liquid1-liquid1 interaction ( type 11 interaction ) 
+							gamma[1][2] 	= 0.5 * ( friction + friction2 ); 
+							gamma[2][0] 	= 0.;
+							gamma[2][1] 	= 0.5 * ( friction + friction2 ); 
+							gamma[2][2] 	= friction2;        					// solid-liquid interaction ( type 01 interaction ) 
+						#else
+							sigma[0][0] 	= 0.;						// solid-solid interaction ( type 00 interaction )
+							sigma[0][1] 	= 0.;        
+							sigma[0][2] 	= 0.;        
+							sigma[1][0] 	= 0.;        
+							sigma[1][1] 	= noise;       						// liquid1-liquid1 interaction ( type 11 interaction ) 
+							sigma[1][2] 	= sqrt( 0.5 * ( noise*noise + noise2*noise2 ) ); 
+							sigma[2][0] 	= 0.;
+							sigma[2][1] 	= sqrt( 0.5 * ( noise*noise + noise2*noise2 ) ); 
+							sigma[2][2] 	= noise2;        					// solid-liquid interaction ( type 01 interaction ) 
+
+							gamma[0][0] 	= 0.;						// solid-solid interaction ( type 00 interaction )
+							gamma[0][1] 	= 0.;        
+							gamma[0][2] 	= 0.;        
+							gamma[1][0] 	= 0.;        
+							gamma[1][1] 	= friction;       					// liquid1-liquid1 interaction ( type 11 interaction ) 
+							gamma[1][2] 	= 0.5 * ( friction + friction2 ); 
+							gamma[2][0] 	= 0.;
+							gamma[2][1] 	= 0.5 * ( friction + friction2 );
+							gamma[2][2] 	= friction2;        					// solid-liquid interaction ( type 01 interaction ) 
+
+						#endif // WALL_ON
+					#else
+						#if WALL_ON
+							sigma[0][0] 	= noise;						// solid-solid interaction ( type 00 interaction )
+							sigma[0][1] 	= 0.;        
+							sigma[0][2] 	= 0.;        
+							sigma[1][0] 	= 0.;        
+							sigma[1][1] 	= noise;       						// liquid1-liquid1 interaction ( type 11 interaction ) 
+							sigma[1][2] 	= 0.; 
+							sigma[2][0] 	= 0.;
+							sigma[2][1] 	= 0.;        				
+							sigma[2][2] 	= 0.;        					// solid-liquid interaction ( type 01 interaction ) 
+
+							gamma[0][0] 	= friction;						// solid-solid interaction ( type 00 interaction )
+							gamma[0][1] 	= 0.;        
+							gamma[0][2] 	= 0.;        
+							gamma[1][0] 	= 0.;        
+							gamma[1][1] 	= friction;       					// liquid1-liquid1 interaction ( type 11 interaction ) 
+							gamma[1][2] 	= 0.; 
+							gamma[2][0] 	= 0.;
+							gamma[2][1] 	= 0.;        				
+							gamma[2][2] 	= 0.;        					// solid-liquid interaction ( type 01 interaction ) 
+						#else
+							sigma[0][0] 	= 0.;						// solid-solid interaction ( type 00 interaction )
+							sigma[0][1] 	= 0.;        
+							sigma[0][2] 	= 0.;        
+							sigma[1][0] 	= 0.;        
+							sigma[1][1] 	= noise;       						// liquid1-liquid1 interaction ( type 11 interaction ) 
+							sigma[1][2] 	= 0.; 
+							sigma[2][0] 	= 0.;
+							sigma[2][1] 	= 0.;        				
+							sigma[2][2] 	= 0.;        					// solid-liquid interaction ( type 01 interaction ) 
+
+							gamma[0][0] 	= 0.;						// solid-solid interaction ( type 00 interaction )
+							gamma[0][1] 	= 0.;        
+							gamma[0][2] 	= 0.;        
+							gamma[1][0] 	= 0.;        
+							gamma[1][1] 	= friction;       					// liquid1-liquid1 interaction ( type 11 interaction ) 
+							gamma[1][2] 	= 0.; 
+							gamma[2][0] 	= 0.;
+							gamma[2][1] 	= 0.;        				
+                       #endif // WALL_ON
+					#endif // MULTI_VISCOSITY_LIQUIDS
+			#endif // RANDOM_DISSIPATIVE
 		}//init
 
 
@@ -844,15 +952,15 @@ class DPD {
 									// simProg << "j2 " << m << " " << mj[x] << " " << mj[y] << " " << mj[z] << " " << jj << " " << j << std::endl;
 
 									#if WALL_ON
-									if ( particles[i].type == 1 && particles[j].type == 1 ){
-											#include "pairforceLL.h"
-									} // liquid liquid interaction
-									else if ( particles[i].type == 0 && particles[j].type == 0 ){
-											#include "pairforceSS.h"
-									}// solid solid interaction
-									else{
-										#include "pairforceSL.h"
-									} // solid liquid interaction
+                                        if ( particles[i].type == 1 && particles[j].type == 1 ){
+                                                #include "pairforceLL.h"
+                                        } // liquid liquid interaction
+                                        else if ( particles[i].type == 0 && particles[j].type == 0 ){
+                                                #include "pairforceSS.h"
+                                        }// solid solid interaction
+                                        else{
+                                            #include "pairforceSL.h"
+                                        } // solid liquid interaction
 									#else 
 										#include "pairforceLL.h"
 									#endif
@@ -897,21 +1005,20 @@ class DPD {
 			momY		= 0.0;
 			momZ		= 0.0;
 			#if LEES_EDWARDS_BC
-			dissipativeWork = 0.0;
-			randomWork	= 0.0;
+                dissipativeWork = 0.0;
+                randomWork	= 0.0;
 			#endif
 	
 			// simProg << " fi[0], fi[fluidCount - 1], fluidCount " << fluid_index[0] << " " << fluid_index[1] << " " << fluidCount << std::endl;	
 			for ( i = 0; i < npart ; ++i )		// traversing over all particles
 			{
-
-			
 				#if DENS_EXACT	
 					particles[i].dens = 0.0;
 				#else
 					particles[i].dens = particles[i].dens_new;
 					particles[i].dens_new = 0.;
 				#endif
+
 				particles[i].rhoBar = 0.0;
 				particles[i].fC.setZero();
 		
@@ -924,7 +1031,6 @@ class DPD {
 					particles[i].fext.setZero();
 					particles[i].fCW.setZero();
 					particles[i].fHarmonic.setZero();
-
 				#endif 
 
 			} // set density equal to zero for solid type particles
@@ -1269,9 +1375,9 @@ class DPD {
 				paraInfo << "Random & Dissipative Force " << std::endl;
 				paraInfo << "---------------------------" << std::endl;
 				paraInfo << "Set temperature (kbT)                      :           " << kBT << std::endl;
-				paraInfo << "Rescaled Noise level (sigma/sqrt(dt))      :           " << sigma << std::endl;
-				paraInfo << "Actual Noise level (sigma)                 :           " << sigma/( inv_sqrt_dt) << std::endl;
-				paraInfo << "Friction parameter (gamma)                 :           " << gamma << std::endl;
+				paraInfo << "Rescaled Noise level (sigma/sqrt(dt))      :           " << noise << std::endl;
+				paraInfo << "Actual Noise level (sigma)                 :           " << noise/( inv_sqrt_dt) << std::endl;
+				paraInfo << "Friction parameter (gamma)                 :           " << friction << std::endl;
 			#endif 
 			
 			#if WALL_ON
@@ -1652,40 +1758,45 @@ class DPD {
 			*/
 
 			#if STYLE_VMD 
-			char filename[40];
-			char filename1[40];
+                char filename[40];
+                char filename1[40];
 
-			// sprintf( filename, "./data/data1_%d.vtu", step);  
-			sprintf( filename, "./data/XYZ%d.xyz", step);  
-			sprintf( filename1, "./data/velocity%d.dat", step);  
-			
-			std::ofstream file(filename);
-			std::ofstream file1(filename1);
+                // sprintf( filename, "./data/data1_%d.vtu", step);  
+                sprintf( filename, "./data/XYZ%d.xyz", step);  
+                sprintf( filename1, "./data/velocity%d.dat", step);  
+                
+                std::ofstream file(filename);
+                std::ofstream file1(filename1);
 
-			file << particles.size() << std::endl;
-			file << "#X Y Z co-ordinates" << std::endl;
-			file1 << particles.size() << std::endl;
-			file1 << "#vx vy vz" << std::endl;
+                file << particles.size() << std::endl;
+                file << "#X Y Z co-ordinates" << std::endl;
+                file1 << particles.size() << std::endl;
+                file1 << "#vx vy vz" << std::endl;
 
 
-			if ( fluidCount != 0 ) {	
-				i = 0;
-				while ( i < fluidCount ){
-					file  << "H" << "\t" << particles[fluid_index[i]].r << std::endl;
-					file1 << "H" << "\t" << particles[fluid_index[i]].v << std::endl;
+                if ( fluidCount != 0 ) {	
+                    i = 0;
+                    while ( i < fluidCount ){
 
-					i++;
-				}
-			}
-				#if WALL_ON	
-				i = 0;
-				while ( i < solidCount ){
-					file  << "O" << "\t" << particles[solid_index[i]].r << std::endl;
-					file1 << "O" << "\t" << particles[solid_index[i]].v << std::endl;
+                        if ( particles[fluid_index[i]].type == 1 ){
+                            file  << "H" << "\t" << particles[fluid_index[i]].r << std::endl;
+                            file1 << "H" << "\t" << particles[fluid_index[i]].v << std::endl;}
+                        else{
+                            file  << "C" << "\t" << particles[fluid_index[i]].r << std::endl;
+                            file1 << "C" << "\t" << particles[fluid_index[i]].v << std::endl;}
 
-					i++;
-				}
-				#endif
+                        i++;
+                    }
+                }
+                    #if WALL_ON	
+                        i = 0;
+                        while ( i < solidCount ){
+                            file  << "O" << "\t" << particles[solid_index[i]].r << std::endl;
+                            file1 << "O" << "\t" << particles[solid_index[i]].v << std::endl;
+
+                            i++;
+                        }
+                    #endif
 			#endif
 
 			#if STYLE_MERCURY_DPM
