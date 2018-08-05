@@ -191,13 +191,14 @@ boxRecip[y] 	= 1.0 / boxEdge[y];
 boxRecip[z] 	= 1.0 / boxEdge[z];
 
 #if RANDOM_DISSIPATIVE
-	inv_sqrt_dt 	= 1.0 / std::sqrt(dt);				    // Rescale sigma after calculating gamma
+    sqrtTwelve      = std::sqrt(12.);
+	inv_sqrt_dt 	= 1.0 / std::sqrt(dt);				    // inverse of square root of the time step
 	friction	    = pow( noise, 2.0 )/( 2.0 * kBT ); 	    // DPD dissipative force parameter
-	noise	 	    = noise * inv_sqrt_dt;				    // inverse of square root of the time step
+	noise	 	    = sqrtTwelve * noise * inv_sqrt_dt;	    // Rescale sigma - sqrt(12) and inv_sqrt_dt
 
 	#if MULTI_VISCOSITY_LIQUIDS
 		friction2	= pow( noise2, 2.0 )/( 2.0 * kBT );     // DPD dissipative force parameter
-		noise2 		= noise2 * inv_sqrt_dt;				    // inverse of square root of the time step
+		noise2 		= sqrtTwelve * noise2 * inv_sqrt_dt;    // Rescale sigma - sqrt(12) and inv_sqrt_dt
 	#endif
 #endif
 
@@ -235,9 +236,9 @@ rd2 = pow( rd_cutoff,2);	// square of cut-off distance
 //****************************** POST- PROCESSING *****************************************//
 //*****************************************************************************************//
 // g(r) calculation
-gR_radMax = boxEdge[x] / 2.0;		// maximum radius for g(r)
-gR_nElem  = round( ( gR_radMax - gR_radMin )/ gR_radDelta); // number of elements
-gR_tEnd = stepMax;
+gR_radMax   = sqrt( pow( 0.5 * boxEdge[x], 2.) + pow( 0.5 * boxEdge[y], 2.) + pow( 0.5 * boxEdge[z], 2.) );		// maximum radius for g(r)
+gR_nElem    = ceil( ( gR_radMax - gR_radMin )/ gR_radDelta); // number of elements
+gR_tEnd     = stepMax;
 gR_tSamples = round(( gR_tEnd - gR_tStart )/(gR_tDelta)) - 1;
 
 // velocity distribution
