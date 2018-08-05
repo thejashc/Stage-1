@@ -19,8 +19,10 @@ double dt;				// time step
 double inv_sqrt_dt;			// inverse of square root of time step
 double half_dt;				// 0.5*dt 
 double half_dt_sqr;			// 0.5*dt*dt
+double sqrtTwelve;
 double dim;				// dimension of system
 double dof;				// degrees of freedom
+unsigned int pCount;
 
 int step;				// counter for number of steps 
 int stepMax;				// total number of steps
@@ -224,8 +226,15 @@ Vec3D sumForce;
 double noise;			// DPD noise parameter
 double friction;		// DPD friction parameter
 	#if MULTI_VISCOSITY_LIQUIDS
+
+        unsigned int fluidType1_idxStart;
+        unsigned int fluidType1_idxEnd;
+        unsigned int fluidType2_idxStart;
+        unsigned int fluidType2_idxEnd;
+
 		double noise2;
 		double friction2;
+
 	#endif
 double uniRand;
 double thetaij;
@@ -252,7 +261,7 @@ int gR_tDelta;				// time between measurements g(r)
 int gR_tEnd;				// end time for the measurement g(r)
 int gR_tSamples;		 	// number of samples for g(r)	
 
-std::vector<double> gR_nCount;// g(r) function
+std::vector<std::vector<double>> gR_nCount;// g(r) function
 
 double ri;	// inner radius
 double ro;	// outer radius
@@ -460,8 +469,6 @@ int ig;		// index for r
                 double distInRightWall; 
                 double distInBottomWall;
                 double distInTopWall;	
-
-		unsigned int pCount;
 
 		double capTubeStart;
 		double capTubeEnd;
