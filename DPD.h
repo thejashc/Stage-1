@@ -146,7 +146,13 @@ class DPD {
 				}
 				tot_en = kin_en + pot_en;
 
-				if ( (step > gR_tStart) && (step % gR_tDelta == 0) ) grSample();
+				if ( (step > gR_tStart) && (step % gR_tDelta == 0) ) {  
+                                                                        grSample(0, fluidCount, 0);
+                                                                        #if MULTI_VISCOSITY_LIQUIDS
+                                                                            grSample(fluidType1_idxStart, fluidType1_idxEnd, 1); 
+                                                                            grSample(fluidType2_idxStart, fluidType2_idxEnd, 2); 
+                                                                        #endif
+                                                                     }
 
 				counter += 1;						// filewriting
 				pcounter += 1;
@@ -194,7 +200,7 @@ class DPD {
 			}//end time loop
 
 			// post-processing
-			// grCalc();	 
+			grCalc();	 
 			// velHistCalc();
 
 
@@ -242,10 +248,11 @@ class DPD {
 			#endif // WALL_ON
 
 			// Initialize the gR_nCount array
-			for (i=0; i < gR_nElem ; ++i){
-				gR_nCount.push_back(0.0);
-			}	
-			
+            gR_nCount.resize( gR_nElem );
+
+			for (i=0; i < gR_nElem; ++i)
+                gR_nCount[i].resize(3);
+
 			// Initialize the velocity histogram array
 			for (i=0; i < velHist_bins ; ++i){
 				velHistX.push_back(0);
@@ -840,9 +847,24 @@ class DPD {
 								// simProg << "j1 "<<  mi[x] << " " << mi[y] << " " << mi[z] << " " << jj << " " << j << std::endl;
 
 								#if WALL_ON
-									if ( particles[i].type == 1 && particles[j].type == 1 ){
-											#include "pairforceLL.h"
-									} // liquid liquid interaction
+                                    #if MULTI_VISCOSITY_LIQUIDS
+                                        if ( particles[i].type == 1 && particles[j].type == 1 ){
+                                                #include "pairforceLL.h"
+                                        } // liquid1 liquid1 interaction
+                                        else if ( particles[i].type == 1 && particles[j].type == 2 ){
+                                                #include "pairforceLL.h"
+                                        } // liquid1 liquid2 interaction
+                                        else if ( particles[i].type == 2 && particles[j].type == 1 ){
+                                                #include "pairforceLL.h"
+                                        } // liquid2 liquid1 interaction
+                                        else if ( particles[i].type == 2 && particles[j].type == 2 ){
+                                                #include "pairforceLL.h"
+                                        } // liquid2 liquid2 interaction
+                                    #else
+                                        if ( particles[i].type == 1 && particles[j].type == 1 ){
+                                                #include "pairforceLL.h"
+                                        } // liquid1 liquid1 interaction
+                                    #endif // MULTI_VISCOSITY_LIQUIDS
 									else if ( particles[i].type == 0 && particles[j].type == 0 ){
 											 #include "pairforceSS.h"
 									} // solid solid interaction
@@ -951,19 +973,34 @@ class DPD {
 									j = grid[mj[x]][mj[y]][mj[z]][jj];
 									// simProg << "j2 " << m << " " << mj[x] << " " << mj[y] << " " << mj[z] << " " << jj << " " << j << std::endl;
 
-									#if WALL_ON
-                                        if ( particles[i].type == 1 && particles[j].type == 1 ){
-                                                #include "pairforceLL.h"
-                                        } // liquid liquid interaction
+                                    #if WALL_ON
+                                        #if MULTI_VISCOSITY_LIQUIDS
+                                            if ( particles[i].type == 1 && particles[j].type == 1 ){
+                                                    #include "pairforceLL.h"
+                                            } // liquid1 liquid1 interaction
+                                            else if ( particles[i].type == 1 && particles[j].type == 2 ){
+                                                    #include "pairforceLL.h"
+                                            } // liquid1 liquid2 interaction
+                                            else if ( particles[i].type == 2 && particles[j].type == 1 ){
+                                                    #include "pairforceLL.h"
+                                            } // liquid2 liquid1 interaction
+                                            else if ( particles[i].type == 2 && particles[j].type == 2 ){
+                                                    #include "pairforceLL.h"
+                                            } // liquid2 liquid2 interaction
+                                        #else
+                                            if ( particles[i].type == 1 && particles[j].type == 1 ){
+                                                    #include "pairforceLL.h"
+                                            } // liquid1 liquid1 interaction
+                                        #endif // MULTI_VISCOSITY_LIQUIDS
                                         else if ( particles[i].type == 0 && particles[j].type == 0 ){
-                                                #include "pairforceSS.h"
-                                        }// solid solid interaction
+                                                 #include "pairforceSS.h"
+                                        } // solid solid interaction
                                         else{
-                                            #include "pairforceSL.h"
+                                                #include "pairforceSL.h"
                                         } // solid liquid interaction
-									#else 
-										#include "pairforceLL.h"
-									#endif
+                                    #else
+                                            #include "pairforceLL.h"
+                                    #endif
 								} // jj
 							} // m
 							#endif
@@ -1089,36 +1126,30 @@ class DPD {
 		}
 
 		//--------------------------------------- g(r) sampling --------------------------------------//
-		void grSample(){
+		void grSample(unsigned int idxStart, unsigned int idxEnd, unsigned int idx){    // idx specifies the gR is between AA, AB, BB species
 
 			//loop over all contacts p=1..N-1, q=p+1..N to evaluate forces
-			i = 0; 
-			while ( i < fluidCount - 1 ){
-				j = i + 1;	
-				while ( j < fluidCount ){
-					
-					Rij 		= particles[fluid_index[i]].r - particles[fluid_index[j]].r;	
-					tempVec.X 	= Vec3D::roundOff_x( Rij, boxEdge[x] );
-					tempVec.Y 	= Vec3D::roundOff_y( Rij, boxEdge[y] );
-					tempVec.Z 	= Vec3D::roundOff_z( Rij, boxEdge[z] );
-					minRij.X 	= Rij.X - tempVec.X*boxEdge[x];
-					minRij.Y	= Rij.Y - tempVec.Y*boxEdge[y];
-					minRij.Z 	= Rij.Z - tempVec.Z*boxEdge[z];
-					r2 = minRij.getLengthSquared();
-					dist = std::sqrt(r2);
+             for( i=idxStart; i <= idxEnd-1; ++i ){
+                 for ( j=i+1; j<= idxEnd; ++j ){
+					Rij     = particles[fluid_index[i]].r - particles[fluid_index[j]].r;	
 
-					if ( dist < boxEdge[x] / 2.0 ) { 
-						ig = ceil(dist/gR_radDelta)-1;
+                    // nearest image distance
+                    Rij.X   = Rij.X - boxEdge[x] * round( Rij.X / boxEdge[x] );		// rij shear-flow correction : dR
+                    Rij.Y   = Rij.Y - boxEdge[y] * round( Rij.Y / boxEdge[y] );
+                    Rij.Z   = Rij.Z - boxEdge[z] * round( Rij.Z / boxEdge[z] );
 
-						if ( (ig < 0) || (ig >= gR_nElem)) {simProg << " out of bounds " << std::endl;} 
+					r2      = Rij.getLengthSquared();
+					dist    = std::sqrt(r2);
 
-						gR_nCount[ig] += 2.0;	
-					}
-
+                    ig = ceil( dist / gR_radDelta ) - 1;
+                    if ( (ig < 0) || (ig >= gR_nElem) ) {simProg << " gRcalc(): out of bounds for dist = " << dist << " and ig = " << ig  << std::endl; abort();} 
+                    gR_nCount[ig][idx] += 2.0;	
 					j++;
 				}
 				i++;
 			}
+
+
 		}
 		//--------------------------------------- g(r) calculation --------------------------------------//
 		// Structure function g(r) calculation
@@ -1138,7 +1169,7 @@ class DPD {
 
 				// gR_nCount[i] /= (npart*gR_tSamples*nHomo);				// normalizing g(r)
 
-				grWrite << ri << "\t" << ro << "\t" << rad << "\t" << gR_nCount[i] << "\t" << npart << "\t" << gR_tSamples << "\t" << rho << std::endl;
+				grWrite << ri << "\t" << ro << "\t" << rad << "\t" << gR_nCount[i][0] << "\t" << gR_nCount[i][1] << "\t" << gR_nCount[i][2] << "\t" << npart << "\t" << gR_tSamples << "\t" << rho << std::endl;
 			}
 
 			simProg << " the total number of samples is: " << gR_tSamples	<< std::endl;
@@ -1375,8 +1406,8 @@ class DPD {
 				paraInfo << "Random & Dissipative Force " << std::endl;
 				paraInfo << "---------------------------" << std::endl;
 				paraInfo << "Set temperature (kbT)                      :           " << kBT << std::endl;
-				paraInfo << "Rescaled Noise level (sigma/sqrt(dt))      :           " << noise << std::endl;
-				paraInfo << "Actual Noise level (sigma)                 :           " << noise/( inv_sqrt_dt) << std::endl;
+				paraInfo << "Rescaled Noise(sqrt(12)*sigma*inv_sqrt_dt) :           " << noise << std::endl;
+				paraInfo << "Actual Noise level (sigma)                 :           " << noise/  ( std::sqrt(12.) * inv_sqrt_dt ) << std::endl;
 				paraInfo << "Friction parameter (gamma)                 :           " << friction << std::endl;
 			#endif 
 			
@@ -1494,57 +1525,60 @@ class DPD {
 			flagList << "UPPER_WALL_ON FLAG                     :            " << "ON" << std::endl;  
 			#endif
 			#if FCC_WALL                         
-			flagList << "FCC_WALL FLAG                          :            " << "ON" << std::endl;  
+                flagList << "FCC_WALL FLAG                          :            " << "ON" << std::endl;  
 			#endif
 			#if ROUGH_WALL                       
-			flagList << "ROUGH_WALL FLAG                        :            " << "ON" << std::endl;  
+                flagList << "ROUGH_WALL FLAG                        :            " << "ON" << std::endl;  
 			#endif
 			#endif
 
 			// POISEUILLE flow
 			#if BODY_FORCE                       
-			flagList << "BODY_FORCE FLAG                        :            " << "ON" << std::endl;  
+                flagList << "BODY_FORCE FLAG                        :            " << "ON" << std::endl;  
 			#endif
 
 			// FILE_WRITE
 			#if STYLE_VMD                        
-			flagList << "STYLE_VMD FLAG                         :            " << "ON" << std::endl;  
+                flagList << "STYLE_VMD FLAG                         :            " << "ON" << std::endl;  
 			#endif
 			#if STYLE_MERCURY_DPM                
-			flagList << "STYLE_MERCURY_DPM FLAG                 :            " << "ON" << std::endl;  
+                flagList << "STYLE_MERCURY_DPM FLAG                 :            " << "ON" << std::endl;  
 			#endif
 
 			// CORRELATION FUNCTIONS
 			#if SACF                              
-			flagList << "SACF FLAG                              :            " << "ON" << std::endl;  
+                flagList << "SACF FLAG                              :            " << "ON" << std::endl;  
 			#endif
 			#if SACF_TEST                        
-			flagList << "SACF_TEST FLAG                         :            " << "ON" << std::endl;  
+                flagList << "SACF_TEST FLAG                         :            " << "ON" << std::endl;  
 			#endif
 
 			// LEES-EDWARDS BOUNDARY CONDITION
 			#if LEES_EDWARDS_BC                  
-			flagList << "LEES_EDWARDS_BC FLAG                   :            " << "ON" << std::endl;  
+                flagList << "LEES_EDWARDS_BC FLAG                   :            " << "ON" << std::endl;  
 			#endif
 
 			// DENSITY CALCULATION
 			#if DENS_EXACT			 
-			flagList << "DENS_EXACT FLAG                        :            " << "ON" << std::endl;  
+                flagList << "DENS_EXACT FLAG                        :            " << "ON" << std::endl;  
 			#endif
 			
 			// CAPILLARY IMBIBITION
 			#if CAPILLARY_CYLINDER		 
-			flagList << "CAPILLARY CYLINDER FLAG                :            " << "ON" << std::endl;  
-			#if PISTON
-			flagList << "PISTON FLAG                            :            " << "ON" << std::endl;  
-			#endif
+                flagList << "CAPILLARY CYLINDER FLAG                :            " << "ON" << std::endl;  
+                #if PISTON
+                    flagList << "PISTON FLAG                            :            " << "ON" << std::endl;  
+                #endif
 			#endif
 			#if CAPILLARY_SQUARE		 
-			flagList << "CAPILLARY SQUARE FLAG                  :            " << "ON" << std::endl;  
-			#if PISTON
-			flagList << "PISTON FLAG                            :            " << "ON" << std::endl;  
+                flagList << "CAPILLARY SQUARE FLAG                  :            " << "ON" << std::endl;  
+                #if PISTON
+                    flagList << "PISTON FLAG                            :            " << "ON" << std::endl;  
+                #endif
 			#endif
-			#endif
+            #if MULTI_VISCOSITY_LIQUIDS
+                flagList << "MULTI VISCOSITY LIQUID FLAG                  :            " << "ON" << std::endl;  
+            #endif
 
 		}
 
