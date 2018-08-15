@@ -55,7 +55,7 @@ if ( r2 <= rc2 ) {
 
         // dissipative force
         rDotv = Vec3D::dot( capRij, wij );
-        magDiss = -1.0 * gamma[particles[i].type][particles[j].type] * wCij2 *rDotv;
+        magDiss = -gamma[particles[i].type][particles[j].type] * wCij2 *rDotv;
         
         fDij.X = magDiss * capRij.X;
         fDij.Y = magDiss * capRij.Y;

@@ -40,5 +40,33 @@ if ( r2 <= rcW2 ) {
 
 	particles[i].fCW += fCWij;
 	particles[j].fCW -= fCWij; 
+	
+    #if RANDOM_DISSIPATIVE
+        // random force	
+        uniRand = randNumGen(seed);
+        thetaij = uniRand - 0.5; 
+        magRand = sigma[particles[i].type][particles[j].type] * wCij * thetaij;
+        
+        // std::cout << uniRand << std::endl;
+        
+        fRij.X = magRand * capRij.X;
+        fRij.Y = magRand * capRij.Y;
+        fRij.Z = magRand * capRij.Z;
+
+        sumForce = fRij;			// inv_sqrt_dt is taken care by scaled value of sigma 
+        particles[i].fR += sumForce;
+        particles[j].fR -= sumForce;
+
+        // dissipative force -- not calculated here
+        rDotv = Vec3D::dot( capRij, wij );
+        magDiss = -gamma[particles[i].type][particles[j].type] * wCij2 *rDotv;
+        
+        fDij.X = magDiss * capRij.X;
+        fDij.Y = magDiss * capRij.Y;
+        fDij.Z = magDiss * capRij.Z;
+
+        particles[i].fD += fDij;
+        particles[j].fD -= fDij;
+	#endif
 
 } // rcutoff
