@@ -19,22 +19,19 @@
 #define SPHERICAL_CAP			0
 #define CYLINDER_DROPLET		0
 #define PLANAR_SLAB			    0
-#define CRYSTAL				    1
+#define CRYSTAL				    0
 #define RESTART				    0
 
 // WALL flags
-#define WALL_ON				    0
+#define WALL_ON				    1
 #define LOWER_WALL_ON			0
 #define UPPER_WALL_ON			0
-#define FCC_WALL			    0
 #define ROUGH_WALL			    0
 
 #define CAPILLARY_CYLINDER		0
-#define CAPILLARY_SQUARE		0
+#define CAPILLARY_SQUARE		1
 #define PISTON				    0
-
-// POISEUILLE flow
-#define BODY_FORCE			    0
+#define CYLINDER_ARRAY          0
 
 // FILE_WRITE
 #define STYLE_VMD			    1
@@ -51,7 +48,7 @@
 #define DENS_EXACT			    0    
 
 // MULTIVISCOSITY_LIQUIDS
-#define MULTI_VISCOSITY_LIQUIDS	0
+#define MULTI_VISCOSITY_LIQUIDS	1
 
 //declare DPD solver
 class DPD {
@@ -87,12 +84,12 @@ class DPD {
 			rho 			= npart/volume;					// density of system 
 			dof 			= dim*(npart - 1);				// total degrees of freedom (momentum only, no energy conservation)
 			half_dt 		= 0.5*dt;					// 0.5*dt to be used in the integrateEOM()
-			half_dt_sqr 		= half_dt*dt;					// 0.5*dt*dt to be used in the integrateEOM()
+			half_dt_sqr     = half_dt*dt;					// 0.5*dt*dt to be used in the integrateEOM()
 
 			rd4 			= pow(rd_cutoff, 4.0);				// fourth power of rd_cutoff
 			rc4 			= pow(rcutoff, 4.0);				// fourth power of rc_cutoff
-			K1 			= piThirty * rc4 * All;				// constant k1
-			K2 			= piThirty * rd4 * Bll;				// constant k2
+			K1 			    = piThirty * rc4 * Aatt[1][1];				// constant k1
+			K2 			    = piThirty * rd4 * Brep[1][1];				// constant k2
 
 			counter 		= 0;						// initialize time, counter for file writing
 			pcounter 		= 0;						// initialize time, counter for file writing
@@ -117,30 +114,27 @@ class DPD {
 				std::ofstream momStats		( "./data/mom_data.dat"	);	// pressure and temperature data
 			#endif // RESTART
 
+
 			// write parameters and initial configuration
 			vtkFileWritePosVel();
 			std::ofstream paraInfo( "param.out" );
 			paraWrite(paraInfo);
 			paraInfo.close();
 
-			#if WALL_ON
-				if ( rd_cutoff > rcWcutoff ){
-					simProg<< " The cutoff for density calculation of fluid near wall needs to be checked " << std::endl; 
-					abort();
-				}
-			#endif
-
 			simProg << " ********************* STARTING SIMULATION ************************* " << std::endl;	
 			while (step<= stepMax) {
+
+				// if ( step % 1 == 0 )
+			    //		simProg << " step= " << step << std::endl;
 
 				createGridList();
 				#if DENS_EXACT
 					dens_calculation();
 				#endif
 				forceCalc();
-	
-				integrateEOM();
 
+				integrateEOM();
+                
 				for ( i=0 ; i <npart ; ++i ) {
 					pot_en += K1 * particles[i].rhoBar + K2 * pow( particles[i].dens, 2.0 ); 	// sum of self-energies of all particles
 				}
@@ -179,23 +173,10 @@ class DPD {
 
 				// change wettability of the capillary tube
 				// from lyophobic to lyophilic
-				#if CAPILLARY_CYLINDER || CAPILLARY_SQUARE
-					if ( step == 10000){ 
-
-						simProg << " Changing the wettability of pore from hydrophobic to hydrophilic with Asl =  " << asl << std::endl;
-						i = 0;
-						while ( i < solidCount ){
-							Asl[i] = asl;
-							i++;
-						}
-					}
-				#endif 
 
 				step += 1;						// increment time step
 
-				// if ( step % 1 == 0 )
-			    //		simProg << " step= " << step << std::endl;
-                //
+                
                 
 			}//end time loop
 
@@ -232,6 +213,8 @@ class DPD {
 				#elif CAPILLARY_SQUARE
 					#include "squarecapillaryTube.h"
 					#include "reservoir.h"
+                #elif CYLINDER_ARRAY
+                    #include "cylinderArray.h"
 				#endif
 			#else
 				#if SPHERICAL_DROPLET 
@@ -273,56 +256,8 @@ class DPD {
 				}	
 			#endif
 
-			// initializing NrCells[3], scale	
-			for ( i = 0 ; i < 3 ; i++ )
-			{
-				NrCells[i] = int( boxEdge[i] / rcutoff ); // cellnr runs from 0 to NrCells-1
-				scale[i] = NrCells[i] * boxRecip[i] ;
-				if ( NrCells[i] < 3 ) { simProg << "*** NrCells[" << i << "] = " << NrCells[i] << std::endl ; abort(); }
+            #include "cellGridInit.h"
 
-				// simProg << "NrCells[" << i << "] = " << NrCells[i] << std::endl;
-			}
-
-			// initializing mini[3], maxi[3]
-			mini[x] = 0; maxi[x] = NrCells[x] - 1;
-			mini[y] = 0; maxi[y] = NrCells[y] - 1;
-			mini[z] = 0; maxi[z] = NrCells[z] - 1;
-
-			// defining grid matrix 
-			grid.resize( NrCells[x] );
-			for ( i = 0 ; i < NrCells[x] ; ++i ) {
-				grid[i].resize( NrCells[y] );
-				for (  j = 0 ; j < NrCells[y] ; ++j ){
-					grid[i][j].resize( NrCells[z] );
-					for ( k = 0 ; k < NrCells[z] ; ++k ){
-						grid[i][j][k].resize( MaxPerCell ); 	
-					} // k 
-				}// j
-			}// i
-
-			// defining periodN 
-			MaxNrCells = std::max( std::max( NrCells[x], NrCells[y] ), NrCells[z]);
-			periodN.resize( MaxNrCells + 2 );
-			periodR.resize( MaxNrCells + 2 );
-			for ( i = 0 ; i < MaxNrCells + 2 ; ++ i ){
-				periodN[ i ].resize( 3 );
-				periodR[ i ].resize( 3 );
-			}
-
-			for ( j = 0 ; j < 3 ; j++ )
-			{
-				periodN[0][j] = NrCells[j] - 1;    // left neighbour of leftmost cell
-				periodR[0][j] = -boxEdge[j];       // correction to add to particle j in rij = ri - rj
-				for ( i = 1 ;  i < NrCells[j] + 1 ; i++ )
-				{ 
-					periodN[i][j] = i - 1; 	   // same cell
-					periodR[i][j] = 0.;
-				} // i
-				periodN[NrCells[j] + 1][j] = 0;          // right neigbour of rightmost cell
-				periodR[NrCells[j] + 1][j] = +boxEdge[j];
-			} // j
-
-		
 			// Initialize Ideal, Non-Ideal and complete Pressure tensor
 			pIdeal[0][0] = 0.0;
 			pIdeal[0][1] = 0.0;
@@ -412,16 +347,6 @@ class DPD {
 						i++;
 					}
 
-				#if BODY_FORCE
-					i = 0;
-					while ( i < fluidCount ) {
-						particles[fluid_index[i]].fBody.X = fBodyX;
-						particles[fluid_index[i]].fBody.Y = 0.;
-						particles[fluid_index[i]].fBody.Z = 0.;
-
-						i++;
-					}
-				#endif	// BODY_FORCE
                 simProg << "\n" << solidCount << " solid particles attached to initial positions by a spring" << std::endl;
 			#endif // WALL_ON
 			
@@ -558,112 +483,62 @@ class DPD {
                 // simProg << "nCorr [" << nCorr.size() << "][" << nCorr[0].size() << "][" << nCorr[0][0].size() << "]" << std::endl;
                 // simProg << "pointCorr [" << pointCorr.size() << "][" << pointCorr[0].size() << "]" << std::endl;
 			#endif
+            
+            // defining the matrix for Brep and Aatt
+            simProg << " ********************************************************************* " << std::endl;
+            simProg << " Defining the matrix of repulsion parameters and attraction parameters " << std::endl;
 
-			/*
-			#if CAPILLARY_CYLINDER || CAPILLARY_SQUARE
-				BslMax	= Bsl;
-				BslMin	= 5.0;
-				BslW	= 2000.0;
-				BslT0 	= 5000.0;
-			#endif
-			*/
+            Brep[0][0] = repParam;  Aatt[0][0] = Ass;
+            Brep[0][1] = repParam;  Aatt[0][1] = Asl1;
+            Brep[0][2] = repParam;  Aatt[0][2] = Asl2;
+
+            Brep[1][0] = repParam;  Aatt[1][0] = Aatt[0][1];
+            Brep[1][1] = repParam;  Aatt[1][1] = All1;
+            Brep[1][2] = repParam;  Aatt[1][2] = All12;
+
+            Brep[2][0] = repParam;  Aatt[2][0] = Aatt[0][2];
+            Brep[2][1] = repParam;  Aatt[2][1] = Aatt[1][2];
+            Brep[2][2] = repParam;  Aatt[2][2] = All2;
+
+            simProg << " Finished defining the matrix of repulsion parameters and attraction parameters " << std::endl;
+            simProg << " ********************************************************************* " << std::endl;
 
 			// determine the number of types of particles present
 			#if RANDOM_DISSIPATIVE
-					sigma.resize( 3 );
-					gamma.resize( 3 );
+                simProg << " ********************************************************************* " << std::endl;
+                simProg << " Defining the matrix of noise and friction parameters " << std::endl;
 
-					for ( i=0; i < 3; ++i ){
-						sigma[i].resize( 3 );
-						gamma[i].resize( 3 );
-					}
+                sigma.resize( 3 );
+                gamma.resize( 3 );
 
-					// defining the elements of the sigma and gamma array
-					#if MULTI_VISCOSITY_LIQUIDS
-						#if WALL_ON
-							sigma[0][0] 	= noise;						// solid-solid interaction ( type 00 interaction )
-							sigma[0][1] 	= 0.;        
-							sigma[0][2] 	= 0.;        
-							sigma[1][0] 	= 0.;        
-							sigma[1][1] 	= noise;       						// liquid1-liquid1 interaction ( type 11 interaction ) 
-							sigma[1][2] 	= sqrt( 0.5 * ( noise*noise + noise2*noise2 ) ); 
-							sigma[2][0] 	= 0.;
-							sigma[2][1] 	= sqrt( 0.5 * ( noise*noise + noise2*noise2 ) );        				
-							sigma[2][2] 	= noise2;        					// solid-liquid interaction ( type 01 interaction ) 
+                for ( i=0; i < 3; ++i ){
+                    sigma[i].resize( 3 );
+                    gamma[i].resize( 3 );
+                }
 
-							gamma[0][0] 	= friction;						// solid-solid interaction ( type 00 interaction )
-							gamma[0][1] 	= 0.;        
-							gamma[0][2] 	= 0.;        
-							gamma[1][0] 	= 0.;        
-							gamma[1][1] 	= friction;       					// liquid1-liquid1 interaction ( type 11 interaction ) 
-							gamma[1][2] 	= 0.5 * ( friction + friction2 ); 
-							gamma[2][0] 	= 0.;
-							gamma[2][1] 	= 0.5 * ( friction + friction2 ); 
-							gamma[2][2] 	= friction2;        					// solid-liquid interaction ( type 01 interaction ) 
-						#else
-							sigma[0][0] 	= 0.;						// solid-solid interaction ( type 00 interaction )
-							sigma[0][1] 	= 0.;        
-							sigma[0][2] 	= 0.;        
-							sigma[1][0] 	= 0.;        
-							sigma[1][1] 	= noise;       						// liquid1-liquid1 interaction ( type 11 interaction ) 
-							sigma[1][2] 	= sqrt( 0.5 * ( noise*noise + noise2*noise2 ) ); 
-							sigma[2][0] 	= 0.;
-							sigma[2][1] 	= sqrt( 0.5 * ( noise*noise + noise2*noise2 ) ); 
-							sigma[2][2] 	= noise2;        					// solid-liquid interaction ( type 01 interaction ) 
+                // defining the elements of the sigma and gamma array
+                sigma[0][0] 	= noise;						// solid-solid interaction ( type 00 interaction )
+                sigma[0][1] 	= noise;        
+                sigma[0][2] 	= noise;        
+                sigma[1][0] 	= sigma[0][1];        
+                sigma[1][1] 	= noise;       						// liquid1-liquid1 interaction ( type 11 interaction ) 
+                sigma[1][2] 	= noise12; 
+                sigma[2][0] 	= sigma[0][2];
+                sigma[2][1] 	= sigma[1][2]; 
+                sigma[2][2] 	= noise2;        					// solid-liquid interaction ( type 01 interaction ) 
 
-							gamma[0][0] 	= 0.;						// solid-solid interaction ( type 00 interaction )
-							gamma[0][1] 	= 0.;        
-							gamma[0][2] 	= 0.;        
-							gamma[1][0] 	= 0.;        
-							gamma[1][1] 	= friction;       					// liquid1-liquid1 interaction ( type 11 interaction ) 
-							gamma[1][2] 	= 0.5 * ( friction + friction2 ); 
-							gamma[2][0] 	= 0.;
-							gamma[2][1] 	= 0.5 * ( friction + friction2 );
-							gamma[2][2] 	= friction2;        					// solid-liquid interaction ( type 01 interaction ) 
+                gamma[0][0] 	= friction;						// solid-solid interaction ( type 00 interaction )
+                gamma[0][1] 	= friction;        
+                gamma[0][2] 	= friction;        
+                gamma[1][0] 	= friction;        
+                gamma[1][1] 	= friction;       					// liquid1-liquid1 interaction ( type 11 interaction ) 
+                gamma[1][2] 	= friction12; 
+                gamma[2][0] 	= gamma[0][2];
+                gamma[2][1] 	= gamma[1][2]; 
+                gamma[2][2] 	= friction2;        					// solid-liquid interaction ( type 01 interaction ) 
 
-						#endif // WALL_ON
-					#else
-						#if WALL_ON
-							sigma[0][0] 	= noise;						// solid-solid interaction ( type 00 interaction )
-							sigma[0][1] 	= 0.;        
-							sigma[0][2] 	= 0.;        
-							sigma[1][0] 	= 0.;        
-							sigma[1][1] 	= noise;       						// liquid1-liquid1 interaction ( type 11 interaction ) 
-							sigma[1][2] 	= 0.; 
-							sigma[2][0] 	= 0.;
-							sigma[2][1] 	= 0.;        				
-							sigma[2][2] 	= 0.;        					// solid-liquid interaction ( type 01 interaction ) 
-
-							gamma[0][0] 	= friction;						// solid-solid interaction ( type 00 interaction )
-							gamma[0][1] 	= 0.;        
-							gamma[0][2] 	= 0.;        
-							gamma[1][0] 	= 0.;        
-							gamma[1][1] 	= friction;       					// liquid1-liquid1 interaction ( type 11 interaction ) 
-							gamma[1][2] 	= 0.; 
-							gamma[2][0] 	= 0.;
-							gamma[2][1] 	= 0.;        				
-							gamma[2][2] 	= 0.;        					// solid-liquid interaction ( type 01 interaction ) 
-						#else
-							sigma[0][0] 	= 0.;						// solid-solid interaction ( type 00 interaction )
-							sigma[0][1] 	= 0.;        
-							sigma[0][2] 	= 0.;        
-							sigma[1][0] 	= 0.;        
-							sigma[1][1] 	= noise;       						// liquid1-liquid1 interaction ( type 11 interaction ) 
-							sigma[1][2] 	= 0.; 
-							sigma[2][0] 	= 0.;
-							sigma[2][1] 	= 0.;        				
-							sigma[2][2] 	= 0.;        					// solid-liquid interaction ( type 01 interaction ) 
-
-							gamma[0][0] 	= 0.;						// solid-solid interaction ( type 00 interaction )
-							gamma[0][1] 	= 0.;        
-							gamma[0][2] 	= 0.;        
-							gamma[1][0] 	= 0.;        
-							gamma[1][1] 	= friction;       					// liquid1-liquid1 interaction ( type 11 interaction ) 
-							gamma[1][2] 	= 0.; 
-							gamma[2][0] 	= 0.;
-							gamma[2][1] 	= 0.;        				
-                       #endif // WALL_ON
-					#endif // MULTI_VISCOSITY_LIQUIDS
+                simProg << " ********************************************************************* " << std::endl;
+                simProg << " Finished defining the matrix of noise and friction parameters " << std::endl;
 			#endif // RANDOM_DISSIPATIVE
 		}//init
 
@@ -798,7 +673,7 @@ class DPD {
 				// simProg << "position of particle " << i << " =" << particles[i].r;
 				// simProg << ", mi[x], mi[y], mi[z] =  " << mi[x] << ", " << mi[y] << ", " << mi[z] << std::endl;
 				if ( mi[x] < mini[x] || mi[x] > maxi[x] ||  // debug
-			             mi[y] < mini[y] || mi[y] > maxi[y] ||
+			         mi[y] < mini[y] || mi[y] > maxi[y] ||
 				     mi[z] < mini[z] || mi[z] > maxi[z] )
 				{ 
 					simProg << "*** particle " << i << " of type " << particles[i].type  << " is outside box in step: " << step << std::endl;
@@ -810,7 +685,7 @@ class DPD {
 				}
 				if ( grid[mi[x]][mi[y]][mi[z]][0] == MaxPerCell )
 				{ 
-					simProg << "*** cell overfull" << std::endl;
+					simProg << "*** cell overfull at time step = " << step << " with " << grid[mi[x]][mi[y]][mi[z]][0] << " particles in cell" << std::endl;
 					simProg << mi[x] << "  " << mi[y] << "  " << mi[z] << std::endl;
 					abort();
 				}
@@ -845,7 +720,10 @@ class DPD {
 							{
 								j = grid[mi[x]][mi[y]][mi[z]][jj];
 								// simProg << "j1 "<<  mi[x] << " " << mi[y] << " " << mi[z] << " " << jj << " " << j << std::endl;
+                                
+                                #include "pairforce.h"
 
+                                /*
 								#if WALL_ON
                                     #if MULTI_VISCOSITY_LIQUIDS
                                         if ( particles[i].type == 1 && particles[j].type == 1 ){
@@ -874,6 +752,7 @@ class DPD {
 								#else
 										#include "pairforceLL.h"
 								#endif
+                                */
 
 								// simProg << "i, mi[x], mi[y], mi[z] = " <<  i << " " << mi[x] << " " << mi[y] << " " <<  mi[z] ;
 								// simProg << ", j, mj[x], mj[y], mj[z] = " << j << " " << mj[x] << " " << mj[y] << " " <<  mj[z] ;
@@ -973,6 +852,9 @@ class DPD {
 									j = grid[mj[x]][mj[y]][mj[z]][jj];
 									// simProg << "j2 " << m << " " << mj[x] << " " << mj[y] << " " << mj[z] << " " << jj << " " << j << std::endl;
 
+                                    #include "pairforce.h"
+
+                                    /*
                                     #if WALL_ON
                                         #if MULTI_VISCOSITY_LIQUIDS
                                             if ( particles[i].type == 1 && particles[j].type == 1 ){
@@ -1001,6 +883,7 @@ class DPD {
                                     #else
                                             #include "pairforceLL.h"
                                     #endif
+                                    */
 								} // jj
 							} // m
 							#endif
@@ -1123,6 +1006,56 @@ class DPD {
 			pRandom_temp[2][1] = 0.;
 			pRandom_temp[2][2] = 0.;
 			#endif
+
+            #if CAPILLARY_CYLINDER || CAPILLARY_SQUARE || CYLINDER_ARRAY
+
+                #if MULTI_VISCOSITY_LIQUIDS
+                // remove the piston particles used for mixing the liquids
+                if ( step == 20000 ){
+
+                    boxEdge[z]  = int( ceil( boxEdge[z] * 1.5 ) ); 
+                    boxHalve[z] = boxEdge[z] / 2.0;
+                    boxRecip[z] = 1.0 / boxEdge[z]; 
+
+                    #include "cellGridInit.h"
+            
+                    simProg << "Box resized to " << boxEdge[z] << "and boxHalve[z], boxRecip[z], re-evaluated" << std::endl;
+
+                    /*
+                    i      = 0;
+                    pCount = 0;
+                    while ( i < solidCount ){
+
+                        particleInSquareSmall = ( particles[solid_index[i]].r0.X >= sqXmin + capWallWdth ) && 
+                                                ( particles[solid_index[i]].r0.X <= sqXmax - capWallWdth ) && 
+                                                ( particles[solid_index[i]].r0.Y >= sqYmin + capWallWdth ) && 
+                                                ( particles[solid_index[i]].r0.Y <= sqYmax - capWallWdth );
+                        
+                        if ( particleInSquareSmall ){
+                            particles.erase( particles.begin() + i );
+                            pCount++;
+                        }
+
+                        i++;
+                    }
+                    simProg << pCount << " particles at the entrance of the capillary tube deleted" << std::endl;
+                    */
+                }
+                #endif
+
+                if ( step == 30000 ){ 
+
+                    simProg << " Changing the wettability of pore from hydrophobic to hydrophilic with Asl =  " << Aatt[0][1] << std::endl;
+                    i = 0;
+                    while ( i < solidCount ){
+                        Aatt[0][1] = -40.;
+                        Aatt[0][2] = -40.;
+                        Aatt[1][0] = -40.;
+                        Aatt[2][0] = -40.;
+                        i++;
+                    }
+                }
+            #endif 
 		}
 
 		//--------------------------------------- g(r) sampling --------------------------------------//
@@ -1409,37 +1342,38 @@ class DPD {
 				paraInfo << "Rescaled Noise(sqrt(12)*sigma*inv_sqrt_dt) :           " << noise << std::endl;
 				paraInfo << "Actual Noise level (sigma)                 :           " << noise/  ( std::sqrt(12.) * inv_sqrt_dt ) << std::endl;
 				paraInfo << "Friction parameter (gamma)                 :           " << friction << std::endl;
+                    #if MULTI_VISCOSITY_LIQUIDS
+                        paraInfo << "Liquid2 rescaled noise level (sigma2)      :           " << sigma[2][2] << std::endl;
+                        paraInfo << "Liquid2 friction parameter (gamma2)        :           " << gamma[2][2] << std::endl;
+                        paraInfo << "L1-L2 rescaled noise level (sigma2)        :           " << sigma[1][2] << std::endl;
+                        paraInfo << "L1-L2 friction parameter (gamma2)          :           " << gamma[1][2] << std::endl;
+                    #endif
 			#endif 
 			
 			#if WALL_ON
-			paraInfo << "---------------------------" << std::endl;
-			paraInfo << "Wall parameters      " << std::endl;
-			paraInfo << "---------------------------" << std::endl;
-			paraInfo << "Number of solid particles (solidCount)     :           " << solidCount << std::endl;
-			paraInfo << "Wall density (initWallRho)                 :           " << initWallRho << std::endl;
-			paraInfo << "Solid-Solid Attraction Strength   (Ass)    :           " << Ass << std::endl;
-			paraInfo << "Solid-Solid Repulsion  Strength   (Bss)    :           " << Bss << std::endl;
-			paraInfo << "Solid-Liquid Attraction Strength   (asl)   :           " << asl << std::endl;
-			paraInfo << "Solid-Liquid Repulsion  Strength   (Bsl)   :           " << BslMax << std::endl;
-			paraInfo << "Soft Repulsive force Strength   (Brep)     :           " << Brep << std::endl;
-			paraInfo << "Penetration tolerance (wallPenetration)    :           " << wallPenetration << std::endl;
-			paraInfo << "Wall Attraction cutoff (rcWallcutoff )     :           " << rcWcutoff << std::endl;
-			paraInfo << "Wall Repulsion  cutoff (rdWall_cutoff )    :           " << rdWcutoff << std::endl;
-			paraInfo << "Spring constant for wall ( kWall )         :           " << kWall << std::endl;
-			#if BODY_FORCE
-			paraInfo << "Particle x body force ( fBodyX )           :           " << fBodyX << std::endl;
-			#endif
-			#else
-			#if BODY_FORCE
-				paraInfo << "Particle x body force ( fBodyX )           :           " << fBodyX << std::endl;
-			#endif
+                paraInfo << "---------------------------" << std::endl;
+                paraInfo << "Wall parameters      " << std::endl;
+                paraInfo << "---------------------------" << std::endl;
+                paraInfo << "Number of solid particles (solidCount)     :           " << solidCount << std::endl;
+                paraInfo << "Wall density (initWallRho)                 :           " << initWallRho << std::endl;
+                paraInfo << "Solid-Solid Attraction Strength   (Ass)    :           " << Aatt[0][0] << std::endl;
+                paraInfo << "Solid-Solid Repulsion  Strength   (Bss)    :           " << Brep[0][0] << std::endl;
+                paraInfo << "Solid-Liquid Attraction Strength   (asl)   :           " << Aatt[0][1] << std::endl;
+                    #if MULTI_VISCOSITY_LIQUIDS
+                        paraInfo << "Solid-Liquid2 Attraction Strength   (asl)  :           " << Aatt[0][2] << std::endl;
+                        paraInfo << "Liquid2-Liquid2 Attraction Strength (asl)  :           " << Aatt[2][2] << std::endl;
+                    #endif
+                paraInfo << "Solid-Liquid Repulsion  Strength   (Bsl)   :           " << Brep[0][1] << std::endl;
+                paraInfo << "Soft Repulsive force Strength   (Brep)     :           " << Brep[0][0] << std::endl;
+                paraInfo << "Penetration tolerance (wallPenetration)    :           " << wallPenetration << std::endl;
+                paraInfo << "Spring constant for wall ( kWall )         :           " << kWall << std::endl;
 			#endif // WALL_ON
 			
 			paraInfo << "---------------------------" << std::endl;
 			paraInfo << "Conservative Force         " << std::endl;
 			paraInfo << "---------------------------" << std::endl;
-			paraInfo << "Liquid-Liquid Attraction Strength (All)    :           " << All << std::endl;
-			paraInfo << "Liquid-Liquid Repulsion Strength (Bll)     :           " << Bll << std::endl;
+			paraInfo << "Liquid-Liquid Attraction Strength (All)    :           " << Aatt[1][1] << std::endl;
+			paraInfo << "Liquid-Liquid Repulsion Strength (Bll)     :           " << Brep[1][1] << std::endl;
 
 			#if LEES_EDWARDS_BC
 				paraInfo << "---------------------------" << std::endl;
@@ -1918,6 +1852,55 @@ class DPD {
 
 		}
 
+        //---------------------- Create cylinder array -----------------------------//
+        void createCylinderArray ( double cylCenterX, double cylCenterZ, double cylRad ){
+
+            pCount = 0;
+
+            xind_min = 0.00;
+            yind_min = 0.00;
+            zind_min = 0.00;
+
+            xind_max = boxEdge[x];
+            yind_max = boxEdge[y];
+            zind_max = boxEdge[z];
+            
+            zind = zind_min;
+            aCube = pow( 1. / initRho, 1./3. );
+
+            simProg << "***************************************************" << std::endl;
+            simProg << "cylinder with cylCenterX: " << cylCenterX << ", cylCenterZ: " << cylCenterZ << ", cylRad: " << cylRad << std::endl;
+
+            while ( zind < zind_max ){
+                xind = xind_min;
+                // Particle position intialization in a crystal structure 
+                while ( xind < xind_max){
+                    yind = yind_min;
+                    while( yind < yind_max){
+            
+                        if ( pow( xind - cylCenterX, 2.0 ) + pow( zind - cylCenterZ, 2.0 ) <= pow( cylRad, 2.0 ) ){
+            
+                            // generate random velocities
+                            rand_gen_velx = ((double) rand() / (RAND_MAX));
+                            rand_gen_vely = ((double) rand() / (RAND_MAX));
+                            rand_gen_velz = ((double) rand() / (RAND_MAX));
+            
+                            // initializing particle radius, mass, position and velocity
+                            // if ( xind*xind + yind*yind + zind*zind <= radSqr )
+                            particles.push_back({0.5,1.0,{xind, yind, zind},{rand_gen_velx, rand_gen_vely, rand_gen_velz},0});
+                            pCount += 1;
+            
+                        }// inside cylinder
+                        yind += aCube*rcutoff;
+                    }// yind			
+                    xind += aCube*rcutoff;
+                }
+                zind += aCube*rcutoff;
+            }// zind
+
+            simProg << "finished initialization of  " << pCount << " particles inside crystal lattice" << std::endl;
+            simProg << "***************************************************" << std::endl;
+        }
 		//------------------------------ Mod function ------------------------------//
 		int moduloAB( int A, int B){ 
 		
