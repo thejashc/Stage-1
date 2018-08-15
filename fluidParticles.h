@@ -8,20 +8,16 @@ while ( i < fluidCount ){
 
 	#if WALL_ON
 
-		#if UPPER_WALL && LOWER_WALL
+		#if UPPER_WALL_ON && LOWER_WALL_ON
 
 			// additional force from soft potential to avoid particles from entering into wall
 			wallLowDist = particles[fluid_index[i]].r.Z - ( wallLowPos - wallPenetration );
 			wallTopDist = particles[fluid_index[i]].r.Z - ( wallTopPos + wallPenetration );
 
-			if ( wallLowDist < 0. ){
-				strength = 0.5 * ( 1 + tanh( ( step - 2e4 ) / 5e3 ) );  
-				particles[fluid_index[i]].fext.Z = -Brep * wallLowDist * ( strength );		// Lower wall -- act on particles below threshold: wallHeight + tolerance
-			}
-			else if ( wallTopDist > 0. ){
-				strength = 0.5 * ( 1 + tanh( ( step - 2e4 ) / 5e3 ) );  
-				particles[fluid_index[i]].fext.Z = -Brep * wallTopDist * ( strength );		// Upper wall -- act on particles above threshold: wallHeight - tolerance
-			}
+			if ( wallLowDist < 0. )
+				particles[fluid_index[i]].fext.Z = -Brep[0][1] * wallLowDist;		// Lower wall -- act on particles below threshold: wallHeight + tolerance
+			else if ( wallTopDist > 0. )
+				particles[fluid_index[i]].fext.Z = -Brep[0][1] * wallTopDist;		// Upper wall -- act on particles above threshold: wallHeight - tolerance
 
 			//simProg << "step = " << step << ", ( step > 50 ) " << ( step > 50 ) << ", particles[fluid_index[i]].fext.Z " << particles[fluid_index[i]].fext.Z << std::endl;
 
@@ -29,15 +25,13 @@ while ( i < fluidCount ){
 			particles[fluid_index[i]].fext.X = 0.; 
 			particles[fluid_index[i]].fext.Y = 0.;
 
-		#elif !(UPPER_WALL) && LOWER_WALL
+		#elif !(UPPER_WALL_ON) && LOWER_WALL_ON
 
 			// additional force from soft potential to avoid particles from entering into wall
 			wallLowDist = particles[fluid_index[i]].r.Z - ( wallLowPos - wallPenetration );
 
-			if ( wallLowDist < 0. ){
-				strength = 0.5 * ( 1 + tanh( ( step - 2e4 ) / 5e3 ) );  
-				particles[fluid_index[i]].fext.Z = -Brep * wallLowDist * ( strength );		// Lower wall -- act on particles below threshold: wallHeight + tolerance
-			}
+			if ( wallLowDist < 0. )
+				particles[fluid_index[i]].fext.Z = -Brep * wallLowDist;		    // Lower wall -- act on particles below threshold: wallHeight + tolerance
 
 			//simProg << "step = " << step << ", ( step > 50 ) " << ( step > 50 ) << ", particles[fluid_index[i]].fext.Z " << particles[fluid_index[i]].fext.Z << std::endl;
 
@@ -102,22 +96,28 @@ while ( i < fluidCount ){
 				distInPiston 	= particles[fluid_index[i]].r.Z - ( pistonStart + wallPenetration );
 			#endif
 			notInPoreEntry  = ( particles[fluid_index[i]].r.X > sqInnerEdgeXmax ) || 
-					  ( particles[fluid_index[i]].r.X < sqInnerEdgeXmin ) || 
-					  ( particles[fluid_index[i]].r.Y > sqInnerEdgeYmax ) || 
-					  ( particles[fluid_index[i]].r.Y < sqInnerEdgeYmin ); 
+					          ( particles[fluid_index[i]].r.X < sqInnerEdgeXmin ) || 
+					          ( particles[fluid_index[i]].r.Y > sqInnerEdgeYmax ) || 
+					          ( particles[fluid_index[i]].r.Y < sqInnerEdgeYmin ); 
+
+            // to ensure particles mix inside the reservoir and
+            // the large fluctuations are killed once that is 
+            // ensured then open the gates peacefully
+            if ( step <= 20000 )
+                notInPoreEntry = 1;
 
 			if ( wallLowDist < 0. && particles[fluid_index[i]].r.Z > ( wallLowPos - capWallWdth ) && notInPoreEntry ){
 
 				particles[fluid_index[i]].fext.X = 0;
 				particles[fluid_index[i]].fext.Y = 0;
-				particles[fluid_index[i]].fext.Z = -Brep * wallLowDist ; 
+				particles[fluid_index[i]].fext.Z = -Brep[0][1] * wallLowDist ; 
 			}
 
 			#if PISTON
 				else if ( distInPiston > 0. ){
 					particles[fluid_index[i]].fext.X = 0;
 					particles[fluid_index[i]].fext.Y = 0;
-					particles[fluid_index[i]].fext.Z = -Brep * distInPiston; 
+					particles[fluid_index[i]].fext.Z = -Brep[0][1] * distInPiston; 
 				}
 			#endif
 
@@ -127,25 +127,17 @@ while ( i < fluidCount ){
 	// update velocities (mid-step)
 	#if RANDOM_DISSIPATIVE
 		#if WALL_ON
-			#if BODY_FORCE
-				particles[fluid_index[i]].w += ( particles[fluid_index[i]].fC + particles[fluid_index[i]].fCW +  particles[fluid_index[i]].fD + particles[fluid_index[i]].fR + particles[fluid_index[i]].fext + particles[fluid_index[i]].fBody )*(dt/particles[fluid_index[i]].m);
-			#else
-				particles[fluid_index[i]].w += ( particles[fluid_index[i]].fC + particles[fluid_index[i]].fCW +  particles[fluid_index[i]].fD + particles[fluid_index[i]].fR + particles[fluid_index[i]].fext )*( dt/particles[fluid_index[i]].m );
-			#endif
+				particles[fluid_index[i]].w += ( particles[fluid_index[i]].fC + particles[fluid_index[i]].fCW +  
+                                                 particles[fluid_index[i]].fD + particles[fluid_index[i]].fR  + 
+                                                 particles[fluid_index[i]].fext )*( dt/particles[fluid_index[i]].m );
 		#else 	
-			#if BODY_FORCE
-				particles[fluid_index[i]].fBody.X = ( particles[fluid_index[i]].r.Y < 0.5 * boxEdge[y] ) ? fBodyX : -1. * fBodyX;	
-				particles[fluid_index[i]].fBody.Y = 0.;
-				particles[fluid_index[i]].fBody.Z = 0.; 	
-
-				particles[fluid_index[i]].w += ( particles[fluid_index[i]].fC + particles[fluid_index[i]].fD + particles[fluid_index[i]].fR + particles[fluid_index[i]].fBody )*(dt/particles[fluid_index[i]].m);
-			#else
-				particles[fluid_index[i]].w += ( particles[fluid_index[i]].fC + particles[fluid_index[i]].fD + particles[fluid_index[i]].fR )*(dt/particles[fluid_index[i]].m);
-			#endif
+				particles[fluid_index[i]].w += ( particles[fluid_index[i]].fC + particles[fluid_index[i]].fD + 
+                                                 particles[fluid_index[i]].fR )*(dt/particles[fluid_index[i]].m);
 		#endif // WALL_ON
 	#else 
 		#if WALL_ON
-			particles[fluid_index[i]].w += ( particles[fluid_index[i]].fC + particles[fluid_index[i]].fCW + particles[fluid_index[i]].fext )*(dt/particles[fluid_index[i]].m);
+			particles[fluid_index[i]].w += ( particles[fluid_index[i]].fC + particles[fluid_index[i]].fCW + 
+                                             particles[fluid_index[i]].fext )*(dt/particles[fluid_index[i]].m);
 		#else
 			particles[fluid_index[i]].w += ( particles[fluid_index[i]].fC )*(dt/particles[fluid_index[i]].m);
 		#endif
@@ -184,20 +176,6 @@ while ( i < fluidCount ){
 		if ( iRhoZ < 0 || iRhoZ > rhoZ_bins  ) { simProg << " rhoZ calculation -- planar slab particle out of bounds" << std::endl; abort(); } 						
 		rhoZ[ iRhoZ ] += 1;
 	
-			/*
-			#if WALL_ON
-			if ( step > nZ_tStart ){
-				
-				// finding COM for fluid particles
-				xCOM += particles[fluid_index[i]].r.X;
-				yCOM += particles[fluid_index[i]].r.Y;
-				zCOM += particles[fluid_index[i]].r.Z;
-	
-				#include "liquidvaporProfileCalculate.h"
-			}
-			#endif
-			*/
-		
 	#elif CYLINDER_DROPLET
 		// calculate radial density profile
 		radPos 	= std::sqrt( pow( particles[fluid_index[i]].r.X - xCOM, 2.0 ) + pow( particles[fluid_index[i]].r.Y - yCOM, 2.0 ) );
