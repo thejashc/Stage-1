@@ -1,32 +1,46 @@
 // particles of class Particle
 std::vector<Particle> particles;     	// vector of DPD particles
+Particle *pointParticle;
 
 // global parameters
-double initRho;				// initial placement density of atoms
-double aCube;				// length of a side of cube corresponding to prescribed density
-double boxEdge[3];			// box length in x,y,z directions
-double boxHalve[3];			// box length in x,y,z directions
-double boxRecip[3];			// box length in x,y,z directions
+double boxEdge[3];	double boxHalve[3];     double boxRecip[3];			// (1) box length in x,y,z directions, (2) half box-length in x,y,z directions, (3)	reciprocal box-length in x,y,z directions
+double initRho;	double aCube;			// (1) initial placement density of atoms, (2) length of a side of cube corresponding to prescribed density			
+
+// interaction paramters
+double All1;				// DPD Warren conservative force -- attractive parameter
+double All2;				// DPD Warren conservative force -- attractive parameter
+double All12;
+double Asl;
+double Asl1;
+double Asl2;        
+double Ass;         double Aatt[3][3];
+double repParam;    double Brep[3][3];                 // DPD Warren conservative force -- repulsive parameter
+double rcutoff;		double rc2;		// (1) cut-off distance -- attractive force, (2) square of the cutoff distance -- attractive force
+double rd_cutoff;	double rd2;		// (1) cut-off distance -- repulsive force, (2)  square of the cutoff distance -- repulsive force
+
+// wall parameters
+double kWall;
+double wallPenetration;
+double initWallRho;
+double wallHeight;
+
+// random-dissipative terms
 double kBT;				// DPD fluid temperature
-double All;				// DPD Warren conservative force -- attractive parameter
-double Bll;                             // DPD Warren conservative force -- repulsive parameter
-double kappa;				// DPD conservative force -- surface tension force
-double rcutoff;				// cut-off distance -- attractive force
-double rd_cutoff;			// cut-off distance -- repulsive force
-double rc2;				// square of the cutoff distance -- attractive force
-double rd2;				// square of the cutoff distance -- repulsive force
-double dt;				// time step
-double inv_sqrt_dt;			// inverse of square root of time step
-double half_dt;				// 0.5*dt 
-double half_dt_sqr;			// 0.5*dt*dt
-double sqrtTwelve;
+double noise, friction; std::vector<std::vector<double>> sigma, gamma; // noise and friction  
+double noise2, friction2, noise12, friction12; // noise and friction for 2nd fluid if MC on
 double dim;				// dimension of system
+
+double dt, inv_sqrt_dt, half_dt, half_dt_sqr, sqrtTwelve;				// time step, sqrt of inverse of time step, half of dt, square of half of dt
+int step, stepMax;				// counter for step, total number of steps
+int rstrtFwrtFreq;			// The frequency of writing a restart file ( writes positions and mid-step velocities )
+unsigned int saveCount;		// number of timestep between saves
+unsigned int psaveCount;	// number of timestep between saves for pressure calculation
+
+// Till Line 30 of paramIn.h
+
 double dof;				// degrees of freedom
 unsigned int pCount;
 
-int step;				// counter for number of steps 
-int stepMax;				// total number of steps
-int rstrtFwrtFreq;			// The frequency of writing a restart file ( writes positions and mid-step velocities )
 double pot_en;				// system potential energy
 double kin_en;				// system kinetic energy
 double vx2;				// square of the x-velocity
@@ -97,7 +111,6 @@ double xCOM;
 double yCOM;
 double zCOM;
 
-unsigned int pCount;
 #endif
 
 // Cell list variables
@@ -223,8 +236,6 @@ Vec3D fDij;
 Vec3D wij;
 Vec3D sumForce;
 
-double noise;			// DPD noise parameter
-double friction;		// DPD friction parameter
 	#if MULTI_VISCOSITY_LIQUIDS
 
         unsigned int fluidType1_idxStart;
@@ -232,8 +243,6 @@ double friction;		// DPD friction parameter
         unsigned int fluidType2_idxStart;
         unsigned int fluidType2_idxEnd;
 
-		double noise2;
-		double friction2;
 
 	#endif
 double uniRand;
@@ -242,13 +251,9 @@ double magRand;
 double rDotv;
 double magDiss;
 	
-std::vector<std::vector<double>> sigma;	// sigma is a 2D vector of random coefficient between different particle types
-std::vector<std::vector<double>> gamma;	// gamma is a 2D vector of friction coefficient for different particle types 
 #endif
 
 // file writing parameters
-unsigned int saveCount;		// number of timestep between saves
-unsigned int psaveCount;	// number of timestep between saves for pressure calculation
 
 // parameters for post-processing
 // g(r) -- structure function
@@ -303,8 +308,6 @@ int ig;		// index for r
 
 // defining wall
 #if WALL_ON
-	double wallHeight;
-	double initWallRho;
 	
 	//double capRad;
 	//double capRadSqr;	
@@ -317,19 +320,9 @@ int ig;		// index for r
 	double w1P;
 	double w2P;
 	double root2;
-	double Ass;
-	double Bss;
 	double asl;
-	std::vector<double> Asl;	// Asl is a vector offering variable wettabilities 
 	double Bsl;
 	double fWallcutoff;
-	
-	double rcWcutoff;
-	double rdWcutoff;
-	double rcW2;
-	double rdW2;
-	double rcWby2;
-	double rdWby2;
 	
 	Vec3D fCWij;
 	Vec3D fCW;
@@ -355,13 +348,10 @@ int ig;		// index for r
 	int segPlane_bins;
 	int segPlane_ind;
 
-	double Brep;
 	double wallLowPos;
 	double wallTopPos;
 	double wallLowDist;
 	double wallTopDist;
-	double wallPenetration;
-	double kWall;
 	double wallTemp;
 
 	unsigned int solidCount;
@@ -369,6 +359,12 @@ int ig;		// index for r
 	std::vector<double> segPlane_xCOM;
 	std::vector<double> segPlane_zCOM;
 	std::vector<int> segPlane_count;
+
+    #if CYLINDER_ARRAY         
+           double zOld;
+           double tApp;
+           double tSep;
+    #endif
 
 	#if LOWER_WALL_ON
 		double zindLW_min;
@@ -402,7 +398,6 @@ int ig;		// index for r
 		bool inCapTube;
 		bool notInPoreEntry;
 
-		unsigned int pCount;
 
 		double capTubeStart;
 		double capTubeEnd;
@@ -442,6 +437,8 @@ int ig;		// index for r
 		double BslT0;
 	#endif
 	#if CAPILLARY_SQUARE
+        double capEntrance_startIndex;
+        double capEntrance_endIndex;
 		double cylCenterX;
 		double cylCenterY;
 		double bufferLen;
@@ -482,7 +479,7 @@ int ig;		// index for r
 
 		double rInner;
 		double rOuter;
-		#if PISTON
+        #if PISTON 
 			unsigned int pistonParticles;
 
 			double pistonStart;
