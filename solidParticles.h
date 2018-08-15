@@ -16,7 +16,9 @@
 		#include "fHarmonic.h"
 	
 		// switch on all the forces including force due to fluid particles starting from step = 50000
-		particles[solid_index[i]].w += ( particles[solid_index[i]].fCW + particles[solid_index[i]].fC + particles[solid_index[i]].fHarmonic +  particles[solid_index[i]].fD + particles[solid_index[i]].fR ) * ( dt/ particles[solid_index[i]].m );
+		particles[solid_index[i]].w += ( particles[solid_index[i]].fCW       +  particles[solid_index[i]].fC + 
+                                         particles[solid_index[i]].fHarmonic +  particles[solid_index[i]].fD + 
+                                         particles[solid_index[i]].fR ) * ( dt/ particles[solid_index[i]].m );
 	
 		particles[solid_index[i]].r += particles[solid_index[i]].w * dt;
 	
