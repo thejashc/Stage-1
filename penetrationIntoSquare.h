@@ -19,19 +19,19 @@ if ( particles[fluid_index[i]].r.Z > capTubeStart  && particles[fluid_index[i]].
 
 		if ( reg3 ){
 
-			particles[fluid_index[i]].fext.X = -Brep * distInLeftWall;
-			particles[fluid_index[i]].fext.Y = -Brep * distInBottomWall;
+			particles[fluid_index[i]].fext.X = -Brep[0][1] * distInLeftWall;
+			particles[fluid_index[i]].fext.Y = -Brep[0][1] * distInBottomWall;
 			particles[fluid_index[i]].fext.Z = 0.;
 
 		}
 		else if ( reg4 ){
 
-			particles[fluid_index[i]].fext.X = -Brep * distInLeftWall;
-			particles[fluid_index[i]].fext.Y = -Brep * distInTopWall;
+			particles[fluid_index[i]].fext.X = -Brep[0][1] * distInLeftWall;
+			particles[fluid_index[i]].fext.Y = -Brep[0][1] * distInTopWall;
 			particles[fluid_index[i]].fext.Z = 0.;
 		}
 		else{
-			particles[fluid_index[i]].fext.X = -Brep * distInLeftWall;
+			particles[fluid_index[i]].fext.X = -Brep[0][1] * distInLeftWall;
 			particles[fluid_index[i]].fext.Y = 0.;
 			particles[fluid_index[i]].fext.Z = 0.;
 		}
@@ -40,19 +40,19 @@ if ( particles[fluid_index[i]].r.Z > capTubeStart  && particles[fluid_index[i]].
 
 		if ( reg3 ){
 
-			particles[fluid_index[i]].fext.X = -Brep * distInRightWall;
-			particles[fluid_index[i]].fext.Y = -Brep * distInBottomWall;
+			particles[fluid_index[i]].fext.X = -Brep[0][1] * distInRightWall;
+			particles[fluid_index[i]].fext.Y = -Brep[0][1] * distInBottomWall;
 			particles[fluid_index[i]].fext.Z = 0.;
 		}
 		else if ( reg4 ){
 
-			particles[fluid_index[i]].fext.X = -Brep * distInRightWall;
-			particles[fluid_index[i]].fext.Y = -Brep * distInTopWall;
+			particles[fluid_index[i]].fext.X = -Brep[0][1] * distInRightWall;
+			particles[fluid_index[i]].fext.Y = -Brep[0][1] * distInTopWall;
 			particles[fluid_index[i]].fext.Z = 0.;
 		}
 		else{
 
-			particles[fluid_index[i]].fext.X = -Brep * distInRightWall;
+			particles[fluid_index[i]].fext.X = -Brep[0][1] * distInRightWall;
 			particles[fluid_index[i]].fext.Y = 0.;
 			particles[fluid_index[i]].fext.Z = 0.;
 
@@ -62,14 +62,14 @@ if ( particles[fluid_index[i]].r.Z > capTubeStart  && particles[fluid_index[i]].
 	else if ( reg3 ){
 
 		particles[fluid_index[i]].fext.X = 0.;
-		particles[fluid_index[i]].fext.Y = -Brep * distInBottomWall;
+		particles[fluid_index[i]].fext.Y = -Brep[0][1] * distInBottomWall;
 		particles[fluid_index[i]].fext.Z = 0.;
 
 	}   // reg3
 	else if ( reg4 ){
 
 		particles[fluid_index[i]].fext.X = 0.;
-		particles[fluid_index[i]].fext.Y = -Brep * distInTopWall;
+		particles[fluid_index[i]].fext.Y = -Brep[0][1] * distInTopWall;
 		particles[fluid_index[i]].fext.Z = 0.;
 
 	}   // reg4
