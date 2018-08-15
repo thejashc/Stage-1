@@ -5,16 +5,15 @@
 	mz = (int) round( ( particles[fluid_index[i]].r.Z - boxHalve[z] ) * boxRecip[z] );
 
 	// if ( abs(mx) > 1 || abs(my) > 1 || abs(mz) > 1 )     // unacceptably large displacement
-	if ( abs(mx) > 1 || abs(my) > 1 )     // unacceptably large displacement
+	if ( abs(mx) > 1 || abs(my) > 1 || abs(mz) > 1 )     // unacceptably large displacement
 	{
 		simProg << "*** particle " << i << " has escaped" << std::endl;
 		simProg << mx << "  " << my << " " << std::endl;
 		abort();
 	} // abs(mx)
 
-	particles[fluid_index[i]].r.X -= mx * boxEdge[x];    // apply periodic boundary conditions in the x and y directions
-	particles[fluid_index[i]].r.Y -= my * boxEdge[y];
-
+    particles[fluid_index[i]].r.X -= mx * boxEdge[x];    // apply periodic boundary conditions in the x and y directions
+    particles[fluid_index[i]].r.Y -= my * boxEdge[y];
 	// reverse the direction of the velocity of the particle in the normal direction
 	// Assumptions:
 	//		(a) Only lower wall present
@@ -33,9 +32,8 @@
 
 			particles[fluid_index[i]].r.Z 	= boxEdge[z] +  particles[fluid_index[i]].w.Z * tSep ;	// finally, integrate EOM from the top face of the box with reverse velocity
 		}
-
 	#endif
-	#if CAPILLARY_CYLINDER || CAPILLARY_SQUARE
+	#if CAPILLARY_CYLINDER || CAPILLARY_SQUARE || CYLINDER_ARRAY
 		
 		if ( abs(mz) == 1.0 ) {
 
@@ -44,7 +42,10 @@
 			// simProg << " initial particle position = " << particles[fluid_index[i]].r.Z << ", initial particle velocity = " << particles[fluid_index[i]].w.Z << std::endl;
 
 			zOld 			= particles[fluid_index[i]].r.Z - particles[fluid_index[i]].w.Z * dt;	// calculate the previous z-position
-			tApp 			= ( particles[fluid_index[i]].w.Z > 0. ) ? ( ( boxEdge[z] - zOld ) / particles[fluid_index[i]].w.Z ) : ( zOld / fabs( particles[fluid_index[i]].w.Z ) ); 
+			tApp 			= ( particles[fluid_index[i]].w.Z > 0. ) ? 
+                              ( ( boxEdge[z] - zOld ) / particles[fluid_index[i]].w.Z ) : 
+                              ( zOld / fabs( particles[fluid_index[i]].w.Z ) ); 
+
 			tSep 			= dt - tApp;					// time in which particle separates from top face of the box
 			particles[fluid_index[i]].w.Z 	*= -1.0;					// reverse the velocity of the particle: away from the top of the box
 
@@ -58,15 +59,13 @@
 				abort();
 			}
 
-			particles[fluid_index[i]].r.Z 	= ( particles[fluid_index[i]].w.Z < 0. ) ? ( boxEdge[z] +  particles[fluid_index[i]].w.Z * tSep ) : ( particles[fluid_index[i]].w.Z * tSep ) ;	// finally, integrate EOM from the top face of the box with reverse velocity
+			particles[fluid_index[i]].r.Z 	= ( particles[fluid_index[i]].w.Z < 0. ) ? 
+                                              ( boxEdge[z] +  particles[fluid_index[i]].w.Z * tSep ) : 
+                                              ( particles[fluid_index[i]].w.Z * tSep ) ;	// finally, integrate EOM from the top face of the box with reverse velocity
 			
 			// simProg << " final particle position = " << particles[fluid_index[i]].r.Z << ", initial particle velocity = " << particles[fluid_index[i]].w.Z << std::endl;
 		}
-
 	#endif
-
-	//if ( ( particles[fluid_index[i]].r.Z < wallLowPos - 2*wallPenetration ) || ( particles[fluid_index[i]].r.Z > wallTopPos + 2*wallPenetration ) )
-	//	simProg << " Particle [" << i << "] infiltrating the wall: " << particles[fluid_index[i]].r << std::endl;
 
 #else	
 	mx = (int) round( ( particles[fluid_index[i]].r.X - boxHalve[x] ) * boxRecip[x] );	
