@@ -29,9 +29,9 @@
 #define ROUGH_WALL			    0
 
 #define CAPILLARY_CYLINDER		0
-#define CAPILLARY_SQUARE		1
+#define CAPILLARY_SQUARE		0
 #define PISTON				    0
-#define CYLINDER_ARRAY          0
+#define CYLINDER_ARRAY          1
 
 // FILE_WRITE
 #define STYLE_VMD			    1
@@ -48,7 +48,7 @@
 #define DENS_EXACT			    0    
 
 // MULTIVISCOSITY_LIQUIDS
-#define MULTI_VISCOSITY_LIQUIDS	1
+#define MULTI_VISCOSITY_LIQUIDS	0
 
 //declare DPD solver
 class DPD {
@@ -214,7 +214,8 @@ class DPD {
 					#include "squarecapillaryTube.h"
 					#include "reservoir.h"
                 #elif CYLINDER_ARRAY
-                    #include "cylinderArray.h"
+                    //#include "cylinderArray.h"
+                    #include "ellipseArray.h"
 				#endif
 			#else
 				#if SPHERICAL_DROPLET 
@@ -697,13 +698,13 @@ class DPD {
 		//--------------------------------------- Force Calculation --------------------------------------//
 		void forceCalc(){
 
-			/*
-			#if CAPILLARY_CYLINDER || CAPILLARY_SQUARE
-				Bsl = BslMin + BslMax * ( 0.5 * ( 1.0 + tanh( (step - BslT0) / BslW ) ) );	// increase the repulsive forces slowly to reduce abrupt forces
+			#if WALL_ON
+
+                // Brep[0][1] = 0. + repParam * ( 0.5 * ( 1.0 + tanh( ( step - 5000. ) / 5000. ) ) );	// increase the repulsive forces slowly to reduce abrupt forces
+                // Brep[1][0] = 0. + repParam * ( 0.5 * ( 1.0 + tanh( ( step - 5000. ) / 5000. ) ) );	// increase the repulsive forces slowly to reduce abrupt forces
 
 				//std::cout << Bsl << std::endl;
 			#endif
-			*/
 
 			for ( mi[x] = 0 ; mi[x] < NrCells[x] ; ++mi[x] )
 				for ( mi[y] = 0 ; mi[y] < NrCells[y] ; ++mi[y] )
@@ -1009,41 +1010,10 @@ class DPD {
 
             #if CAPILLARY_CYLINDER || CAPILLARY_SQUARE || CYLINDER_ARRAY
 
-                #if MULTI_VISCOSITY_LIQUIDS
-                // remove the piston particles used for mixing the liquids
-                if ( step == 20000 ){
+                if ( step == 20000 )
+                        boxResize( int( boxEdge[z] * 1.5 ) );
 
-                    boxEdge[z]  = int( ceil( boxEdge[z] * 1.5 ) ); 
-                    boxHalve[z] = boxEdge[z] / 2.0;
-                    boxRecip[z] = 1.0 / boxEdge[z]; 
-
-                    #include "cellGridInit.h"
-            
-                    simProg << "Box resized to " << boxEdge[z] << "and boxHalve[z], boxRecip[z], re-evaluated" << std::endl;
-
-                    /*
-                    i      = 0;
-                    pCount = 0;
-                    while ( i < solidCount ){
-
-                        particleInSquareSmall = ( particles[solid_index[i]].r0.X >= sqXmin + capWallWdth ) && 
-                                                ( particles[solid_index[i]].r0.X <= sqXmax - capWallWdth ) && 
-                                                ( particles[solid_index[i]].r0.Y >= sqYmin + capWallWdth ) && 
-                                                ( particles[solid_index[i]].r0.Y <= sqYmax - capWallWdth );
-                        
-                        if ( particleInSquareSmall ){
-                            particles.erase( particles.begin() + i );
-                            pCount++;
-                        }
-
-                        i++;
-                    }
-                    simProg << pCount << " particles at the entrance of the capillary tube deleted" << std::endl;
-                    */
-                }
-                #endif
-
-                if ( step == 30000 ){ 
+                if ( step == 25000 ){ 
 
                     simProg << " Changing the wettability of pore from hydrophobic to hydrophilic with Asl =  " << Aatt[0][1] << std::endl;
                     i = 0;
@@ -1852,8 +1822,41 @@ class DPD {
 
 		}
 
+		//-------------------- Resize boxsize in z dirn ----------------------//
+        void boxResize(unsigned resizeBoxTo){
+
+            // remove the piston particles used for mixing the liquids
+            boxEdge[z]  = resizeBoxTo; 
+            boxHalve[z] = boxEdge[z] / 2.0;
+            boxRecip[z] = 1.0 / boxEdge[z]; 
+
+            #include "cellGridInit.h"
+
+            simProg << "Box resized to " << boxEdge[z] << "and boxHalve[z], boxRecip[z], re-evaluated" << std::endl;
+
+            /*
+            i      = 0;
+            pCount = 0;
+            while ( i < solidCount ){
+
+                particleInSquareSmall = ( particles[solid_index[i]].r0.X >= sqXmin + capWallWdth ) && 
+                                        ( particles[solid_index[i]].r0.X <= sqXmax - capWallWdth ) && 
+                                        ( particles[solid_index[i]].r0.Y >= sqYmin + capWallWdth ) && 
+                                        ( particles[solid_index[i]].r0.Y <= sqYmax - capWallWdth );
+                
+                if ( particleInSquareSmall ){
+                    particles.erase( particles.begin() + i );
+                    pCount++;
+                }
+
+                i++;
+            }
+            simProg << pCount << " particles at the entrance of the capillary tube deleted" << std::endl;
+            */
+        }
+
         //---------------------- Create cylinder array -----------------------------//
-        void createCylinderArray ( double cylCenterX, double cylCenterZ, double cylRad ){
+        void createCylinderArray ( Vec3D p1, Vec3D p2, double cylRad ){
 
             pCount = 0;
 
@@ -1869,7 +1872,7 @@ class DPD {
             aCube = pow( 1. / initRho, 1./3. );
 
             simProg << "***************************************************" << std::endl;
-            simProg << "cylinder with cylCenterX: " << cylCenterX << ", cylCenterZ: " << cylCenterZ << ", cylRad: " << cylRad << std::endl;
+            // simProg << "cylinder with cylCenterX: " << cylCenterX << ", cylCenterZ: " << cylCenterZ << ", cylRad: " << cylRad << std::endl;
 
             while ( zind < zind_max ){
                 xind = xind_min;
@@ -1877,8 +1880,23 @@ class DPD {
                 while ( xind < xind_max){
                     yind = yind_min;
                     while( yind < yind_max){
+
+                        x01.X = xind - p1.X; x01.Y = yind - p1.Y; x01.Z = zind - p1.Z;
+                        x02.X = xind - p2.X; x02.Y = yind - p2.Y; x02.Z = zind - p2.Z;
+
+                        x21.X = p2.X - p1.X; x21.Y = p2.Y - p1.Y; x21.Z = p2.Z - p1.Z;
+
+                        x012Cross = x01%x02;
+
+                        Num = x012Cross.getLength(); 
+                        Den = x21.getLength(); 
+
+                        shortestDist = Num / Den; 
+                        // std::cout << "x01 = " <<  x01 << ", x02 = " << x02 <<", x012Cross = " << x012Cross << ", x21= " << x21 << std::endl;
+                        // std::cout << "shortestDist = " << shortestDist << std::endl;
             
-                        if ( pow( xind - cylCenterX, 2.0 ) + pow( zind - cylCenterZ, 2.0 ) <= pow( cylRad, 2.0 ) ){
+                        // if ( pow( xind - cylCenterX, 2.0 ) + pow( zind - cylCenterZ, 2.0 ) <= pow( cylRad, 2.0 ) ){
+                        if ( shortestDist <= cylRad ){
             
                             // generate random velocities
                             rand_gen_velx = ((double) rand() / (RAND_MAX));
@@ -1899,6 +1917,55 @@ class DPD {
             }// zind
 
             simProg << "finished initialization of  " << pCount << " particles inside crystal lattice" << std::endl;
+            simProg << "***************************************************" << std::endl;
+        }
+
+        /******************************* ELLIPSE **********************************************/
+        void createEllipseArray ( double Xc, double Zc, double alphaOut, double majAxisOut, double alphaIn, double majAxisIn ){
+
+            pCount = 0;
+
+            xind_min = 0.00;
+            yind_min = 0.00;
+            zind_min = 0.00;
+
+            xind_max = boxEdge[x];
+            yind_max = boxEdge[y];
+            zind_max = boxEdge[z];
+            
+            zind = zind_min;
+            aCube = pow( 1. / initRho, 1./3. );
+
+            simProg << "***************************************************" << std::endl;
+            // simProg << "cylinder with cylCenterX: " << cylCenterX << ", cylCenterZ: " << cylCenterZ << ", cylRad: " << cylRad << std::endl;
+
+            while ( zind < zind_max ){
+                xind = xind_min;
+                // Particle position intialization in a crystal structure 
+                while ( xind < xind_max){
+                    yind = yind_min;
+                    while( yind < yind_max){
+
+                            rand_gen_velx = ((double) rand() / (RAND_MAX));
+                            rand_gen_vely = ((double) rand() / (RAND_MAX));
+                            rand_gen_velz = ((double) rand() / (RAND_MAX));
+
+                            bool outerEllipse = pow( xind - Xc, 2. ) +  pow(alphaIn, 2. ) * pow( zind - Zc , 2. ) <= pow(majAxisOut, 2.);
+                            bool innerEllipse = pow( xind - Xc, 2. ) +  pow(alphaOut, 2. ) * pow( zind - Zc , 2. ) >= pow(majAxisIn, 2.);
+            
+                            if ( outerEllipse && innerEllipse  ){
+                                particles.push_back({0.5,1.0,{xind, yind, zind},{0., 0., 0.},0});
+                                pCount++;
+                            }
+            
+                        yind += aCube*rcutoff;
+                    }// yind			
+                    xind += aCube*rcutoff;
+                }
+                zind += aCube*rcutoff;
+            }// zind
+
+            simProg << "finished initialization of  " << pCount << " particles inside elliptical cylinder" << std::endl;
             simProg << "***************************************************" << std::endl;
         }
 		//------------------------------ Mod function ------------------------------//
