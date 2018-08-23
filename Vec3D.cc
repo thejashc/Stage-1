@@ -48,6 +48,14 @@ Vec3D Vec3D::operator /(const double a) const
     return Vec3D(X / a, Y / a, Z / a);
 }
 
+// Divides each element by a scalar
+Vec3D Vec3D::operator %(const Vec3D& b) const
+{
+    return Vec3D(   Y * b.Z - b.Y * Z,
+                   -X * b.Z + b.X * Z,
+                    X * b.Y - b.X * Y 
+                );
+}
 
  // Adds a vector to itself
 Vec3D& Vec3D::operator+=(const Vec3D& a)
@@ -84,6 +92,15 @@ Vec3D& Vec3D::operator/=(const double a)
     Z /= a;
     return *this;
 }
+
+// // Cross product between 2 vectors
+// Vec3D Vec3D::cross( Vec3D a, Vec3D b){
+//
+//    return Vec3D(    a.Y * b.Z - b.Y * a.Z,
+//                    -a.X * b.Z + b.X * a.Z,
+//                     a.X * b.Y - b.X * a.Y 
+//                ); 
+//}
 
 // Divides each element by a scalar and rounds off
 double Vec3D::roundOff_x(const Vec3D& b, double a)

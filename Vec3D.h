@@ -49,6 +49,10 @@ public:
     
     // Divides itself by a scalar
     Vec3D& operator/=(const double a);
+
+    // Cross Product between two vectors
+    // Vec3D cross( Vec3D a, Vec3D b);
+    Vec3D operator %(const Vec3D& b) const;
     
     // Divides itself by a scalar and rounds off the value
     static double roundOff_x(const Vec3D& b, double a);
