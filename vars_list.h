@@ -309,8 +309,8 @@ int ig;		// index for r
 // defining wall
 #if WALL_ON
 	
-	//double capRad;
-	//double capRadSqr;	
+	double capRad;
+	double capRadSqr;	
 	double strength;
 	double capSphXc;
 	double capSphYc;
@@ -364,6 +364,17 @@ int ig;		// index for r
            double zOld;
            double tApp;
            double tSep;
+
+           double shortestDist;
+           Vec3D p0, p1, p2;
+           Vec3D x012Cross;
+
+           double Num;
+           double Den;
+           unsigned int resizeBoxSizeTo;
+
+           Vec3D x01; Vec3D x02; Vec3D x21;
+
     #endif
 
 	#if LOWER_WALL_ON

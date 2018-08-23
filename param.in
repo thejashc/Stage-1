@@ -1,6 +1,6 @@
-boxEdgeX            20.0		# box dimensions
-boxEdgeY            20.0
-boxEdgeZ            53.0
+boxEdgeX            52.0		# box dimensions
+boxEdgeY            52.0
+boxEdgeZ            80.0
 initRho             6.00
 #
 repParam             25.0        # interaction paramters
@@ -25,7 +25,7 @@ noise12             6.0
 dim                 3			# dimensions
 #
 dt                  0.01		# time parameters	
-stepMax             10000
+stepMax             100
 rstrtFWrtFreq       10000
 saveCount           500
 psaveCount          50000
