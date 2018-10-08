@@ -62,12 +62,12 @@
 	zCOM = 0.0;
 	xind_min = 0.;
 	yind_min = 0.;
-	zind_min = ( boxEdge[z] / 2. ) - ( cylHeight / 2. ); 
-	// zind_min = 0.;
+	// zind_min = ( boxEdge[z] / 2. ) - ( cylHeight / 2. ); 
+	zind_min = 0.;
 	xind_max = boxEdge[x];
 	yind_max = boxEdge[y];
-	zind_max = ( boxEdge[z] / 2. ) + ( cylHeight / 2. );
-	//zind_max = boxEdge[z];
+	// zind_max = ( boxEdge[z] / 2. ) + ( cylHeight / 2. );
+	zind_max = boxEdge[z];
 	
 	zind = zind_min;
 	simProg << "***************************************************" << std::endl;

@@ -31,15 +31,15 @@
 #define CAPILLARY_CYLINDER		0
 #define CAPILLARY_SQUARE		0
 #define PISTON				    0
-#define CYLINDER_ARRAY          1
+#define CYLINDER_ARRAY          0
+#define HARD_SPHERES            1
 
 // FILE_WRITE
 #define STYLE_VMD			    1
 #define STYLE_MERCURY_DPM		0
 
 // CORRELATION FUNCTIONS
-#define SACF				    0
-#define SACF_TEST			    0
+#define SACF				    1
 
 // LEES-EDWARDS BOUNDARY CONDITION
 #define LEES_EDWARDS_BC			0
@@ -96,6 +96,11 @@ class DPD {
 
 			#if !(RESTART)
 				createGridList();
+
+                #if WALL_ON 
+                    springNetwork();
+                #endif 
+
 				dens_calculation();
 				forceCalc();
 				
@@ -112,8 +117,10 @@ class DPD {
 				std::ofstream eosStats		( "./data/eos_data.dat"	);	// Mean Pressure and temperature data
 				std::ofstream pTensStats	( "./data/pTens.dat"	);	// Pressure tensor data
 				std::ofstream momStats		( "./data/mom_data.dat"	);	// pressure and temperature data
+                #if HARD_SPHERES
+                    std::ofstream colloidStats   ("./data/colloid_box_crossing.dat", std::ios_base::app );
+                #endif
 			#endif // RESTART
-
 
 			// write parameters and initial configuration
 			vtkFileWritePosVel();
@@ -122,15 +129,21 @@ class DPD {
 			paraInfo.close();
 
 			simProg << " ********************* STARTING SIMULATION ************************* " << std::endl;	
-			while (step<= stepMax) {
 
-				// if ( step % 1 == 0 )
-			    //		simProg << " step= " << step << std::endl;
+            i = 0;
+            while ( i < solidCount ) {
+                simProg << " position of  " << i << " is " << particles[i].r << " , with bond indices " << particles[i].bondIndex[0] << std::endl;
+
+                i++;
+            }
+
+			while (step<= stepMax) {
 
 				createGridList();
 				#if DENS_EXACT
 					dens_calculation();
 				#endif
+
 				forceCalc();
 
 				integrateEOM();
@@ -140,6 +153,7 @@ class DPD {
 				}
 				tot_en = kin_en + pot_en;
 
+                /*
 				if ( (step > gR_tStart) && (step % gR_tDelta == 0) ) {  
                                                                         grSample(0, fluidCount, 0);
                                                                         #if MULTI_VISCOSITY_LIQUIDS
@@ -148,17 +162,19 @@ class DPD {
                                                                         #endif
                                                                      }
 
-				counter += 1;						// filewriting
-				pcounter += 1;
-				fileWrite(enStats, eosStats, momStats, pTensStats);
+                 */
 
-				// std::cout << "force on piston is: " << forceOnPiston << std::endl;
+				counter += 1;						// filewriting
+				fileWrite(enStats, eosStats, momStats, pTensStats);
+                
+                #if HARD_SPHERES
+					if ( step % saveCount == 0 )
+                        // colloidStats << step << "\t\t" << colloid_com_pos << "\t\t" <<  colloid_boxCrossing << std::endl;
+                        colloidStats << step << "\t\t" << colloid_com_pos << std::endl; 
+                #endif
 
 				resetVar();						// reset variables to zero
 				
-				// for (Particle& p : particles)
-				//	simProg << "Position: " << p.r << ", Density: " << p.dens <<", conservative force: " << p.fC << std::endl;
-
 				if ( step % rstrtFwrtFreq == 0 ){
 					// write position velocity stats 
 					std::ofstream writeConfig;
@@ -176,8 +192,6 @@ class DPD {
 
 				step += 1;						// increment time step
 
-                
-                
 			}//end time loop
 
 			// post-processing
@@ -201,8 +215,8 @@ class DPD {
 			#if WALL_ON
 				#include "defineWall.h"
 
-				#if SPHERICAL_CAP
-					#include "sphericalCap.h"			
+				#if SPHERICAL_DROPLET
+					#include "sphDropInit.h"
 				#elif CYLINDER_DROPLET
 					#include "cylDropInit.h"
 				#elif PLANAR_SLAB
@@ -216,6 +230,8 @@ class DPD {
                 #elif CYLINDER_ARRAY
                     //#include "cylinderArray.h"
                     #include "ellipseArray.h"
+                #elif HARD_SPHERES
+                    #include "sphericalColloids.h"
 				#endif
 			#else
 				#if SPHERICAL_DROPLET 
@@ -342,13 +358,22 @@ class DPD {
 			#endif
 
 			#if WALL_ON
+                /*
 				i = 0;
 				while ( i <  solidCount ) {
 						particles[solid_index[i]].r0 = particles[solid_index[i]].r;
 						i++;
-					}
+                }
+                simProg << "\n" << solidCount << " solid particles stuck to their initial positions" << std::endl;
+                */
 
-                simProg << "\n" << solidCount << " solid particles attached to initial positions by a spring" << std::endl;
+				i = 0;
+                while ( i < solidCount ) {
+                    particles[solid_index[i]].bondIndex[0] = 0;
+                    i++;
+                }
+                simProg << "\n" << solidCount << " solid particles bond indices set to 0" << std::endl;
+
 			#endif // WALL_ON
 			
 			
@@ -370,15 +395,27 @@ class DPD {
 					particles[fluid_index[i]].w -= velAvg;
 					i++;
 				}
-	
+
+
 				simProg << "Excess average velocity from fluid particles removed" << std::endl;
 				simProg << "Densities of the fluid particles set to 0" << std::endl;
+
+                #if SPHERICAL_DROPLET || CAPILLARY_CYLINDER || CAPILLARY_SQUARE
+                    i = 0;
+                    while( i < fluidCount ){
+                        particles[fluid_index[i]].w.Z -= 5e-1;
+
+                        i++;
+                    }
+                    simProg << "The fluid particles have been given a negative velocity of -5e-1 rc/dt" << std::endl;
+                #endif
+	
 			}
 			else{
 
 				simProg << "No fluid particles intialized" << std::endl;
 			}
-
+            
 			#if WALL_ON
 				velAvg={0.0, 0.0, 0.0};
 				// Remove excess velocity and set particle density to 0
@@ -394,6 +431,11 @@ class DPD {
 				i = 0;
 				while ( i < solidCount ){
 					particles[solid_index[i]].w -= velAvg;
+
+                    particles[solid_index[i]].rUnfolded.X = particles[solid_index[i]].r.X;
+                    particles[solid_index[i]].rUnfolded.Y = particles[solid_index[i]].r.Y;
+                    particles[solid_index[i]].rUnfolded.Z = particles[solid_index[i]].r.Z;
+
 					i++;
 				}
 				
@@ -473,7 +515,6 @@ class DPD {
                 for ( i=0 ; i<n_vars*n_vars ; ++i ){
                         normalizeCorr[i] = 0.;
                         normalizeCorrAv[i] = 0.;}
-                        
 
                 // initialize sacpunt
                 sacpunt = 0;
@@ -518,25 +559,25 @@ class DPD {
                 }
 
                 // defining the elements of the sigma and gamma array
-                sigma[0][0] 	= noise;						// solid-solid interaction ( type 00 interaction )
-                sigma[0][1] 	= noise;        
-                sigma[0][2] 	= noise;        
-                sigma[1][0] 	= sigma[0][1];        
-                sigma[1][1] 	= noise;       						// liquid1-liquid1 interaction ( type 11 interaction ) 
-                sigma[1][2] 	= noise12; 
+                sigma[0][0] 	= noise;						// S-S 
+                sigma[0][1] 	= noise;                        // S-L1
+                sigma[0][2] 	= noise;                        // S-L2
+                sigma[1][0] 	= sigma[0][1];                   
+                sigma[1][1] 	= noise;       					// L1-L1    
+                sigma[1][2] 	= noise12;                      // L1-L2
                 sigma[2][0] 	= sigma[0][2];
                 sigma[2][1] 	= sigma[1][2]; 
-                sigma[2][2] 	= noise2;        					// solid-liquid interaction ( type 01 interaction ) 
+                sigma[2][2] 	= noise2;        			    // L2-L2		
 
-                gamma[0][0] 	= friction;						// solid-solid interaction ( type 00 interaction )
-                gamma[0][1] 	= friction;        
-                gamma[0][2] 	= friction;        
-                gamma[1][0] 	= friction;        
-                gamma[1][1] 	= friction;       					// liquid1-liquid1 interaction ( type 11 interaction ) 
-                gamma[1][2] 	= friction12; 
-                gamma[2][0] 	= gamma[0][2];
+                gamma[0][0] 	= friction;						// S-S 
+                gamma[0][1] 	= friction;                     // S-L1
+                gamma[0][2] 	= friction;                     // S-L2
+                gamma[1][0] 	= gamma[0][1];             
+                gamma[1][1] 	= friction;       		        // L1-L1
+                gamma[1][2] 	= friction12;                   // L1-L2
+                gamma[2][0] 	= gamma[0][2];                  
                 gamma[2][1] 	= gamma[1][2]; 
-                gamma[2][2] 	= friction2;        					// solid-liquid interaction ( type 01 interaction ) 
+                gamma[2][2] 	= friction2;        	        // L2-L2	
 
                 simProg << " ********************************************************************* " << std::endl;
                 simProg << " Finished defining the matrix of noise and friction parameters " << std::endl;
@@ -724,43 +765,6 @@ class DPD {
                                 
                                 #include "pairforce.h"
 
-                                /*
-								#if WALL_ON
-                                    #if MULTI_VISCOSITY_LIQUIDS
-                                        if ( particles[i].type == 1 && particles[j].type == 1 ){
-                                                #include "pairforceLL.h"
-                                        } // liquid1 liquid1 interaction
-                                        else if ( particles[i].type == 1 && particles[j].type == 2 ){
-                                                #include "pairforceLL.h"
-                                        } // liquid1 liquid2 interaction
-                                        else if ( particles[i].type == 2 && particles[j].type == 1 ){
-                                                #include "pairforceLL.h"
-                                        } // liquid2 liquid1 interaction
-                                        else if ( particles[i].type == 2 && particles[j].type == 2 ){
-                                                #include "pairforceLL.h"
-                                        } // liquid2 liquid2 interaction
-                                    #else
-                                        if ( particles[i].type == 1 && particles[j].type == 1 ){
-                                                #include "pairforceLL.h"
-                                        } // liquid1 liquid1 interaction
-                                    #endif // MULTI_VISCOSITY_LIQUIDS
-									else if ( particles[i].type == 0 && particles[j].type == 0 ){
-											 #include "pairforceSS.h"
-									} // solid solid interaction
-									else{
-											#include "pairforceSL.h"
-									} // solid liquid interaction
-								#else
-										#include "pairforceLL.h"
-								#endif
-                                */
-
-								// simProg << "i, mi[x], mi[y], mi[z] = " <<  i << " " << mi[x] << " " << mi[y] << " " <<  mi[z] ;
-								// simProg << ", j, mj[x], mj[y], mj[z] = " << j << " " << mj[x] << " " << mj[y] << " " <<  mj[z] ;
-								// simProg << "i, pos= " <<  i << " " << particles[i].r;
-								// simProg << ",j, pos= " << j << " " << particles[j].r;
-								// simProg << ", fCij = " << fCij  << ", fC = " << particles[i].fC << std::endl; 
-
 							} // jj
 
 							// particle j in neighbour cell to i
@@ -802,7 +806,7 @@ class DPD {
 										j = grid[mj[x]][mj[y]][mj[z]][jj];
 										// simProg << "j2 " << m << " " << mj[x] << " " << mj[y] << " " << mj[z] << " " << jj << " " << j << std::endl;
 
-										#include "pairforceLL.h"
+										#include "pairforce.h"
 
 									} // jj
 
@@ -830,13 +834,14 @@ class DPD {
 										j = grid[mj[x]][mj[y]][mj[z]][jj];
 										// simProg << "j2 " << m << " " << mj[x] << " " << mj[y] << " " << mj[z] << " " << jj << " " << j << std::endl;
 
-											#include "pairforceLL.h"
+											#include "pairforce.h"
 									} // jj
 								} // m
 							
 							}	
 
 							#else
+
 							// particle j in neighbour cell to i
 							for ( m = 0 ; m < 13 ; m++ )
 							{
@@ -855,41 +860,12 @@ class DPD {
 
                                     #include "pairforce.h"
 
-                                    /*
-                                    #if WALL_ON
-                                        #if MULTI_VISCOSITY_LIQUIDS
-                                            if ( particles[i].type == 1 && particles[j].type == 1 ){
-                                                    #include "pairforceLL.h"
-                                            } // liquid1 liquid1 interaction
-                                            else if ( particles[i].type == 1 && particles[j].type == 2 ){
-                                                    #include "pairforceLL.h"
-                                            } // liquid1 liquid2 interaction
-                                            else if ( particles[i].type == 2 && particles[j].type == 1 ){
-                                                    #include "pairforceLL.h"
-                                            } // liquid2 liquid1 interaction
-                                            else if ( particles[i].type == 2 && particles[j].type == 2 ){
-                                                    #include "pairforceLL.h"
-                                            } // liquid2 liquid2 interaction
-                                        #else
-                                            if ( particles[i].type == 1 && particles[j].type == 1 ){
-                                                    #include "pairforceLL.h"
-                                            } // liquid1 liquid1 interaction
-                                        #endif // MULTI_VISCOSITY_LIQUIDS
-                                        else if ( particles[i].type == 0 && particles[j].type == 0 ){
-                                                 #include "pairforceSS.h"
-                                        } // solid solid interaction
-                                        else{
-                                                #include "pairforceSL.h"
-                                        } // solid liquid interaction
-                                    #else
-                                            #include "pairforceLL.h"
-                                    #endif
-                                    */
 								} // jj
 							} // m
 							#endif
 
 						} // ii
+
 		}
 
 		//--------------------------------------- Integrate Equations of motion --------------------------------------//
@@ -905,7 +881,11 @@ class DPD {
 			// calculate auto-correlation
 			#if SACF
 				if ( step > 5e4 ){
-					#include "ACF.h"
+                    #if HARD_SPHERES 
+                        #include "colloid_VACF.h"
+                    #else
+					    #include "ACF.h"
+                    #endif
 				}
 			#endif
 
@@ -913,23 +893,37 @@ class DPD {
 		//--------------------------------------- Resetting variables--------------------------------------//
 		void resetVar(){
 			// energy reset to zero
-			pot_en		= 0.0;
-			kin_en		= 0.0;
-			tot_en		= 0.0;
-			vx2		= 0.0;
-			vy2		= 0.0;
-			vz2		= 0.0;
-			v2		= 0.0;
-			vxvy		= 0.0;
-			pressure	= 0.0;
-			momX		= 0.0;
-			momY		= 0.0;
-			momZ		= 0.0;
+			pot_en		= 0.;
+			kin_en		= 0.;
+			tot_en		= 0.;
+			vx2		    = 0.;
+			vy2		    = 0.;
+			vz2		    = 0.;
+			v2		    = 0.;
+			vxvy		= 0.;
+			pressure	= 0.;
+			momX		= 0.;
+			momY		= 0.;
+			momZ		= 0.;
+
+            // std::cout << step << ", " << totCOM/npart << std::endl;
+
+            totCOM.X      = 0.;
+            totCOM.Y      = 0.;
+            totCOM.Z      = 0.;
+
 			#if LEES_EDWARDS_BC
                 dissipativeWork = 0.0;
                 randomWork	= 0.0;
 			#endif
+
+            #if HARD_SPHERES
+                colloid_com_pos.X = 0.;
+                colloid_com_pos.Y = 0.;
+                colloid_com_pos.Z = 0.;
+            #endif
 	
+
 			// simProg << " fi[0], fi[fluidCount - 1], fluidCount " << fluid_index[0] << " " << fluid_index[1] << " " << fluidCount << std::endl;	
 			for ( i = 0; i < npart ; ++i )		// traversing over all particles
 			{
@@ -942,17 +936,12 @@ class DPD {
 
 				particles[i].rhoBar = 0.0;
 				particles[i].fC.setZero();
-		
-				#if RANDOM_DISSIPATIVE 
-					particles[i].fR.setZero();
-					particles[i].fD.setZero();
-				#endif
+                particles[i].fR.setZero();
+                particles[i].fD.setZero();
+                particles[i].fext.setZero();
+                particles[i].fHarmonic.setZero();
 
-				#if WALL_ON
-					particles[i].fext.setZero();
-					particles[i].fCW.setZero();
-					particles[i].fHarmonic.setZero();
-				#endif 
+                // springPotEn = 0;
 
 			} // set density equal to zero for solid type particles
 
@@ -961,6 +950,18 @@ class DPD {
 					forceOnPiston = 0.;
 				#endif
 			#endif
+
+            /*
+            #if CYLINDER_ARRAY || LOWER_WALL_ON
+                    if ( step % 1000 == 0 && residual > 0.)
+                        simProg << "droplet Zcom = " << droplet_Zcom << ", capRad = " << capRad << ", zind_max = " << zind_max << " & residual= " << residual << " at time " << step << std::endl;
+
+                    droplet_Zcom = droplet_ZcomNew / fluidCount;
+                    droplet_ZcomNew = 0.;
+
+                    residual = droplet_Zcom - capRad - zind_max;
+            #endif
+            */
 
 			// reset temporary ideal and non-ideal component of pressure tensor
 			// to 0 at every time step. 
@@ -1008,14 +1009,14 @@ class DPD {
 			pRandom_temp[2][2] = 0.;
 			#endif
 
+            /*
             #if CAPILLARY_CYLINDER || CAPILLARY_SQUARE || CYLINDER_ARRAY
-
                 if ( step == 20000 )
                         boxResize( int( boxEdge[z] * 1.5 ) );
 
                 if ( step == 25000 ){ 
 
-                    simProg << " Changing the wettability of pore from hydrophobic to hydrophilic with Asl =  " << Aatt[0][1] << std::endl;
+                    simProg << " Changing the wettability of pore from hydrophobic to hydrophilic with Asl =  -40" << std::endl;
                     i = 0;
                     while ( i < solidCount ){
                         Aatt[0][1] = -40.;
@@ -1025,7 +1026,8 @@ class DPD {
                         i++;
                     }
                 }
-            #endif 
+            #endif
+            */
 		}
 
 		//--------------------------------------- g(r) sampling --------------------------------------//
@@ -1212,7 +1214,7 @@ class DPD {
 
 			std::ofstream corrdata("./data/correlationData.dat"); 
 			#if SACF_TEST
-			std::ofstream corrdata("./cbp7_li_ForLi/thejas/mycorrelationData_p_16.dat"); 
+                std::ofstream corrdata("./cbp7_li_ForLi/thejas/mycorrelationData_p_16.dat"); 
 			#endif
 			
 			// std::cout << "before avg fcorr[0][0][0]= " << fCorr[0][0][0] << std::endl;
@@ -1257,7 +1259,6 @@ class DPD {
 			corrdata.close();
 		}
 		#endif
-
 		//--------------------------------------- Parameter file writing--------------------------------------//
 		void paraWrite(std::ofstream& paraInfo){
 
@@ -1677,6 +1678,7 @@ class DPD {
 					}
 					#endif	
 
+
 					//reset the counter, write time to terminal
 					counter = 0;
 			}
@@ -1717,10 +1719,10 @@ class DPD {
                     while ( i < fluidCount ){
 
                         if ( particles[fluid_index[i]].type == 1 ){
-                            file  << "H" << "\t" << particles[fluid_index[i]].r << std::endl;
+                            file  << "H" << "\t" << particles[fluid_index[i]].r  << "\t " << std::endl;
                             file1 << "H" << "\t" << particles[fluid_index[i]].v << std::endl;}
-                        else{
-                            file  << "C" << "\t" << particles[fluid_index[i]].r << std::endl;
+                        else if ( particles[fluid_index[i]].type == 2 ){
+                            file  << "C" << "\t" << particles[fluid_index[i]].r << "\t " <<  std::endl;
                             file1 << "C" << "\t" << particles[fluid_index[i]].v << std::endl;}
 
                         i++;
@@ -1735,28 +1737,30 @@ class DPD {
                             i++;
                         }
                     #endif
+
 			#endif
 
+
 			#if STYLE_MERCURY_DPM
-			char filename[40];
-			char filename1[40];
+                char filename[40];
+                char filename1[40];
 
-			// sprintf( filename, "./data/data1_%d.vtu", step);  
-			sprintf( filename, "./data/fluid_XYZ%d.data", step);  
-			
-			std::ofstream file(filename);
-			std::ofstream file1(filename1);
+                // sprintf( filename, "./data/data1_%d.vtu", step);  
+                sprintf( filename, "./data/fluid_XYZ%d.data", step);  
+                
+                std::ofstream file(filename);
+                std::ofstream file1(filename1);
 
-			file << particles.size() << ", " << step << " 0, 0, 0, " << boxEdge[x] << ", " << boxEdge[y] << ", " << boxEdge[z] << std::endl;
-			i = 0;
-			while ( i < fluidCount ){
-				file  <<  particles[fluid_index[i]].r << " " 
-				      <<  particles[fluid_index[i]].v << " " 
-				      <<  particles[fluid_index[i]].a << " 0 0 0 0 0 0 " 
-				      <<  particles[fluid_index[i]].type << std::endl;
+                file << particles.size() << ", " << step << " 0, 0, 0, " << boxEdge[x] << ", " << boxEdge[y] << ", " << boxEdge[z] << std::endl;
+                i = 0;
+                while ( i < fluidCount ){
+                    file  <<  particles[fluid_index[i]].r << " " 
+                          <<  particles[fluid_index[i]].v << " " 
+                          <<  particles[fluid_index[i]].a << " 0 0 0 0 0 0 " 
+                          <<  particles[fluid_index[i]].type << std::endl;
 
-				      i++;
-			}
+                          i++;
+                }
 			#endif
 			/*
 			file << "</DataArray>"<<std::endl;
@@ -1856,6 +1860,7 @@ class DPD {
         }
 
         //---------------------- Create cylinder array -----------------------------//
+        #if CYLINDER_ARRAY 
         void createCylinderArray ( Vec3D p1, Vec3D p2, double cylRad ){
 
             pCount = 0;
@@ -1919,9 +1924,10 @@ class DPD {
             simProg << "finished initialization of  " << pCount << " particles inside crystal lattice" << std::endl;
             simProg << "***************************************************" << std::endl;
         }
+        #endif
 
         /******************************* ELLIPSE **********************************************/
-        void createEllipseArray ( double Xc, double Zc, double alphaOut, double majAxisOut, double alphaIn, double majAxisIn ){
+        void createEllipseArray ( double Xc, double Zc, double alphaOut, double majAxisOut, double alphaIn, double majAxisIn, bool y_axis ){
 
             pCount = 0;
 
@@ -1932,6 +1938,8 @@ class DPD {
             xind_max = boxEdge[x];
             yind_max = boxEdge[y];
             zind_max = boxEdge[z];
+
+            bool outerEllipse, innerEllipse;
             
             zind = zind_min;
             aCube = pow( 1. / initRho, 1./3. );
@@ -1950,8 +1958,14 @@ class DPD {
                             rand_gen_vely = ((double) rand() / (RAND_MAX));
                             rand_gen_velz = ((double) rand() / (RAND_MAX));
 
-                            bool outerEllipse = pow( xind - Xc, 2. ) +  pow(alphaIn, 2. ) * pow( zind - Zc , 2. ) <= pow(majAxisOut, 2.);
-                            bool innerEllipse = pow( xind - Xc, 2. ) +  pow(alphaOut, 2. ) * pow( zind - Zc , 2. ) >= pow(majAxisIn, 2.);
+                            if ( y_axis ) {
+                                outerEllipse = pow( yind - Xc, 2. ) +  pow(alphaIn, 2. ) * pow( zind - Zc , 2. ) <= pow(majAxisOut, 2.);
+                                innerEllipse = pow( yind - Xc, 2. ) +  pow(alphaOut, 2. ) * pow( zind - Zc , 2. ) >= pow(majAxisIn, 2.);
+                            }
+                            else {
+                                outerEllipse = pow( xind - Xc, 2. ) +  pow(alphaIn, 2. ) * pow( zind - Zc , 2. ) <= pow(majAxisOut, 2.);
+                                innerEllipse = pow( xind - Xc, 2. ) +  pow(alphaOut, 2. ) * pow( zind - Zc , 2. ) >= pow(majAxisIn, 2.);
+                            }
             
                             if ( outerEllipse && innerEllipse  ){
                                 particles.push_back({0.5,1.0,{xind, yind, zind},{0., 0., 0.},0});
@@ -1968,6 +1982,51 @@ class DPD {
             simProg << "finished initialization of  " << pCount << " particles inside elliptical cylinder" << std::endl;
             simProg << "***************************************************" << std::endl;
         }
+		//------------------------------ Spring Network ------------------------------//
+		void springNetwork(){
+
+
+			for ( mi[x] = 0 ; mi[x] < NrCells[x] ; ++mi[x] )
+				for ( mi[y] = 0 ; mi[y] < NrCells[y] ; ++mi[y] )
+					for ( mi[z] = 0 ; mi[z] < NrCells[z] ; ++mi[z] )
+						for ( ii = 1 ; ii <= grid[mi[x]][mi[y]][mi[z]][0] ; ++ii ){
+							i = grid[mi[x]][mi[y]][mi[z]][ii];
+							// printf("i  %i %i %i %i %i \n",mix,miy,miz,ii,i);
+
+							// particle j in same cell as i
+							dR.setZero();
+
+							for ( jj = ii + 1 ; jj <= grid[mi[x]][mi[y]][mi[z]][0] ; ++jj )
+							{
+								j = grid[mi[x]][mi[y]][mi[z]][jj];
+								// simProg << "j1 "<<  mi[x] << " " << mi[y] << " " << mi[z] << " " << jj << " " << j << std::endl;
+                                
+                                #include "createBondIndex.h"
+                               
+							} // jj
+
+							// particle j in neighbour cell to i
+							for ( m = 0 ; m < 13 ; m++ ){
+								mj[x]	     = periodN[ mi[x] + dm[m][x] + 1 ][x];
+								mj[y]	     = periodN[ mi[y] + dm[m][y] + 1 ][y];
+								mj[z]	     = periodN[ mi[z] + dm[m][z] + 1 ][z];
+								
+								dR.X	     = periodR[ mi[x] + dm[m][x] + 1 ][x];
+								dR.Y	     = periodR[ mi[y] + dm[m][y] + 1 ][y];
+								dR.Z	     = periodR[ mi[z] + dm[m][z] + 1 ][z];
+
+								for ( jj = 1 ; jj <= grid[mj[x]][mj[y]][mj[z]][0] ; ++jj ){
+									j = grid[mj[x]][mj[y]][mj[z]][jj];
+									// simProg << "j2 " << m << " " << mj[x] << " " << mj[y] << " " << mj[z] << " " << jj << " " << j << std::endl;
+
+                                    #include "createBondIndex.h"
+
+								} // jj
+
+							} // m
+
+						} // ii
+		}
 		//------------------------------ Mod function ------------------------------//
 		int moduloAB( int A, int B){ 
 		

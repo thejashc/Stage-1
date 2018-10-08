@@ -15,7 +15,6 @@ set cz [expr {$maxz/2.0}]
 set delta [exec grep "\(saveCount\)" param.out | awk {{print $NF}}]
 set startFile $delta 
 set endFile [exec tail -1 "simProg.txt" | awk {{print $1}}]
-#set endFile 100000
 set incrFile [expr {$delta - 1}]
 
 draw color white
@@ -61,13 +60,13 @@ mol modselect 1 0 type O
 
 puts "the representation is created and the solid and fluid atoms are labelled"
 
-mol modstyle  0 0 Points 11.0
-mol modstyle  1 0 Points 11.0
+mol modstyle  0 0 Points 3.0
+mol modstyle  1 0 Points 3.0
 
 puts "the Points representation is chosen for both solids and fluids"
 
 mol modcolor  0 0 ColorID 0
-mol modcolor  1 0 ColorID 2 
+mol modcolor  1 0 ColorID 1
 
 puts "the solid is red in color and the fluid is blue in color"
 
@@ -83,10 +82,5 @@ mol clipplane normal 0 0 0 "0.0 1.0 0.0"
 mol clipplane normal 1 1 0 "0.0 1.0 0.0"
 mol clipplane status 0 0 0 1
 mol clipplane status 1 1 0 1
-
-# read the data file
-# for command format : for {initialization} {test} {increment} {task} 
-
-# CPK : Sphere Scale , Sphere Resolution, Bond Radius, Bond Resolution
-# mol modstyle  0 0 CPK 0.6 1.0 0.0 1.0
-# mol modstyle  1 0 CPK 0.6 1.0 0.0 1.0
+mol clipplane color  0 0 0 "1 1 1"
+mol clipplane color  1 1 0 "0 0 0"

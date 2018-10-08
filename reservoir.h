@@ -57,12 +57,14 @@
 //yind_max = sqInnerEdgeYmax;
 //zind_max = bufferLen + capLen;
 
+double reservoirCOMZ = 95.5;
+
 xind_min = 0.;
 yind_min = 0.;
-zind_min = bufferLen + capLen + capWallWdth; 
+zind_min = ( reservoirCOMZ - resWdth * 0.5 );
 xind_max = boxEdge[x];
 yind_max = boxEdge[y];
-zind_max = bufferLen + capLen + capWallWdth + resWdth;
+zind_max = reservoirCOMZ + resWdth * 0.5; 
 
 pCount = 0;
 
@@ -86,7 +88,8 @@ for ( i=1 ; i<= fluidCount/2 ; ++i ){
             // generate random positions
             xind = ((double) rand() / (RAND_MAX)) * ( boxEdge[x] );
             yind = ((double) rand() / (RAND_MAX)) * ( boxEdge[y] );
-            zind = zind_min + ((double) rand() / (RAND_MAX)) * ( zind_max - zind_min );
+            // zind = zind_min + ((double) rand() / (RAND_MAX)) * ( zind_max - zind_min );
+            zind = ( reservoirCOMZ - resWdth * 0.5 ) + ((double) rand() / (RAND_MAX)) * resWdth;
 
 			// generate random velocities
 			rand_gen_velx = ((double) rand() / (RAND_MAX));
@@ -109,7 +112,8 @@ for ( i=fluidCount/2 + 1; i<= fluidCount ; ++i ){
             // generate random positions
             xind = ((double) rand() / (RAND_MAX)) * ( boxEdge[x] );
             yind = ((double) rand() / (RAND_MAX)) * ( boxEdge[y] );
-            zind = zind_min + ((double) rand() / (RAND_MAX)) * ( zind_max - zind_min );
+            // zind = zind_min + ((double) rand() / (RAND_MAX)) * ( zind_max - zind_min );
+            zind = ( reservoirCOMZ - resWdth * 0.5 ) + ((double) rand() / (RAND_MAX)) * resWdth;
 
 			// generate random velocities
 			rand_gen_velx = ((double) rand() / (RAND_MAX));
@@ -122,7 +126,7 @@ for ( i=fluidCount/2 + 1; i<= fluidCount ; ++i ){
                     pCount++;
             #else
                 // initializing particle radius, mass, position and velocity
-                particles.push_back({1.0,1.0,{xind, yind, zind},{rand_gen_velx, rand_gen_vely, rand_gen_velz}, 2});
+                particles.push_back({1.0,1.0,{xind, yind, zind},{rand_gen_velx, rand_gen_vely, rand_gen_velz}, 1});
                 pCount++;
             #endif
 
@@ -130,4 +134,3 @@ for ( i=fluidCount/2 + 1; i<= fluidCount ; ++i ){
 
 simProg << "finished initialization of  " << pCount << std::endl;
 simProg << "***************************************************" << std::endl;
-

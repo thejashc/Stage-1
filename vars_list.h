@@ -35,8 +35,10 @@ int step, stepMax;				// counter for step, total number of steps
 int rstrtFwrtFreq;			// The frequency of writing a restart file ( writes positions and mid-step velocities )
 unsigned int saveCount;		// number of timestep between saves
 unsigned int psaveCount;	// number of timestep between saves for pressure calculation
+    Vec3D totCOM;
 
 // Till Line 30 of paramIn.h
+
 
 double dof;				// degrees of freedom
 unsigned int pCount;
@@ -102,8 +104,6 @@ double cylHeight;
 double xCOM;
 double yCOM;
 double zCOM;
-
-unsigned int pCount;
 
 #elif PLANAR_SLAB
 double slabWidth;
@@ -308,8 +308,18 @@ int ig;		// index for r
 
 // defining wall
 #if WALL_ON
-	
-	double capRad;
+
+    unsigned int topLayer[300];
+    unsigned int bottomLayer[300];
+
+    Vec3D colloid_com_Vel;
+    Vec3D colloid_com_pos;
+    Vec3D colloid_boxCrossing;
+
+    double colloid_com_Vel_Av;
+    double springPotEn;
+    double springKinEn;
+    double springTotEn;
 	double capRadSqr;	
 	double strength;
 	double capSphXc;
@@ -375,6 +385,10 @@ int ig;		// index for r
 
            Vec3D x01; Vec3D x02; Vec3D x21;
 
+           double droplet_Zcom;
+           double droplet_ZcomNew;
+
+           double residual;
     #endif
 
 	#if LOWER_WALL_ON
@@ -386,6 +400,11 @@ int ig;		// index for r
 		double zOld;
 		double tApp;
 		double tSep;
+           
+        double droplet_Zcom;
+        double droplet_ZcomNew;
+
+        double residual;
 	#endif
 	#if UPPER_WALL_ON
 		double zindUW_min;
@@ -398,8 +417,8 @@ int ig;		// index for r
 		double cylCenterX;
 		double cylCenterY;
 		double bufferLen;
-		double capRad;
 		double capLen;
+		double capRad;
 		double capWallWdth;
 		double resWdth;
 		double capThick;
@@ -619,6 +638,7 @@ double K2;
 //initialise time, and counter/ofstream for data output
 unsigned int counter;
 unsigned int pcounter;
+unsigned int pCorrTime;
 unsigned int n; //mesh size
 //define Cell as vector of Particle pointers
 typedef std::vector<Particle*> Cell; 

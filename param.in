@@ -1,6 +1,6 @@
-boxEdgeX            52.0		# box dimensions
-boxEdgeY            52.0
-boxEdgeZ            80.0
+boxEdgeX            15.0	# box dimensions
+boxEdgeY            15.0
+boxEdgeZ            15.0
 initRho             6.00
 #
 repParam             25.0        # interaction paramters
@@ -8,8 +8,8 @@ All1                -40.0
 All2                -40.0
 All12               -40.0
 Ass                 -40.0
-Asl1                -10.0
-Asl2                -10.0
+Asl1                -40.0
+Asl2                -40.0
 rcutoff             1.0		
 rd_cutoff           0.75
 #
@@ -20,15 +20,16 @@ wallHeight          2.0			# WALL_ON
 #
 kBT                 1.0 		# temperature	
 noise               6.0			# dissipation coeffecient
-noise2              3.0
+noise2              6.0
 noise12             6.0
 dim                 3			# dimensions
 #
 dt                  0.01		# time parameters	
-stepMax             100
+stepMax             200000
 rstrtFWrtFreq       10000
 saveCount           500
-psaveCount          50000
+psaveCount          1000
+pCorrTime           500
 #
 gR_radMin           0.0			# g(r) calculation
 gR_radDelta         0.01	
@@ -62,7 +63,7 @@ bufferLength        10.0		# CAPILLARIES
 capLen              35.0
 capRad              5.0
 capWallWdth         1.5
-resWdth             5.0
+resWdth             10.0
 #
 appPressure         10.0
 pistonT0	        10000.0

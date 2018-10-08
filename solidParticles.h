@@ -8,23 +8,33 @@
 	vy2 = 0.;
 	vz2 = 0.;
 
+    #include "springNetworkForce.h"    // inter-particle spring force between particles - first calculate all the forces and then integrate the equations of motion
+
 	i = 0;
 	while ( i < solidCount ){
-		
-		particles[solid_index[i]].w_old = particles[solid_index[i]].w;		
+    
 	
+        totCOM += particles[solid_index[i]].w;      // totCOM usually has contribution from the liquidParticles.h as well. Check before using 
+
+		particles[solid_index[i]].w_old = particles[solid_index[i]].w;		
+
+        /*
 		#include "fHarmonic.h"
+        */
 	
 		// switch on all the forces including force due to fluid particles starting from step = 50000
-		particles[solid_index[i]].w += ( particles[solid_index[i]].fCW       +  particles[solid_index[i]].fC + 
-                                         particles[solid_index[i]].fHarmonic +  particles[solid_index[i]].fD + 
-                                         particles[solid_index[i]].fR ) * ( dt/ particles[solid_index[i]].m );
-	
+		particles[solid_index[i]].w += (particles[solid_index[i]].fC + particles[solid_index[i]].fHarmonic +  
+                                         particles[solid_index[i]].fD + particles[solid_index[i]].fR  ) * ( dt/ particles[solid_index[i]].m );
+
 		particles[solid_index[i]].r += particles[solid_index[i]].w * dt;
+
+        #if HARD_SPHERES 
+            particles[solid_index[i]].rUnfolded += particles[solid_index[i]].w * dt;
+            colloid_com_pos += particles[solid_index[i]].rUnfolded;
+        #endif
 	
 		particles[solid_index[i]].v = 0.5*( particles[solid_index[i]].w + particles[solid_index[i]].w_old );
-	
-		
+
 		// implement periodic boundary condition -- replace with special boundary conditions for the wall
 		#include "pbcWall.h"
 	
@@ -34,13 +44,18 @@
 		vz2 += particles[solid_index[i]].v.Z * particles[solid_index[i]].v.Z;
 
 		#if PISTON
-			if ( i >= solidCount - pistonParticles   )						// if i^{th} particle is solid
+			if ( i >= solidCount - pistonParticles   )						    // if i^{th} particle is solid
 				forceOnPiston += particles[solid_index[i]].fCW.Z;				// z-component of force on the piston due to fluid, the conservative force cancels out because internal forces
 		#endif												
 
 		// update counter for solid particles
 		i++;
 	}
+
+    // calculate box-crossing of the colloidal particle
+    #if HARD_SPHERES
+        #include "colloidBoxCrossing.h"
+    #endif
 
 	// calculate force deficit
 	#if PISTON
@@ -49,8 +64,13 @@
 	
 	// temperature calculation	
 	v2 = ( vx2 + vy2 + vz2 ) / ( 3. * solidCount );
+    springKinEn = 0.5 * ( vx2 + vy2 + vz2 );
 	kin_en = 0.5 * v2;		// unit mass assumption
 	wallTemp = 2.*kin_en;
+
+    // springTotEn = springPotEn + springKinEn;
+    // std::cout << step << "\t\t" << springKinEn << "\t\t" << springPotEn << "\t\t" << springTotEn << std::endl;
+
 #endif // WALL_ON
 
 //********** DEBUG STATEMENTS ****************//

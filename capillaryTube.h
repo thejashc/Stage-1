@@ -39,7 +39,6 @@ while ( zind < zind_max ){
 				// initializing particle radius, mass, position and velocity
 				// if ( xind*xind + yind*yind + zind*zind <= radSqr )
 				particles.push_back( { 1.0, 1.0, {xind, yind, zind}, {0., 0., 0.}, 0} );
-				Asl.push_back( { -5.0 } );	// lyophobic capillary
 				pCount++;
 
 			}// inside cylinder
@@ -86,7 +85,6 @@ while ( xind < xind_max){
 			if ( !(outerRadius) ){
 				// initializing particle radius, mass, position and velocity
 				particles.push_back({0.5,1.0,{xind, yind, zind},{0., 0., 0.},0});
-				Asl.push_back( { asl } );	// lyophilic wall 
 				pCount++;
 			}
 

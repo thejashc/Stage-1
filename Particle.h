@@ -31,6 +31,12 @@ public:
 	Vec3D r0;  // initial position for wall particles
 	Vec3D w_old;  // mid-step velocity
 
+    unsigned int bondIndex[1000];
+    double equilibriumBondLength[1000][3];
+    std::vector<Vec3D> equiBondLength;
+
+    Vec3D rUnfolded;
+
 };
 
 #endif

@@ -1,11 +1,11 @@
-capRad = 10.0;
+capRad = 5.0;
 capRadSqr = pow(capRad, 2.);
 pCount = 0;
 
 // co-ordinates of center of spherical Cap
 capSphXc = boxEdge[x] / 2.;
 capSphYc = boxEdge[y] / 2.;
-capSphZc = wallHeight;
+capSphZc = wallHeight + 10. * rcutoff;
 
 // Droplet Initialization	
 xind_min = 0.;
@@ -13,7 +13,8 @@ yind_min = 0.;
 zind_min = wallHeight;
 xind_max = boxEdge[x];
 yind_max = boxEdge[y];
-zind_max = wallHeight + capRad;
+zind_max = boxEdge[z];
+
 
 simProg << "***************************************************" << std::endl;
 simProg << "Started initialization of the spherical cap of fluid " << std::endl;
@@ -57,3 +58,5 @@ while ( xind < xind_max){
 }// end of xind
 simProg << "finished initialization of  " << pCount << std::endl;
 simProg << "***************************************************" << std::endl;
+
+zind_max = wallHeight;

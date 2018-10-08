@@ -14,10 +14,13 @@
 
     particles[fluid_index[i]].r.X -= mx * boxEdge[x];    // apply periodic boundary conditions in the x and y directions
     particles[fluid_index[i]].r.Y -= my * boxEdge[y];
+
 	// reverse the direction of the velocity of the particle in the normal direction
 	// Assumptions:
 	//		(a) Only lower wall present
 	//		(b) is that the z-velocity of the particle is +ve
+    //
+    /*                  BUGGY : HAVE TO CORRECT THIS
 	#if LOWER_WALL_ON && !(UPPER_WALL_ON)
 
 		if ( abs(mz) == 1.0 ) {
@@ -33,6 +36,7 @@
 			particles[fluid_index[i]].r.Z 	= boxEdge[z] +  particles[fluid_index[i]].w.Z * tSep ;	// finally, integrate EOM from the top face of the box with reverse velocity
 		}
 	#endif
+    */
 	#if CAPILLARY_CYLINDER || CAPILLARY_SQUARE || CYLINDER_ARRAY
 		
 		if ( abs(mz) == 1.0 ) {
@@ -65,6 +69,8 @@
 			
 			// simProg << " final particle position = " << particles[fluid_index[i]].r.Z << ", initial particle velocity = " << particles[fluid_index[i]].w.Z << std::endl;
 		}
+	#elif HARD_SPHERES
+        particles[fluid_index[i]].r.Z -= mz * boxEdge[z];
 	#endif
 
 #else	
@@ -89,4 +95,6 @@
 	particles[fluid_index[i]].r.X -= mx * boxEdge[x];    // apply periodic boundary conditions
 	particles[fluid_index[i]].r.Y -= my * boxEdge[y];
 	particles[fluid_index[i]].r.Z -= mz * boxEdge[z];
+
 #endif // WALL_ON
+

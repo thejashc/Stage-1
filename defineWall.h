@@ -4,9 +4,10 @@ xind_max = boxEdge[x];
 yind_min = 0.01;	// avoid boundary edge -- non-moving case
 yind_max = boxEdge[y];
 
+aCube = pow( 1. / initRho, 1./3. );
 #if LOWER_WALL_ON 
-    zindLW_min = 0.00; 
     zindLW_max = wallHeight;
+    zindLW_min = wallHeight - 0.01; 
 #endif 
 #if UPPER_WALL_ON 
     zindUW_min = boxEdge[z] - wallHeight; 
@@ -14,7 +15,6 @@ yind_max = boxEdge[y];
 #endif 
 
 xind = xind_min;
-aCube = pow( 1. / initWallRho, 1./3. );
 
 // Particle position in lower wall
 #if LOWER_WALL_ON
@@ -38,7 +38,7 @@ aCube = pow( 1. / initWallRho, 1./3. );
                 // initializing particle (1) radius, 
                 //			 (2) mass, 
                 //			 (3) position 
-                //           		 (4) mid step velocity 
+                //           (4) mid step velocity 
                 //			 (5) particle type
                 particles.push_back( { 1.0, 1.0, {xind, yind, zind}, {0., 0., 0.}, 0} );
                 lwp++;
@@ -50,6 +50,22 @@ aCube = pow( 1. / initWallRho, 1./3. );
         }// end of yind			
         xind += aCube*rcutoff;
     }// end of xind
+
+/*
+    particles.push_back( { 1.0, 1.0, {7.5, 7.5, 6.00}, {0., 0., 1.0}, 0} );
+    particles.push_back( { 1.0, 1.0, {7.5, 7.5, 6.25}, {0., 0., 0.0}, 0} );
+    particles.push_back( { 1.0, 1.0, {7.5, 7.5, 6.50}, {0., 0., 0.0}, 0} );
+    particles.push_back( { 1.0, 1.0, {7.5, 7.5, 6.75}, {0., 0., 0.0}, 0} );
+    particles.push_back( { 1.0, 1.0, {7.5, 7.5, 7.00}, {0., 0., 0.0}, 0} );
+    particles.push_back( { 1.0, 1.0, {7.5, 7.5, 7.25}, {0., 0., 0.0}, 0} );
+    particles.push_back( { 1.0, 1.0, {7.5, 7.5, 7.50}, {0., 0., 0.0}, 0} );
+    particles.push_back( { 1.0, 1.0, {7.5, 7.5, 7.75}, {0., 0., 0.0}, 0} );
+    particles.push_back( { 1.0, 1.0, {7.5, 7.5, 8.00}, {0., 0., 0.0}, 0} );
+    particles.push_back( { 1.0, 1.0, {7.5, 7.5, 8.25}, {0., 0., 0.0}, 0} );
+    particles.push_back( { 1.0, 1.0, {7.5, 7.5, 8.50}, {0., 0., 0.0}, 0} );
+    particles.push_back( { 1.0, 1.0, {7.5, 7.5, 8.75}, {0., 0., 0.0}, 0} );
+    particles.push_back( { 1.0, 1.0, {7.5, 7.5, 9.00}, {0., 0., -1.0}, 0} );
+*/
 #endif 
 
 xind = xind_min;

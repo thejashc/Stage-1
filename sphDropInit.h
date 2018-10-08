@@ -1,14 +1,17 @@
 // Droplet Initialization	
-dropBox = boxEdge[x]/2.0;	// boxEdge[y] or boxEdge[z] is also fine
-xind_min = 1.0*( dropBox / 2.0 ) + 0.25;
-yind_min = 1.0*( dropBox / 2.0 ) + 0.25;
-zind_min = 1.0*( dropBox / 2.0 ) + 0.25;
-xind_max = 3.0*( dropBox / 2.0 );
-yind_max = 3.0*( dropBox / 2.0 );
-zind_max = 3.0*( dropBox / 2.0 );
+xind_min = 0.;
+yind_min = 0.;
+zind_min = 0.;
+xind_max = boxEdge[x];
+yind_max = boxEdge[y];
+zind_max = boxEdge[z];
+
+double capRad = 5.0;
+double radSqr = capRad * capRad;
 
 aCube = pow( 1. / initRho, 1./3. );
 
+/*
 xind = xind_min;
 // Particle position intialization in a crystal structure 
 while ( xind < xind_max){
@@ -22,8 +25,8 @@ while ( xind < xind_max){
 			rand_gen_velz = ((double) rand() / (RAND_MAX));
 
 			// initializing particle radius, mass, position and velocity and type
-			//if ( xind*xind + yind*yind + zind*zind <= radSqr )
-			particles.push_back({0.5,1.0,{xind, yind, zind},{rand_gen_velx, rand_gen_vely, rand_gen_velz},1});
+			if ( pow( xind - 0.5* boxEdge[x], 2.) + pow( yind - 0.5*boxEdge[y], 2. ) + pow( zind - ( 0.5 * boxEdge[z] + 5. ) , 2. ) <= radSqr )
+                particles.push_back({0.5,1.0,{xind, yind, zind},{0., 0., 0.},1});
 
 			// update zind
 			zind += aCube*rcutoff;
@@ -32,3 +35,7 @@ while ( xind < xind_max){
 	}// end of yind			
 	xind += aCube*rcutoff;
 }// end of xind
+*/
+
+
+particles.push_back( { 1.0, 1.0, {10., 10., 20.0}, {0., 0., 0.}, 1} );

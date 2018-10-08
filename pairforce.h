@@ -47,6 +47,15 @@ if ( r2 <= rc2 ) {
         particles[j].dens_new += rho_temp;
 	}
 
+    /*
+    simProg   << "i = " << i 
+              << ", j = " << j 
+              << ", type_i = " << particles[i].type 
+              << ", type_j = " << particles[j].type 
+              << ", Asl[i][j] = " << Aatt[particles[i].type][particles[j].type] << std::endl;
+
+    */
+
 	term1 = Aatt[particles[i].type][particles[j].type] * wCij;
 	term3 = term1 + term2; 
 	fCij.X = term3 * capRij.X; 
@@ -139,3 +148,4 @@ if ( r2 <= rc2 ) {
 	//simProg << i << ", fC = " << particles[i].fC << ", fR= " << particles[i].fR << ", fD= " << particles[i].fD << std::endl;
 
 } // rcutoff
+
