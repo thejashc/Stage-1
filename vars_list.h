@@ -13,8 +13,8 @@ double All12;
 double Asl;
 double Asl1;
 double Asl2;        
-double Ass;         double Aatt[3][3];
-double repParam;    double Brep[3][3];                 // DPD Warren conservative force -- repulsive parameter
+double Ass;         double Aatt[4][4];
+double repParam;    double Brep[4][4];                 // DPD Warren conservative force -- repulsive parameter
 double rcutoff;		double rc2;		// (1) cut-off distance -- attractive force, (2) square of the cutoff distance -- attractive force
 double rd_cutoff;	double rd2;		// (1) cut-off distance -- repulsive force, (2)  square of the cutoff distance -- repulsive force
 
@@ -309,6 +309,24 @@ int ig;		// index for r
 // defining wall
 #if WALL_ON
 
+    bool wcaInteraction;
+
+    double sigmaWCA;
+    double epsilonWCA;
+
+    double r2i;
+    double r6i;
+    double rc2i;
+    double rc6i;
+    double ecutLJ;
+    double ecutWCA;
+    double ff;
+    double sig2;
+    double sig6;
+    double twoPower1_3_sigma2;
+
+    Vec3D fWCA;
+
     unsigned int topLayer[300];
     unsigned int bottomLayer[300];
 
@@ -336,6 +354,10 @@ int ig;		// index for r
 	
 	Vec3D fCWij;
 	Vec3D fCW;
+
+    double ext;
+    double refExt;
+    Vec3D springForce;
 	
 	std::vector<std::vector<int>> nZ;
 	int nZ_indz;
@@ -421,6 +443,7 @@ int ig;		// index for r
 		double capRad;
 		double capWallWdth;
 		double resWdth;
+		double resCOMZ;
 		double capThick;
 
 		bool innerRadius;					// to define the region within the inner cylinder
