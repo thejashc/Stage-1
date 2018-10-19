@@ -57,14 +57,12 @@
 //yind_max = sqInnerEdgeYmax;
 //zind_max = bufferLen + capLen;
 
-double reservoirCOMZ = 95.5;
-
 xind_min = 0.;
 yind_min = 0.;
-zind_min = ( reservoirCOMZ - resWdth * 0.5 );
+zind_min = resCOMZ - resWdth * 0.5;
 xind_max = boxEdge[x];
 yind_max = boxEdge[y];
-zind_max = reservoirCOMZ + resWdth * 0.5; 
+zind_max = resCOMZ + resWdth * 0.5; 
 
 pCount = 0;
 
@@ -89,7 +87,7 @@ for ( i=1 ; i<= fluidCount/2 ; ++i ){
             xind = ((double) rand() / (RAND_MAX)) * ( boxEdge[x] );
             yind = ((double) rand() / (RAND_MAX)) * ( boxEdge[y] );
             // zind = zind_min + ((double) rand() / (RAND_MAX)) * ( zind_max - zind_min );
-            zind = ( reservoirCOMZ - resWdth * 0.5 ) + ((double) rand() / (RAND_MAX)) * resWdth;
+            zind = ( resCOMZ - resWdth * 0.5 ) + ((double) rand() / (RAND_MAX)) * resWdth;
 
 			// generate random velocities
 			rand_gen_velx = ((double) rand() / (RAND_MAX));
@@ -113,7 +111,7 @@ for ( i=fluidCount/2 + 1; i<= fluidCount ; ++i ){
             xind = ((double) rand() / (RAND_MAX)) * ( boxEdge[x] );
             yind = ((double) rand() / (RAND_MAX)) * ( boxEdge[y] );
             // zind = zind_min + ((double) rand() / (RAND_MAX)) * ( zind_max - zind_min );
-            zind = ( reservoirCOMZ - resWdth * 0.5 ) + ((double) rand() / (RAND_MAX)) * resWdth;
+            zind = ( resCOMZ - resWdth * 0.5 ) + ((double) rand() / (RAND_MAX)) * resWdth;
 
 			// generate random velocities
 			rand_gen_velx = ((double) rand() / (RAND_MAX));
