@@ -23,6 +23,15 @@ std::cout << " particles[i].type = " << particles[i].type
 #endif
 r2 = Rij.getLengthSquared();
 
+// setting fWCA to zero before force calculation routine and 
+// check for WCA interaction between fluid and inner-core 
+// colloidal particle
+fWCA.setZero();
+wcaInteraction = ( particles[i].type == 1 && particles[j].type == 3 ) || 
+                 ( particles[i].type == 3 && particles[j].type == 1 ) ||
+                 ( particles[i].type == 2 && particles[j].type == 3 ) ||
+                 ( particles[i].type == 3 && particles[j].type == 2 );
+
 if ( r2 <= rc2 ) {
 
 	dist = std::sqrt(r2);
@@ -48,104 +57,122 @@ if ( r2 <= rc2 ) {
 	}
 
     /*
-    simProg   << "i = " << i 
-              << ", j = " << j 
-              << ", type_i = " << particles[i].type 
-              << ", type_j = " << particles[j].type 
-              << ", Asl[i][j] = " << Aatt[particles[i].type][particles[j].type] << std::endl;
+    std::cout << " sig  = " << sigmaWCA << "\t"
+              << " sig6 = " << sig6 << "\t" 
+              << " eps = "  << epsilonWCA << "\t"
+              << " rcutoff = " << twoPower1_3_sigma2 << std::endl;
+              */
+
+    if ( r2 <= twoPower1_3_sigma2 && wcaInteraction ){
+
+        r2i = 1. / r2; 
+        r6i = pow( r2i, 3. ); 
+
+        ff = 48. * epsilonWCA * sig6 * r2i * r6i * ( sig6*r6i - 0.5 );
+        fWCA = ff * Rij;
+
+        // pot_en += 4.0 * epsilonWCA * sig6 * r6i *( sig6*r6i - 1.0) - ecutWCA;
+    }
+
+    /*
+       simProg   << "i = " << i 
+       << ", j = " << j 
+       << ", type_i = " << particles[i].type 
+       << ", type_j = " << particles[j].type 
+       << ", Asl[i][j] = " << Aatt[particles[i].type][particles[j].type] << std::endl;
 
     */
 
-	term1 = Aatt[particles[i].type][particles[j].type] * wCij;
-	term3 = term1 + term2; 
-	fCij.X = term3 * capRij.X; 
-	fCij.Y = term3 * capRij.Y; 
-	fCij.Z = term3 * capRij.Z; 
+    term1 = Aatt[particles[i].type][particles[j].type] * wCij;
+    term3 = term1 + term2; 
+    fCij.X = term3 * capRij.X; 
+    fCij.Y = term3 * capRij.Y; 
+    fCij.Z = term3 * capRij.Z; 
 
-	// rhoBar calculation 
-	rhoBartemp = fifteen_by_twopi_by_rc * wCij2;
-	particles[i].rhoBar += rhoBartemp;
-	particles[j].rhoBar += rhoBartemp;
-	
-	particles[i].fC += fCij;
-	particles[j].fC -= fCij; 
+    // rhoBar calculation 
+    rhoBartemp = fifteen_by_twopi_by_rc * wCij2;
+    particles[i].rhoBar += rhoBartemp;
+    particles[j].rhoBar += rhoBartemp;
 
-	// simProg << "i, mi[x], mi[y], mi[z] = " <<  i << " " << mi[x] << " " << mi[y] << " " <<  mi[z] ;
-	// simProg << ", j, mj[x], mj[y], mj[z] = " << j << " " << mj[x] << " " << mj[y] << " " <<  mj[z] ;
-	// simProg << ", fCij = " << fCij  << ", fC = " << particles[i].fC << std::endl; 
+    particles[i].fC += ( fCij + fWCA );
+    particles[j].fC -= ( fCij + fWCA ); 
 
-	#if RANDOM_DISSIPATIVE
-        // random force	
-        uniRand = randNumGen(seed);
-        thetaij = uniRand - 0.5; 
-        magRand = sigma[particles[i].type][particles[j].type] * wCij * thetaij;
-        
-        // std::cout << uniRand << std::endl;
-        
-        fRij.X = magRand * capRij.X;
-        fRij.Y = magRand * capRij.Y;
-        fRij.Z = magRand * capRij.Z;
+    // simProg << "i, mi[x], mi[y], mi[z] = " <<  i << " " << mi[x] << " " << mi[y] << " " <<  mi[z] ;
+    // simProg << ", j, mj[x], mj[y], mj[z] = " << j << " " << mj[x] << " " << mj[y] << " " <<  mj[z] ;
+    // simProg << ", fCij = " << fCij  << ", fC = " << particles[i].fC << std::endl; 
 
-        sumForce = fRij;			// inv_sqrt_dt is taken care by scaled value of sigma 
-        particles[i].fR += sumForce;
-        particles[j].fR -= sumForce;
+#if RANDOM_DISSIPATIVE
+    // random force	
+    uniRand = randNumGen(seed);
+    thetaij = uniRand - 0.5; 
+    magRand = sigma[particles[i].type][particles[j].type] * wCij * thetaij;
 
-        // dissipative force -- not calculated here
-        rDotv = Vec3D::dot( capRij, wij );
-        magDiss = -gamma[particles[i].type][particles[j].type] * wCij2 *rDotv;
-        
-        fDij.X = magDiss * capRij.X;
-        fDij.Y = magDiss * capRij.Y;
-        fDij.Z = magDiss * capRij.Z;
+    // std::cout << uniRand << std::endl;
 
-        particles[i].fD += fDij;
-        particles[j].fD -= fDij;
-	#endif
+    fRij.X = magRand * capRij.X;
+    fRij.Y = magRand * capRij.Y;
+    fRij.Z = magRand * capRij.Z;
 
-	// Non-Ideal contribution to pressure -- Conservative forces	
-	pNonIdeal_temp[0][0] 		+= Rij.X * fCij.X;
-	pNonIdeal_temp[0][1] 		+= Rij.X * fCij.Y;
-	pNonIdeal_temp[0][2] 		+= Rij.X * fCij.Z;
+    sumForce = fRij;			// inv_sqrt_dt is taken care by scaled value of sigma 
+    particles[i].fR += sumForce;
+    particles[j].fR -= sumForce;
 
-	pNonIdeal_temp[1][0] 		+= Rij.Y * fCij.X;
-	pNonIdeal_temp[1][1] 		+= Rij.Y * fCij.Y;
-	pNonIdeal_temp[1][2] 		+= Rij.Y * fCij.Z;
+    // dissipative force -- not calculated here
+    rDotv = Vec3D::dot( capRij, wij );
+    magDiss = -gamma[particles[i].type][particles[j].type] * wCij2 *rDotv;
 
-	pNonIdeal_temp[2][0] 		+= Rij.Z * fCij.X;
-	pNonIdeal_temp[2][1] 		+= Rij.Z * fCij.Y;
-	pNonIdeal_temp[2][2] 		+= Rij.Z * fCij.Z;
+    fDij.X = magDiss * capRij.X;
+    fDij.Y = magDiss * capRij.Y;
+    fDij.Z = magDiss * capRij.Z;
 
-	#if RANDOM_DISSIPATIVE
-		// Non-Ideal contribution to pressure -- Dissipative forces
-		pDissipative_temp[0][0] 	+= Rij.X * fDij.X;
-		pDissipative_temp[0][1] 	+= Rij.X * fDij.Y;
-		pDissipative_temp[0][2] 	+= Rij.X * fDij.Z;
+    particles[i].fD += fDij;
+    particles[j].fD -= fDij;
+#endif
 
-		pDissipative_temp[1][0]	    += Rij.Y * fDij.X;
-		pDissipative_temp[1][1] 	+= Rij.Y * fDij.Y;
-		pDissipative_temp[1][2] 	+= Rij.Y * fDij.Z;
+    // Non-Ideal contribution to pressure -- Conservative forces	
+    pNonIdeal_temp[0][0] 		+= Rij.X * fCij.X;
+    pNonIdeal_temp[0][1] 		+= Rij.X * fCij.Y;
+    pNonIdeal_temp[0][2] 		+= Rij.X * fCij.Z;
 
-		pDissipative_temp[2][0] 	+= Rij.Z * fDij.X;
-		pDissipative_temp[2][1] 	+= Rij.Z * fDij.Y;
-		pDissipative_temp[2][2] 	+= Rij.Z * fDij.Z;
+    pNonIdeal_temp[1][0] 		+= Rij.Y * fCij.X;
+    pNonIdeal_temp[1][1] 		+= Rij.Y * fCij.Y;
+    pNonIdeal_temp[1][2] 		+= Rij.Y * fCij.Z;
 
-		// Non-Ideal contribution to pressure -- Random forces
-		pRandom_temp[0][0] 		+= Rij.X * fRij.X;
-		pRandom_temp[0][1] 		+= Rij.X * fRij.Y;
-		pRandom_temp[0][2] 		+= Rij.X * fRij.Z;
+    pNonIdeal_temp[2][0] 		+= Rij.Z * fCij.X;
+    pNonIdeal_temp[2][1] 		+= Rij.Z * fCij.Y;
+    pNonIdeal_temp[2][2] 		+= Rij.Z * fCij.Z;
 
-		pRandom_temp[1][0] 		+= Rij.Y * fRij.X;
-		pRandom_temp[1][1] 		+= Rij.Y * fRij.Y;
-		pRandom_temp[1][2] 		+= Rij.Y * fRij.Z;
+#if RANDOM_DISSIPATIVE
+    // Non-Ideal contribution to pressure -- Dissipative forces
+    pDissipative_temp[0][0] 	+= Rij.X * fDij.X;
+    pDissipative_temp[0][1] 	+= Rij.X * fDij.Y;
+    pDissipative_temp[0][2] 	+= Rij.X * fDij.Z;
 
-		pRandom_temp[2][0] 		+= Rij.Z * fRij.X;
-		pRandom_temp[2][1] 		+= Rij.Z * fRij.Y;
-		pRandom_temp[2][2] 		+= Rij.Z * fRij.Z;	
-	#endif
+    pDissipative_temp[1][0]	    += Rij.Y * fDij.X;
+    pDissipative_temp[1][1] 	+= Rij.Y * fDij.Y;
+    pDissipative_temp[1][2] 	+= Rij.Y * fDij.Z;
 
-	pTensCounter += 1;	
+    pDissipative_temp[2][0] 	+= Rij.Z * fDij.X;
+    pDissipative_temp[2][1] 	+= Rij.Z * fDij.Y;
+    pDissipative_temp[2][2] 	+= Rij.Z * fDij.Z;
 
-	//simProg << i << ", fC = " << particles[i].fC << ", fR= " << particles[i].fR << ", fD= " << particles[i].fD << std::endl;
+    // Non-Ideal contribution to pressure -- Random forces
+    pRandom_temp[0][0] 		+= Rij.X * fRij.X;
+    pRandom_temp[0][1] 		+= Rij.X * fRij.Y;
+    pRandom_temp[0][2] 		+= Rij.X * fRij.Z;
+
+    pRandom_temp[1][0] 		+= Rij.Y * fRij.X;
+    pRandom_temp[1][1] 		+= Rij.Y * fRij.Y;
+    pRandom_temp[1][2] 		+= Rij.Y * fRij.Z;
+
+    pRandom_temp[2][0] 		+= Rij.Z * fRij.X;
+    pRandom_temp[2][1] 		+= Rij.Z * fRij.Y;
+    pRandom_temp[2][2] 		+= Rij.Z * fRij.Z;	
+#endif
+
+    pTensCounter += 1;	
+
+    //simProg << i << ", fC = " << particles[i].fC << ", fR= " << particles[i].fR << ", fD= " << particles[i].fD << std::endl;
 
 } // rcutoff
 
