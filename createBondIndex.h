@@ -8,22 +8,22 @@ Rij.Z = Rij.Z - boxEdge[z] * round( Rij.Z / boxEdge[z] );
 r2 = Rij.getLengthSquared();
 dist = std::sqrt(r2);
 
-aCube = pow( 1. / initRho, 1./3. );
+wcaInteraction = ( particles[i].type == 0 && particles[j].type == 3 ) || 
+                 ( particles[i].type == 3 && particles[j].type == 0 ) ||
+                 ( particles[i].type == 3 && particles[j].type == 3 ) ||
+                 ( particles[i].type == 0 && particles[j].type == 0 );
 
-if ( ( dist < 0.5 ) && ( particles[i].type == 0 && particles[j].type == 0 ) ) {
+if ( ( dist < 0.80 ) && wcaInteraction ) {
 
     k = particles[i].bondIndex[0] + 1;
 
     // add neighbor to the list
-    particles[i].bondIndex[k] = j;
-
-    // create initial bond vectors --- notice that equilibriumBondLength[0][1:3] is not used
-    particles[i].equilibriumBondLength[k][0] = Rij.X;
-    particles[i].equilibriumBondLength[k][1] = Rij.Y;
-    particles[i].equilibriumBondLength[k][2] = Rij.Z;
+    particles[i].bondIndex[k]    = j;
+    particles[i].eqBondLength[k] = dist;
 
     // increment the number of neighbors
-    particles[i].bondIndex[0]++;                    // increment the counter for particle i
+    particles[i].bondIndex[0]    += 1;                    
+    particles[i].eqBondLength[0] += 1;                 
 }
 
 // particles[j].bondIndex[particles[j].bondIndex[0] + 1] = i; -- for debugging and checking bonds
