@@ -27,6 +27,8 @@
 #define LOWER_WALL_ON			0
 #define UPPER_WALL_ON			0
 #define ROUGH_WALL			    0
+#define SPRING_CONNECTED_SLD    1 
+#define BCKGRND_CONNECTED_SLD   0
 
 #define CAPILLARY_CYLINDER		0
 #define CAPILLARY_SQUARE		0
@@ -39,7 +41,7 @@
 #define STYLE_MERCURY_DPM		0
 
 // CORRELATION FUNCTIONS
-#define SACF				    1
+#define SACF				    0
 
 // LEES-EDWARDS BOUNDARY CONDITION
 #define LEES_EDWARDS_BC			0
@@ -98,7 +100,9 @@ class DPD {
 				createGridList();
 
                 #if WALL_ON 
-                    springNetwork();
+                    #if SPRING_CONNECTED_SLD
+                        springNetwork();
+                    #endif
                 #endif 
 
 				dens_calculation();
@@ -113,10 +117,10 @@ class DPD {
 				std::ofstream pTensStats	( "./data/pTens.dat"	, std::ios_base::app);	// Pressure tensor data
 				std::ofstream momStats		( "./data/mom_data.dat"	, std::ios_base::app);	// pressure and temperature data
 			#else
-				std::ofstream enStats 		( "./data/en_data.dat"	);	// Kinetic, Potential and total energy
-				std::ofstream eosStats		( "./data/eos_data.dat"	);	// Mean Pressure and temperature data
-				std::ofstream pTensStats	( "./data/pTens.dat"	);	// Pressure tensor data
-				std::ofstream momStats		( "./data/mom_data.dat"	);	// pressure and temperature data
+                std::ofstream enStats       ( "./data/en_data.dat"  , std::ios_base::app);  // Kinetic, Potential and total energy
+                std::ofstream eosStats      ( "./data/eos_data.dat" , std::ios_base::app);  // Mean Pressure and temperature data
+                std::ofstream pTensStats    ( "./data/pTens.dat"    , std::ios_base::app);  // Pressure tensor data
+                std::ofstream momStats      ( "./data/mom_data.dat" , std::ios_base::app);  // pressure and temperature data
                 #if HARD_SPHERES
                     std::ofstream colloidStats   ("./data/colloid_box_crossing.dat", std::ios_base::app );
                 #endif
@@ -129,14 +133,6 @@ class DPD {
 			paraInfo.close();
 
 			simProg << " ********************* STARTING SIMULATION ************************* " << std::endl;	
-
-            i = 0;
-            while ( i < solidCount ) {
-                simProg << " position of  " << i << " is " << particles[i].r << " , with bond indices " << particles[i].bondIndex[0] << std::endl;
-
-                i++;
-            }
-
 			while (step<= stepMax) {
 
 				createGridList();
@@ -145,12 +141,15 @@ class DPD {
 				#endif
 
 				forceCalc();
+                // forceCalc_bruteForce();
 
 				integrateEOM();
-                
+               
+                /*
 				for ( i=0 ; i <npart ; ++i ) {
 					pot_en += K1 * particles[i].rhoBar + K2 * pow( particles[i].dens, 2.0 ); 	// sum of self-energies of all particles
 				}
+                */
 				tot_en = kin_en + pot_en;
 
                 /*
@@ -358,21 +357,22 @@ class DPD {
 			#endif
 
 			#if WALL_ON
-                /*
 				i = 0;
-				while ( i <  solidCount ) {
-						particles[solid_index[i]].r0 = particles[solid_index[i]].r;
-						i++;
-                }
-                simProg << "\n" << solidCount << " solid particles stuck to their initial positions" << std::endl;
-                */
+                #if BCKGRND_CONNECTED_SLD
+                    while ( i <  solidCount ) {
+                            particles[solid_index[i]].r0 = particles[solid_index[i]].r;
+                            i++;
+                    }
+                    simProg << "\n" << solidCount << " solid particles stuck to their initial positions" << std::endl;
+                #endif
 
-				i = 0;
-                while ( i < solidCount ) {
-                    particles[solid_index[i]].bondIndex[0] = 0;
-                    i++;
-                }
-                simProg << "\n" << solidCount << " solid particles bond indices set to 0" << std::endl;
+                #if SPRING_CONNECTED_SLD
+                    while ( i < solidCount ) {
+                        particles[solid_index[i]].bondIndex[0] = 0;
+                        i++;
+                    }
+                    simProg << "\n" << solidCount << " solid particles bond indices set to 0" << std::endl;
+                #endif
 
 			#endif // WALL_ON
 			
@@ -430,7 +430,9 @@ class DPD {
 
 				i = 0;
 				while ( i < solidCount ){
-					particles[solid_index[i]].w -= velAvg;
+					particles[solid_index[i]].w.X -= velAvg.X;
+					particles[solid_index[i]].w.Y -= velAvg.Y;
+					particles[solid_index[i]].w.Z -= velAvg.Z;
 
                     particles[solid_index[i]].rUnfolded.X = particles[solid_index[i]].r.X;
                     particles[solid_index[i]].rUnfolded.Y = particles[solid_index[i]].r.Y;
@@ -533,14 +535,22 @@ class DPD {
             Brep[0][0] = repParam;  Aatt[0][0] = Ass;
             Brep[0][1] = repParam;  Aatt[0][1] = Asl1;
             Brep[0][2] = repParam;  Aatt[0][2] = Asl2;
+            Brep[0][3] = repParam;  Aatt[0][3] = Ass;
 
             Brep[1][0] = repParam;  Aatt[1][0] = Aatt[0][1];
             Brep[1][1] = repParam;  Aatt[1][1] = All1;
             Brep[1][2] = repParam;  Aatt[1][2] = All12;
+            Brep[1][3] = repParam;  Aatt[1][3] = All12;
 
             Brep[2][0] = repParam;  Aatt[2][0] = Aatt[0][2];
             Brep[2][1] = repParam;  Aatt[2][1] = Aatt[1][2];
             Brep[2][2] = repParam;  Aatt[2][2] = All2;
+            Brep[2][3] = repParam;  Aatt[2][3] = All2;
+
+            Brep[3][0] = repParam;  Aatt[3][0] = Ass;
+            Brep[3][1] = repParam;  Aatt[3][1] = Asl1;
+            Brep[3][2] = repParam;  Aatt[3][2] = Asl2;
+            Brep[3][3] = repParam;  Aatt[3][3] = Ass;
 
             simProg << " Finished defining the matrix of repulsion parameters and attraction parameters " << std::endl;
             simProg << " ********************************************************************* " << std::endl;
@@ -550,37 +560,57 @@ class DPD {
                 simProg << " ********************************************************************* " << std::endl;
                 simProg << " Defining the matrix of noise and friction parameters " << std::endl;
 
-                sigma.resize( 3 );
-                gamma.resize( 3 );
+                sigma.resize( 4 );
+                gamma.resize( 4 );
 
-                for ( i=0; i < 3; ++i ){
-                    sigma[i].resize( 3 );
-                    gamma[i].resize( 3 );
+                for ( i=0; i < 4; ++i ){
+                    sigma[i].resize( 4 );
+                    gamma[i].resize( 4 );
                 }
 
                 // defining the elements of the sigma and gamma array
-                sigma[0][0] 	= noise;						// S-S 
-                sigma[0][1] 	= noise;                        // S-L1
-                sigma[0][2] 	= noise;                        // S-L2
-                sigma[1][0] 	= sigma[0][1];                   
-                sigma[1][1] 	= noise;       					// L1-L1    
-                sigma[1][2] 	= noise12;                      // L1-L2
-                sigma[2][0] 	= sigma[0][2];
-                sigma[2][1] 	= sigma[1][2]; 
-                sigma[2][2] 	= noise2;        			    // L2-L2		
+               sigma[0][0] 	= noise;						// S1-S1 
+               sigma[0][1] 	= noise;                        // S1-L1
+               sigma[0][2] 	= noise;                        // S1-L2
+               sigma[0][3] 	= noise;                        // S1-S2
 
-                gamma[0][0] 	= friction;						// S-S 
-                gamma[0][1] 	= friction;                     // S-L1
-                gamma[0][2] 	= friction;                     // S-L2
-                gamma[1][0] 	= gamma[0][1];             
-                gamma[1][1] 	= friction;       		        // L1-L1
-                gamma[1][2] 	= friction12;                   // L1-L2
-                gamma[2][0] 	= gamma[0][2];                  
-                gamma[2][1] 	= gamma[1][2]; 
-                gamma[2][2] 	= friction2;        	        // L2-L2	
+               sigma[1][0] 	= sigma[0][1];                  // L1-S1 
+               sigma[1][1] 	= noise;       					// L1-L1    
+               sigma[1][2] 	= noise12;                      // L1-L2
+   	 		   sigma[1][3] 	= sigma[0][3];                  // L1-S2
 
-                simProg << " ********************************************************************* " << std::endl;
-                simProg << " Finished defining the matrix of noise and friction parameters " << std::endl;
+               sigma[2][0] 	= sigma[0][2];                  // L2-S1
+               sigma[2][1] 	= sigma[1][2];                  // L2-L1 
+               sigma[2][2] 	= noise2;        			    // L2-L2		
+               sigma[2][3] 	= sigma[2][0];        			// L2-S2		
+
+               sigma[3][0] 	= noise;						// S2-S1 
+               sigma[3][1] 	= noise;                        // S2-L1
+               sigma[3][2] 	= noise;                        // S2-L2
+               sigma[3][3] 	= noise;                        // S2-S2
+
+   			   gamma[0][0] 	= friction;						// S1-S1 
+               gamma[0][1] 	= friction;                     // S1-L1
+               gamma[0][2] 	= friction;                     // S1-L2
+               gamma[0][3] 	= friction;                     // S1-S2
+
+               gamma[1][0] 	= gamma[0][1];                  // L1-S1
+               gamma[1][1] 	= friction;       		        // L1-L1     
+               gamma[1][2] 	= friction12;                   // L1-L2     
+               gamma[1][3] 	= gamma[1][0];                  // L1-S2     
+
+               gamma[2][0] 	= gamma[0][2];                  // L2-S1
+               gamma[2][1] 	= gamma[1][2];                  // L2-L1
+               gamma[2][2] 	= friction2;        	        // L2-L2	
+               gamma[2][3] 	= gamma[2][0];        	        // L2-S2	
+
+               gamma[3][0] 	= friction;						// S2-S1 
+               gamma[3][1] 	= friction;                     // S2-L1
+               gamma[3][2] 	= friction;                     // S2-L2
+               gamma[3][3] 	= friction;                     // S2-S2
+
+               simProg << " ********************************************************************* " << std::endl;
+               simProg << " Finished defining the matrix of noise and friction parameters " << std::endl;
 			#endif // RANDOM_DISSIPATIVE
 		}//init
 
@@ -906,7 +936,7 @@ class DPD {
 			momY		= 0.;
 			momZ		= 0.;
 
-            // std::cout << step << ", " << totCOM/npart << std::endl;
+            std::cout << step << ", " << totCOM/npart << std::endl;
 
             totCOM.X      = 0.;
             totCOM.Y      = 0.;
@@ -922,7 +952,8 @@ class DPD {
                 colloid_com_pos.Y = 0.;
                 colloid_com_pos.Z = 0.;
             #endif
-	
+
+            fWCA.setZero();
 
 			// simProg << " fi[0], fi[fluidCount - 1], fluidCount " << fluid_index[0] << " " << fluid_index[1] << " " << fluidCount << std::endl;	
 			for ( i = 0; i < npart ; ++i )		// traversing over all particles
@@ -1571,12 +1602,16 @@ class DPD {
 				        	<< std::setw(20) << std::setprecision(15) << randomWork << std::endl;
 						#else
 							#if WALL_ON
-								#if CAPILLARY_CYLINDER || CAPILLARY_SQUARE
+								#if CAPILLARY_CYLINDER || CAPILLARY_SQUARE || HARD_SPHERES
 									#if PISTON
-									enStats 	<< std::setw(20) << std::setprecision(15) << pot_en << "\t" 
-											<< std::setw(20) << std::setprecision(15) << kin_en << "\t" 
-											<< std::setw(20) << std::setprecision(15) << tot_en << "\t"
-											<< std::setw(20) << std::setprecision(15) << forceOnPiston << std::endl;
+                                    enStats     << std::setw(20) << std::setprecision(15) << pot_en << "\t" 
+                                                << std::setw(20) << std::setprecision(15) << kin_en << "\t" 
+                                                << std::setw(20) << std::setprecision(15) << tot_en << "\t"
+                                                << std::setw(20) << std::setprecision(15) << forceOnPiston << std::endl;
+                                    #else 
+                                       enStats     << std::setw(20) << std::setprecision(15) << pot_en << "\t" 
+                                                    << std::setw(20) << std::setprecision(15) << kin_en << "\t" 
+                                                    << std::setw(20) << std::setprecision(15) << tot_en << "\t" << std::endl;
 									#endif
 								#endif
 							#else
@@ -1729,13 +1764,19 @@ class DPD {
                     }
                 }
                     #if WALL_ON	
-                        i = 0;
-                        while ( i < solidCount ){
-                            file  << "O" << "\t" << particles[solid_index[i]].r << std::endl;
-                            file1 << "O" << "\t" << particles[solid_index[i]].v << std::endl;
-
-                            i++;
-                        }
+                         i = 0;
+                         while ( i < solidCount ){
+                             if ( particles[solid_index[i]].type == 0 ){
+                                 file  << "O" << "\t" << particles[solid_index[i]].r << std::endl;
+                                 file1 << "O" << "\t" << particles[solid_index[i]].v << std::endl;
+                             }
+                             else{
+                                 file  << "B" << "\t" << particles[solid_index[i]].r << std::endl;
+                                 file1 << "B" << "\t" << particles[solid_index[i]].v << std::endl;
+                             }
+ 
+                             i++;
+                         }
                     #endif
 
 			#endif
@@ -2026,16 +2067,68 @@ class DPD {
 							} // m
 
 						} // ii
-		}
-		//------------------------------ Mod function ------------------------------//
-		int moduloAB( int A, int B){ 
-		
-			int result = std::fmod( A, B);
 
-			result = ( result < 0 ) ? ( result + B ) : result; 
+            i = 0;
+            while ( i < solidCount )
+            {
+                simProg << "************ Particle " << i << "************" << std::endl;
 
-			return( result );
-		}
-};
+                for ( k=1; k<= particles[solid_index[i]].bondIndex[0]; ++k )
+                    simProg << " Particle " << particles[solid_index[i]].bondIndex[k] << " , eq bond length = " << particles[i].eqBondLength[k] << std::endl; 
+
+                i++;
+            }
+
+        }
+        //------------------------------ Mod function ------------------------------//
+        int moduloAB( int A, int B){ 
+
+            int result = std::fmod( A, B);
+
+            result = ( result < 0 ) ? ( result + B ) : result; 
+
+            return( result );
+        }
+        //------------------------------ Brute force ------------------------------//
+        // Brute force implementation of the Force Calculation 
+        void forceCalc_bruteForce(){
+
+            //loop over all contacts p=1..N-1, q=p+1..N to evaluate forces
+            for (auto p = particles.begin();  p!=particles.end()-1; ++p){
+                for (auto q = p+1;  q!=particles.end(); ++q) {
+
+                    Vec3D temp;
+                    Vec3D minRij;
+
+                    Vec3D Rij = p->r - q->r;    
+
+                    temp.X = Vec3D::roundOff_x(Rij, boxEdge[x]);
+                    temp.Y = Vec3D::roundOff_y(Rij, boxEdge[y]);
+                    temp.Z = Vec3D::roundOff_z(Rij, boxEdge[z]);
+
+                    minRij.X = Rij.X - temp.X*boxEdge[x];
+                    minRij.Y = Rij.Y - temp.Y*boxEdge[y];
+                    minRij.Z = Rij.Z - temp.Z*boxEdge[z];
+
+                    double r2 = minRij.getLengthSquared();
+
+                    if ( r2 < rc2 ) {
+                        double r2i = 1/r2;
+                        double r6i = pow(r2i,3);
+
+                        double ff = 48.*1.*sig6*r2i*r6i*(sig6*r6i - 0.5);
+                        Vec3D Fij = ff*minRij;
+                        p->fC += Fij;
+                        q->fC += Fij*(-1.0); 
+
+                        // potential energy
+                        double pair_pot_en = 4.0*1.*sig6*r6i*(sig6*r6i - 1.0);
+                        pot_en += pair_pot_en - ecutLJ;
+                    }       
+
+                }
+            }
+        } 
+        };
 
 #endif
