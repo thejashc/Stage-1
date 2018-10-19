@@ -159,15 +159,35 @@ readParam >> emptyLine;			readParam.ignore(256,'\n');			    // L61
 	readParam >> buffer >> capRad;		readParam.ignore(256,'\n');		// L64 
 	readParam >> buffer >> capWallWdth;	readParam.ignore(256,'\n');		// L65 
 	readParam >> buffer >> resWdth;		readParam.ignore(256,'\n');		// L66 
+	readParam >> buffer >> resCOMZ;		readParam.ignore(256,'\n');		// L67 
 
-	readParam >> emptyLine;			readParam.ignore(256,'\n');		    // L67
+	readParam >> emptyLine;			readParam.ignore(256,'\n');		    // L68
 
 	#if PISTON
 	simProg << "Reading parameters for the capillary tube" << std::endl;	
-	readParam >> buffer >> appPressure;	readParam.ignore(256,'\n');		// L68
-	readParam >> buffer >> pistonT0;	readParam.ignore(256,'\n');		// L69
-	readParam >> buffer >> pistonW;		readParam.ignore(256,'\n');		// L70
+	readParam >> buffer >> appPressure;	readParam.ignore(256,'\n');		// L69
+	readParam >> buffer >> pistonT0;	readParam.ignore(256,'\n');		// L70
+	readParam >> buffer >> pistonW;		readParam.ignore(256,'\n');		// L71
 	#endif
+#else
+	readParam.ignore(256, '\n');
+	readParam.ignore(256, '\n');
+	readParam.ignore(256, '\n');
+	readParam.ignore(256, '\n');
+	readParam.ignore(256, '\n');
+	readParam.ignore(256, '\n');
+	readParam.ignore(256, '\n');
+	readParam.ignore(256, '\n');
+	readParam.ignore(256, '\n');
+	readParam.ignore(256, '\n');
+#endif
+
+readParam >> emptyLine;			        readParam.ignore(256,'\n');		// L72
+
+#if HARD_SPHERES
+    simProg << " Reading parameters for WCA potential of hard-spheres " << std::endl;
+	readParam >> buffer >> sigmaWCA;	readParam.ignore(256,'\n');		// L73
+	readParam >> buffer >> epsilonWCA;	readParam.ignore(256,'\n');		// L74
 #endif
 
 readParam.close();
@@ -200,8 +220,19 @@ boxRecip[z] 	= 1.0 / boxEdge[z];
 // Cutoff distances for liquid-liquid and solid-liquid interactions
 fifteen_by_twopi_by_rd = 15.0/( 2.0 * M_PI * pow( rd_cutoff,3.0) );	// 15/(2*PI*rd^3) used in Lucy weight function
 fifteen_by_twopi_by_rc = 15.0/( 2.0 * M_PI * pow( rcutoff,3.0 ) );	// 15/(2*PI*rc^3) used in Lucy weight function
-rc2 = pow( rcutoff , 2);	// square of cut-off distance
-rd2 = pow( rd_cutoff,2);	// square of cut-off distance
+
+rc2 = pow( rcutoff, 2. );
+rd2 = pow( rd_cutoff, 2. );
+
+sig2 = pow( sigmaWCA, 2.);
+sig6 = pow( sig2, 3.);
+
+twoPower1_3_sigma2 = pow( 2. , 1. / 3. ) * sig2;
+
+rc2i = 1. / rc2;
+rc6i = pow( rc2i, 3. );
+ecutLJ  = 4. * 1.0 * sig6 * rc6i *( sig6*rc6i - 1.);
+ecutWCA = -1.0; 
 
 #if WALL_ON
 	#if UPPER_WALL_ON && LOWER_WALL_ON
