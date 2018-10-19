@@ -8,23 +8,35 @@
 	vy2 = 0.;
 	vz2 = 0.;
 
-    #include "springNetworkForce.h"    // inter-particle spring force between particles - first calculate all the forces and then integrate the equations of motion
+    #if SPRING_CONNECTED_SLD 
+        #include "springNetworkForce.h"    // inter-particle spring force between particles - first calculate all the forces and then integrate the equations of motion
+    #endif
 
 	i = 0;
 	while ( i < solidCount ){
     
-	
         totCOM += particles[solid_index[i]].w;      // totCOM usually has contribution from the liquidParticles.h as well. Check before using 
 
 		particles[solid_index[i]].w_old = particles[solid_index[i]].w;		
 
-        /*
-		#include "fHarmonic.h"
-        */
+        #if BCKGRND_CONNECTED_SLD
+            #include "fHarmonic.h"
+        #endif
 	
 		// switch on all the forces including force due to fluid particles starting from step = 50000
-		particles[solid_index[i]].w += (particles[solid_index[i]].fC + particles[solid_index[i]].fHarmonic +  
-                                         particles[solid_index[i]].fD + particles[solid_index[i]].fR  ) * ( dt/ particles[solid_index[i]].m );
+        /*
+        std::cout << "********************** Step = " << step << " ******************************" << std::endl;
+        std::cout << " Particle i = " << i << std::endl;
+        std::cout << " fC =  " << particles[solid_index[i]].fC << "\n"
+                  << " fH = "  << particles[solid_index[i]].fHarmonic << "\n"
+                  << " fD = "  << particles[solid_index[i]].fD << "\n"
+                  << " fR = "  << particles[solid_index[i]].fR << "\n" << std::endl;
+                  */
+
+		particles[solid_index[i]].w += (    particles[solid_index[i]].fC        + 
+                                            particles[solid_index[i]].fHarmonic +  
+                                            particles[solid_index[i]].fD        + 
+                                            particles[solid_index[i]].fR            ) * ( dt/ particles[solid_index[i]].m );
 
 		particles[solid_index[i]].r += particles[solid_index[i]].w * dt;
 
@@ -48,6 +60,11 @@
 				forceOnPiston += particles[solid_index[i]].fCW.Z;				// z-component of force on the piston due to fluid, the conservative force cancels out because internal forces
 		#endif												
 
+        // calculate momentum -- solid particles
+        momX += particles[solid_index[i]].w.X;
+        momY += particles[solid_index[i]].w.Y;
+        momZ += particles[solid_index[i]].w.Z;
+
 		// update counter for solid particles
 		i++;
 	}
@@ -65,7 +82,7 @@
 	// temperature calculation	
 	v2 = ( vx2 + vy2 + vz2 ) / ( 3. * solidCount );
     springKinEn = 0.5 * ( vx2 + vy2 + vz2 );
-	kin_en = 0.5 * v2;		// unit mass assumption
+	kin_en = 0.5 * ( vx2 + vy2 + vz2 );		// unit mass assumption
 	wallTemp = 2.*kin_en;
 
     // springTotEn = springPotEn + springKinEn;
