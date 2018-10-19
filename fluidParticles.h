@@ -8,7 +8,7 @@ while ( i < fluidCount ){
 	// store velocity (mid-step)
 	particles[fluid_index[i]].w_old = particles[fluid_index[i]].w;
 
-    // totCOM += particles[fluid_index[i]].w;
+    totCOM += particles[fluid_index[i]].w;
 
     #include "wallBoundaryConditions.h"
 
