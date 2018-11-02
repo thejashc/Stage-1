@@ -8,7 +8,7 @@ for ( i = 0 ; i < 3 ; i++ )
     // simProg << "NrCells[" << i << "] = " << NrCells[i] << std::endl;
 }
 
-simProg << " NrCells[x] = " << NrCells[x] << ", NrCells[y] = " << NrCells[y] << ", NrCells[z] = " << NrCells[z] << std::endl;
+simProg << "NrCells[x] = " << NrCells[x] << "\nNrCells[y] = " << NrCells[y] << "\nNrCells[z] = " << NrCells[z] << std::endl;
 
 // initializing mini[3], maxi[3]
 mini[x] = 0; maxi[x] = NrCells[x] - 1;
@@ -29,7 +29,7 @@ for ( i = 0 ; i < NrCells[x] ; ++i ) {
 
 // defining periodN 
 MaxNrCells = std::max( std::max( NrCells[x], NrCells[y] ), NrCells[z]);
-simProg << " MaxNrCells = " << MaxNrCells << std::endl;
+simProg << "MaxNrCells = " << MaxNrCells << "\n" << std::endl;
 periodN.resize( MaxNrCells + 2 );
 periodR.resize( MaxNrCells + 2 );
 for ( i = 0 ; i < MaxNrCells + 2 ; ++ i ){

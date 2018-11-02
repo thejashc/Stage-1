@@ -69,7 +69,7 @@
 			
 			// simProg << " final particle position = " << particles[fluid_index[i]].r.Z << ", initial particle velocity = " << particles[fluid_index[i]].w.Z << std::endl;
 		}
-	#elif HARD_SPHERES
+	#elif HARD_SPHERES || SLIM
         particles[fluid_index[i]].r.Z -= mz * boxEdge[z];
 	#endif
 

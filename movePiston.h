@@ -1,17 +1,16 @@
 appForce = appPressure * pistonArea;          								// push means appPressure -ve, pull means appPressure +ve, delForce = z_{cap} direction
-// delForce = ( appForce - forceOnPiston ) * ( 1. - exp( - ( 1.* step - pistonT0 ) / pistonW ) ) * ( step > pistonT0 );	      // force deficit is always with reference to the applied force: 
-delForce = ( + forceOnPiston + appForce ) * ( dt / pistonW ) * ( step > pistonT0 );	      // force deficit is always with reference to the applied force: 
+delForce = ( - forceOnPiston - appForce ) * ( dt / pistonW ) * ( step > pistonT0 );	      // force deficit is always with reference to the applied force: 
 
 // Move piston depending on force
 vzPist 	= vz0Pist + delForce * ( dt );
 drPist	= vzPist * dt;
 
 // move the spring-points and the piston particles by an amount delR
-i = solidCount - pistonParticles;
+i = pistonStartIndex;
 
-while ( i < solidCount ){
-	particles[solid_index[i]].r0.Z += drPist;  
-	particles[solid_index[i]].r.Z  += drPist;
+while ( i <= pistonEndIndex ){
+	particles[i].r0.Z += drPist;  
+	particles[i].r.Z  += drPist;
 	
 	i++;
 }

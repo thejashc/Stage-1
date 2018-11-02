@@ -1,11 +1,12 @@
-capRad = 5.0;
+resCOMVel = -0.05;
+double capRad = 5.0;
 capRadSqr = pow(capRad, 2.);
 pCount = 0;
 
 // co-ordinates of center of spherical Cap
 capSphXc = boxEdge[x] / 2.;
 capSphYc = boxEdge[y] / 2.;
-capSphZc = wallHeight + 10. * rcutoff;
+capSphZc = 40.;
 
 // Droplet Initialization	
 xind_min = 0.;

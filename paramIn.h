@@ -13,28 +13,15 @@ readParam >> buffer >> initRho;		readParam.ignore(256,'\n');     // L4
 readParam >> emptyLine ;		readParam.ignore(256,'\n');     // L5
 
 simProg << "Reading Liquid Liquid Interaction Parameters" << std::endl;
-readParam >> buffer >> repParam;		readParam.ignore(256,'\n');     // L6
+readParam >> buffer >> repParam;	readParam.ignore(256,'\n');     // L6
 readParam >> buffer >> All1;		readParam.ignore(256,'\n');     // L7
-#if MULTI_VISCOSITY_LIQUIDS
-    simProg << "Reading Liquid1 Liquid2 Interaction Parameters" << std::endl;
-    readParam >> buffer >> All2;		readParam.ignore(256,'\n');     // L8
-    readParam >> buffer >> All12;		readParam.ignore(256,'\n');     // L9
-#else
-   	readParam.ignore(256,'\n');		
-   	readParam.ignore(256,'\n');		
-#endif
-#if WALL_ON
-    simProg << "Reading Solid-Solid and Solid-Liquid Interaction Parameters" << std::endl;
-    readParam >> buffer >> Ass;		    readParam.ignore(256,'\n');     // L10
-    readParam >> buffer >> Asl1;		readParam.ignore(256,'\n');     // L11
-    readParam >> buffer >> Asl2;		readParam.ignore(256,'\n');     // L12
-#else
-   	readParam.ignore(256,'\n');		
-   	readParam.ignore(256,'\n');		
-   	readParam.ignore(256,'\n');		
-#endif
-readParam >> buffer >> rcutoff;	            readParam.ignore(256,'\n');		// L13
-readParam >> buffer >> rd_cutoff;	        readParam.ignore(256,'\n');		// L14
+readParam >> buffer >> All2;		readParam.ignore(256,'\n');     // L8
+readParam >> buffer >> All12;		readParam.ignore(256,'\n');     // L9
+readParam >> buffer >> Ass;		    readParam.ignore(256,'\n');     // L10
+readParam >> buffer >> Asl1;		readParam.ignore(256,'\n');     // L11
+readParam >> buffer >> Asl2;		readParam.ignore(256,'\n');     // L12
+readParam >> buffer >> rcutoff;	    readParam.ignore(256,'\n');		// L13
+readParam >> buffer >> rd_cutoff;	readParam.ignore(256,'\n');		// L14
 	
 readParam >> emptyLine ;		            readParam.ignore(256,'\n');     // L15
 #if WALL_ON
@@ -56,14 +43,10 @@ readParam >> emptyLine;        readParam.ignore(256,'\n');     // L20
     simProg << "Reading Random and Dissipative Parameters" << std::endl;
     readParam >> buffer >> kBT;		        readParam.ignore(256,'\n');		// L21
     readParam >> buffer >> noise;		    readParam.ignore(256,'\n');		// L22
-        #if MULTI_VISCOSITY_LIQUIDS
-            readParam >> buffer >> noise2;	readParam.ignore(256,'\n');		// L23
-            readParam >> buffer >> noise12;	readParam.ignore(256,'\n');		// L23
-        #else
-            readParam.ignore(256, '\n');		
-            readParam.ignore(256, '\n');		
-        #endif
+    readParam >> buffer >> noise2;	        readParam.ignore(256,'\n');		// L23
+    readParam >> buffer >> noise12;	        readParam.ignore(256,'\n');		// L23
 #else
+    readParam.ignore(256, '\n');		
     readParam.ignore(256, '\n');		
     readParam.ignore(256, '\n');
     readParam.ignore(256, '\n');
@@ -160,14 +143,19 @@ readParam >> emptyLine;			readParam.ignore(256,'\n');			    // L61
 	readParam >> buffer >> capWallWdth;	readParam.ignore(256,'\n');		// L65 
 	readParam >> buffer >> resWdth;		readParam.ignore(256,'\n');		// L66 
 	readParam >> buffer >> resCOMZ;		readParam.ignore(256,'\n');		// L67 
+	readParam >> buffer >> resCOMVel;	readParam.ignore(256,'\n');		// L68 
 
-	readParam >> emptyLine;			readParam.ignore(256,'\n');		    // L68
+	readParam >> emptyLine;			readParam.ignore(256,'\n');		    // L69
 
 	#if PISTON
-	simProg << "Reading parameters for the capillary tube" << std::endl;	
-	readParam >> buffer >> appPressure;	readParam.ignore(256,'\n');		// L69
-	readParam >> buffer >> pistonT0;	readParam.ignore(256,'\n');		// L70
-	readParam >> buffer >> pistonW;		readParam.ignore(256,'\n');		// L71
+        simProg << "Reading parameters for the capillary tube" << std::endl;	
+        readParam >> buffer >> appPressure;	readParam.ignore(256,'\n');		// L70
+        readParam >> buffer >> pistonT0;	readParam.ignore(256,'\n');		// L71
+        readParam >> buffer >> pistonW;		readParam.ignore(256,'\n');		// L72
+    #else 
+        readParam.ignore(256, '\n');
+        readParam.ignore(256, '\n');
+        readParam.ignore(256, '\n');
 	#endif
 #else
 	readParam.ignore(256, '\n');
@@ -180,15 +168,14 @@ readParam >> emptyLine;			readParam.ignore(256,'\n');			    // L61
 	readParam.ignore(256, '\n');
 	readParam.ignore(256, '\n');
 	readParam.ignore(256, '\n');
+	readParam.ignore(256, '\n');
 #endif
 
-readParam >> emptyLine;			        readParam.ignore(256,'\n');		// L72
+readParam >> emptyLine;			        readParam.ignore(256,'\n');		// L73
 
-#if HARD_SPHERES
-    simProg << " Reading parameters for WCA potential of hard-spheres " << std::endl;
-	readParam >> buffer >> sigmaWCA;	readParam.ignore(256,'\n');		// L73
-	readParam >> buffer >> epsilonWCA;	readParam.ignore(256,'\n');		// L74
-#endif
+simProg << " Reading parameters for WCA potential of hard-spheres " << std::endl;
+readParam >> buffer >> sigmaWCA;	readParam.ignore(256,'\n');		// L74
+readParam >> buffer >> epsilonWCA;	readParam.ignore(256,'\n');		// L75
 
 readParam.close();
 
@@ -208,13 +195,11 @@ boxRecip[z] 	= 1.0 / boxEdge[z];
 	friction	    = pow( noise, 2.0 )/( 2.0 * kBT ); 	    // DPD dissipative force parameter
 	noise	 	    = sqrtTwelve * noise * inv_sqrt_dt;	    // Rescale sigma - sqrt(12) and inv_sqrt_dt
 
-	#if MULTI_VISCOSITY_LIQUIDS
-		friction2	= pow( noise2, 2.0 )/( 2.0 * kBT );     // DPD dissipative force parameter
-		noise2 		= sqrtTwelve * noise2 * inv_sqrt_dt;    // Rescale sigma - sqrt(12) and inv_sqrt_dt
+    friction2	= pow( noise2, 2.0 )/( 2.0 * kBT );     // DPD dissipative force parameter
+    noise2 		= sqrtTwelve * noise2 * inv_sqrt_dt;    // Rescale sigma - sqrt(12) and inv_sqrt_dt
 
-		friction12	= pow( noise12, 2.0 )/( 2.0 * kBT );     // DPD dissipative force parameter
-		noise12 	= sqrtTwelve * noise12 * inv_sqrt_dt;    // Rescale sigma - sqrt(12) and inv_sqrt_dt
-	#endif
+    friction12	= pow( noise12, 2.0 )/( 2.0 * kBT );     // DPD dissipative force parameter
+    noise12 	= sqrtTwelve * noise12 * inv_sqrt_dt;    // Rescale sigma - sqrt(12) and inv_sqrt_dt
 #endif
 
 // Cutoff distances for liquid-liquid and solid-liquid interactions

@@ -127,7 +127,7 @@ while ( xind < xind_max){
         particles.push_back({1.0,1.0,{xind, yind, zind},{rand_gen_velx, rand_gen_vely, rand_gen_velz}, 1});
     } 
 
-    simProg << "finished initialization of  " << npart << " particles inside crystal lattice" << std::endl;
+simProg << "finished initialization of  " << npart << " particles inside crystal lattice" << std::endl;
 simProg << "***************************************************" << std::endl;
 #endif
 

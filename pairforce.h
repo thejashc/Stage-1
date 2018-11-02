@@ -56,13 +56,6 @@ if ( r2 <= rc2 ) {
         particles[j].dens_new += rho_temp;
 	}
 
-    /*
-    std::cout << " sig  = " << sigmaWCA << "\t"
-              << " sig6 = " << sig6 << "\t" 
-              << " eps = "  << epsilonWCA << "\t"
-              << " rcutoff = " << twoPower1_3_sigma2 << std::endl;
-              */
-
     if ( r2 <= twoPower1_3_sigma2 && wcaInteraction ){
 
         r2i = 1. / r2; 
@@ -73,15 +66,6 @@ if ( r2 <= rc2 ) {
 
         // pot_en += 4.0 * epsilonWCA * sig6 * r6i *( sig6*r6i - 1.0) - ecutWCA;
     }
-
-    /*
-       simProg   << "i = " << i 
-       << ", j = " << j 
-       << ", type_i = " << particles[i].type 
-       << ", type_j = " << particles[j].type 
-       << ", Asl[i][j] = " << Aatt[particles[i].type][particles[j].type] << std::endl;
-
-    */
 
     term1 = Aatt[particles[i].type][particles[j].type] * wCij;
     term3 = term1 + term2; 
@@ -96,10 +80,6 @@ if ( r2 <= rc2 ) {
 
     particles[i].fC += ( fCij + fWCA );
     particles[j].fC -= ( fCij + fWCA ); 
-
-    // simProg << "i, mi[x], mi[y], mi[z] = " <<  i << " " << mi[x] << " " << mi[y] << " " <<  mi[z] ;
-    // simProg << ", j, mj[x], mj[y], mj[z] = " << j << " " << mj[x] << " " << mj[y] << " " <<  mj[z] ;
-    // simProg << ", fCij = " << fCij  << ", fC = " << particles[i].fC << std::endl; 
 
 #if RANDOM_DISSIPATIVE
     // random force	

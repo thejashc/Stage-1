@@ -7,58 +7,6 @@ capSphXc = boxEdge[x] / 2.;
 capSphYc = boxEdge[y] / 2.;
 capSphZc = boxEdge[z] / 2.; 
 
-/*
-xind_min = 0.;
-yind_min = 0.;
-zind_min = wallHeight;
-xind_max = boxEdge[x];
-yind_max = boxEdge[y];
-zind_max = boxEdge[z];
-
-simProg << "***************************************************" << std::endl;
-simProg << "Started initialization of the spherical colloid" << std::endl;
-
-simProg << "The minimum x-coord of colloid is: "<< xind_min << std::endl;
-simProg << "The minimum y-coord of colloid is: "<< yind_min << std::endl;
-simProg << "The minimum z-coord of colloid is: "<< zind_min << std::endl;
-
-simProg << "The maximum x-coord of colloid is: "<< xind_max << std::endl;
-simProg << "The maximum y-coord of colloid is: "<< yind_max << std::endl;
-simProg << "The maximum z-coord of colloid is: "<< zind_max << std::endl;
-
-simProg << "The radius of the colloid is:       "<< capRad << std::endl;
-
-std::ifstream readConfig( "./readConfig/cluster_rad_1_5_icosphere.dat", std::ifstream::in);
-//std::ifstream readConfig( "./readConfig/rad_1_5_icosphere.dat", std::ifstream::in);
-
-if ( ! readConfig ) { simProg << "*** The restart file could not be opened/ does not exist *** \n Aborting !! " << std::endl; abort(); }
-
-readConfig >> solidCount;
-
-for ( j = 1 ; j <= solidCount ; ++ j ){	
-
-    // generate random velocities
-    rand_gen_velx = 0.;
-    rand_gen_vely = 0.;
-    rand_gen_velz = 0.;
-
-    readConfig >> xind;
-    readConfig >> yind;
-    readConfig >> zind;
-
-    if ( sqrt( pow( xind, 2. ) + pow( yind, 2. ) + pow( zind, 2. ) ) > capRad - 0.75 )
-        particles.push_back( {1.0 ,1.0 , {xind + capSphXc, yind + capSphYc, zind + capSphZc} ,{rand_gen_velx, rand_gen_vely, rand_gen_velz}, 0} );
-   // else
-   //    particles.push_back( {1.0 ,1.0 , {xind + capSphXc, yind + capSphYc, zind + capSphZc} ,{rand_gen_velx, rand_gen_vely, rand_gen_velz}, 3} );
-
-    //std::cout << xind << " " << yind << " " << zind << " " << rand_gen_velx << " " << rand_gen_vely << " " << rand_gen_velz << std::endl;
-}
-
-simProg << "\n  " << solidCount << " particles positions and velocities are initialized" << std::endl;
-
-readConfig.close();
-*/
-
 /***************************************** SOLID INIT ********************************/
 xind_min = 0.;
 yind_min = 0.;
@@ -104,8 +52,6 @@ while ( xind < xind_max){
             else if ( innerCore ) 
                 particles.push_back({1.0,1.0,{xind, yind, zind},{rand_gen_velx, rand_gen_vely, rand_gen_velz}, 3});
 
-            // particles.push_back({1.0,1.0,{xind, yind, zind},{rand_gen_velx, rand_gen_vely, rand_gen_velz}, 3});
-            // particles.push_back({1.0,1.0,{xind, yind, zind},{ 0., 0., 0.}, 3});
             pCount++;
 
             // update zind
@@ -170,3 +116,56 @@ while ( xind < xind_max){
 
 simProg << "finished initialization of  " << pCount << " particles inside crystal lattice" << std::endl;
 simProg << "***************************************************" << std::endl;
+
+/*
+ * ICOSPHERE GEOMETRY
+xind_min = 0.;
+yind_min = 0.;
+zind_min = wallHeight;
+xind_max = boxEdge[x];
+yind_max = boxEdge[y];
+zind_max = boxEdge[z];
+
+simProg << "***************************************************" << std::endl;
+simProg << "Started initialization of the spherical colloid" << std::endl;
+
+simProg << "The minimum x-coord of colloid is: "<< xind_min << std::endl;
+simProg << "The minimum y-coord of colloid is: "<< yind_min << std::endl;
+simProg << "The minimum z-coord of colloid is: "<< zind_min << std::endl;
+
+simProg << "The maximum x-coord of colloid is: "<< xind_max << std::endl;
+simProg << "The maximum y-coord of colloid is: "<< yind_max << std::endl;
+simProg << "The maximum z-coord of colloid is: "<< zind_max << std::endl;
+
+simProg << "The radius of the colloid is:       "<< capRad << std::endl;
+
+std::ifstream readConfig( "./readConfig/cluster_rad_1_5_icosphere.dat", std::ifstream::in);
+//std::ifstream readConfig( "./readConfig/rad_1_5_icosphere.dat", std::ifstream::in);
+
+if ( ! readConfig ) { simProg << "*** The restart file could not be opened/ does not exist *** \n Aborting !! " << std::endl; abort(); }
+
+readConfig >> solidCount;
+
+for ( j = 1 ; j <= solidCount ; ++ j ){	
+
+    // generate random velocities
+    rand_gen_velx = 0.;
+    rand_gen_vely = 0.;
+    rand_gen_velz = 0.;
+
+    readConfig >> xind;
+    readConfig >> yind;
+    readConfig >> zind;
+
+    if ( sqrt( pow( xind, 2. ) + pow( yind, 2. ) + pow( zind, 2. ) ) > capRad - 0.75 )
+        particles.push_back( {1.0 ,1.0 , {xind + capSphXc, yind + capSphYc, zind + capSphZc} ,{rand_gen_velx, rand_gen_vely, rand_gen_velz}, 0} );
+   // else
+   //    particles.push_back( {1.0 ,1.0 , {xind + capSphXc, yind + capSphYc, zind + capSphZc} ,{rand_gen_velx, rand_gen_vely, rand_gen_velz}, 3} );
+
+    //std::cout << xind << " " << yind << " " << zind << " " << rand_gen_velx << " " << rand_gen_vely << " " << rand_gen_velz << std::endl;
+}
+
+simProg << "\n  " << solidCount << " particles positions and velocities are initialized" << std::endl;
+
+readConfig.close();
+*/

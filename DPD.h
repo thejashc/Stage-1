@@ -19,26 +19,27 @@
 #define SPHERICAL_CAP			0
 #define CYLINDER_DROPLET		0
 #define PLANAR_SLAB			    0
-#define CRYSTAL				    0
+#define CRYSTAL				    1
 #define RESTART				    0
 
 // WALL flags
-#define WALL_ON				    1
+#define WALL_ON				    0
 #define LOWER_WALL_ON			0
 #define UPPER_WALL_ON			0
 #define ROUGH_WALL			    0
-#define SPRING_CONNECTED_SLD    1 
+#define SPRING_CONNECTED_SLD    0
 #define BCKGRND_CONNECTED_SLD   0
 
 #define CAPILLARY_CYLINDER		0
 #define CAPILLARY_SQUARE		0
 #define PISTON				    0
 #define CYLINDER_ARRAY          0
-#define HARD_SPHERES            1
+#define HARD_SPHERES            0
+#define SLIM                    0
+#define RANDOM_FIBRE_BUNDLE     0
 
 // FILE_WRITE
 #define STYLE_VMD			    1
-#define STYLE_MERCURY_DPM		0
 
 // CORRELATION FUNCTIONS
 #define SACF				    0
@@ -49,8 +50,8 @@
 // DENSITY CALCULATION
 #define DENS_EXACT			    0    
 
-// MULTIVISCOSITY_LIQUIDS
-#define MULTI_VISCOSITY_LIQUIDS	0
+// MULTI-VISCOSITY LIQUIDS
+#define MULTI_VISCOSITY_LIQUIDS 0
 
 //declare DPD solver
 class DPD {
@@ -110,6 +111,7 @@ class DPD {
 				
 				resetVar();
 			#endif
+
 
 			#if RESTART	
 				std::ofstream enStats 		( "./data/en_data.dat"	, std::ios_base::app);	// Kinetic, Potential and total energy
@@ -221,8 +223,18 @@ class DPD {
 				#elif PLANAR_SLAB
 					#include "planarSlabInit.h" 
 				#elif CAPILLARY_CYLINDER
-					#include "capillaryTube.h"
+                    //#include "wettingLiquidInCapillaryTube.h" 
+					//#include "reservoir.h"
+                    //#include "nonWettingReservoir.h" 
+                    //#include "separateReservoir.h"
+					//#include "capillaryTube.h"
+                    //#include "definePiston.h"
+                    //
+					//#include "mixedReservoir.h"
+					//#include "separateReservoir.h"
 					#include "reservoir.h"
+                    #include "SLIM_capillary.h"
+                    #include "definePiston.h"
 				#elif CAPILLARY_SQUARE
 					#include "squarecapillaryTube.h"
 					#include "reservoir.h"
@@ -231,10 +243,21 @@ class DPD {
                     #include "ellipseArray.h"
                 #elif HARD_SPHERES
                     #include "sphericalColloids.h"
+                #elif SLIM
+                    //#include "definePiston.h"
+                    //#include "SLIMLiquid.h"
+                    //#include "SLIMSolid.h"
+					#include "reservoir.h"
+                    #include "SLIM_capillary.h"
+                #elif RANDOM_FIBRE_BUNDLE
+                    #include "randomFibreBundle.h"
+					#include "sphericalCap.h"
 				#endif
 			#else
 				#if SPHERICAL_DROPLET 
 					#include "sphDropInit.h"
+				#elif SPHERICAL_CAP
+					#include "sphericalCap.h"
 				#elif PLANAR_SLAB
 					#include "planarSlabInit.h"
 				#elif CYLINDER_DROPLET 
@@ -327,116 +350,130 @@ class DPD {
 
 			// find indices of all liquid particles
 			fluidCount = 0;
-			#if WALL_ON
-				solidCount = 0;
-			#endif
+            solidCount = 0;
+
+            fluidStartIndex = 0;
+            solidStartIndex = 0;
+
+            fluidEndIndex = 0;
+            solidEndIndex = 0;
+
 			for ( i = 0; i < particles.size(); ++i ){
-                #if MULTI_VISCOSITY_LIQUIDS
-                    if ( particles[i].type == 1 || particles[i].type == 2 ){
-                        fluid_index.push_back(i);
-                        fluidCount++;
-                    }
-                #else
-                    if ( particles[i].type == 1 ){
-                        fluid_index.push_back(i);
-                        fluidCount++;
-                    }
-                #endif
-				#if WALL_ON
-				else{
+                if ( particles[i].type == 1 || particles[i].type == 2 ){
+                    fluid_index.push_back(i);
+                    fluidCount++;
+                }
+				else if( particles[i].type == 0 || particles[i].type == 3 ){
 					solid_index.push_back(i);
 					solidCount++;
 				}
-				#endif
 			}
 
-			simProg << fluidCount << " fluid particles indexed" << std::endl;
-			#if WALL_ON
-                simProg << solidCount << " solid particles indexed" << std::endl;
-                simProg << fluidCount + solidCount << " total particles indexed " << std::endl;
-			#endif
+            if ( solidCount > 0 ){
+                solidStartIndex = solid_index[0];
+                solidEndIndex   = solid_index[solidCount-1];
+            }
+
+            if ( fluidCount > 0 ){
+                fluidStartIndex = fluid_index[0];
+                fluidEndIndex   = fluid_index[fluidCount-1];
+            }
+            
+            simProg << fluidStartIndex << " : starting index of fluid particles " << std::endl;
+            simProg << fluidEndIndex << " : ending index of fluid particles " << std::endl;
+			simProg << fluidCount << " : fluid particles indexed \n" << std::endl;
+
+            simProg << solidStartIndex << " : starting index of solid particles " << std::endl;
+            simProg << solidEndIndex << " : ending index of solid particles " << std::endl;
+			simProg << solidCount << " : solid particles indexed \n" << std::endl;
+
+            #if PISTON
+                pistonStartIndex = solidEndIndex - pistonParticles + 1;
+                pistonEndIndex = solidEndIndex;
+
+                simProg << pistonStartIndex << " : start index of piston particles" << std::endl; 
+                simProg << pistonEndIndex << " : end index of piston particles \n" << std::endl; 
+            #endif
+
+            simProg << fluidCount + solidCount << " total particles indexed \n" << std::endl;
 
 			#if WALL_ON
-				i = 0;
+				i = solidStartIndex;
                 #if BCKGRND_CONNECTED_SLD
-                    while ( i <  solidCount ) {
-                            particles[solid_index[i]].r0 = particles[solid_index[i]].r;
+                    while ( i <=  solidEndIndex ) {
+                            particles[i].r0 = particles[i].r;
                             i++;
                     }
                     simProg << "\n" << solidCount << " solid particles stuck to their initial positions" << std::endl;
                 #endif
-
                 #if SPRING_CONNECTED_SLD
-                    while ( i < solidCount ) {
-                        particles[solid_index[i]].bondIndex[0] = 0;
+                    while ( i <= solidEndIndex ) {
+                        particles[i].bondIndex[0] = 0;
                         i++;
                     }
                     simProg << "\n" << solidCount << " solid particles bond indices set to 0" << std::endl;
                 #endif
-
 			#endif // WALL_ON
-			
 			
 			// Remove excess velocity and set particle density to 0
 			Vec3D velAvg={0.0, 0.0, 0.0};
 			if ( fluidCount != 0 ){
-				i = 0;
-				while( i < fluidCount ){
-					velAvg 					+= particles[fluid_index[i]].w/fluidCount;
-					particles[fluid_index[i]].dens 	 	= 0.0;
-					particles[fluid_index[i]].dens_new	= 0.0;
-					particles[fluid_index[i]].fC.setZero();
+				i = fluidStartIndex;
+				while( i <= fluidEndIndex ){
+                        velAvg 					+= particles[i].w/fluidCount;
+                        particles[i].dens 	 	= 0.0;
+                        particles[i].dens_new	= 0.0;
+                        particles[i].fC.setZero();
 
 					i++;
 				}
 
-				i = 0;
-				while( i < fluidCount ){
-					particles[fluid_index[i]].w -= velAvg;
+				i = fluidStartIndex;
+				while( i <= fluidEndIndex ){
+					particles[i].w -= velAvg;
 					i++;
 				}
-
 
 				simProg << "Excess average velocity from fluid particles removed" << std::endl;
 				simProg << "Densities of the fluid particles set to 0" << std::endl;
 
-                #if SPHERICAL_DROPLET || CAPILLARY_CYLINDER || CAPILLARY_SQUARE
-                    i = 0;
-                    while( i < fluidCount ){
-                        particles[fluid_index[i]].w.Z -= 5e-1;
+                #if SPHERICAL_CAP || CAPILLARY_CYLINDER || CAPILLARY_SQUARE
+                    i = fluidStartIndex;
+                    while( i <= fluidEndIndex ){
+                        //if ( particles[i].type == 2 )
+                            particles[i].w.Z += resCOMVel;
 
                         i++;
                     }
-                    simProg << "The fluid particles have been given a negative velocity of -5e-1 rc/dt" << std::endl;
+                    simProg << "The fluid particles have been assigned a velocity of " << resCOMVel << " rc/dt" << std::endl;
                 #endif
-	
 			}
 			else{
 
 				simProg << "No fluid particles intialized" << std::endl;
 			}
-            
+
 			#if WALL_ON
 				velAvg={0.0, 0.0, 0.0};
 				// Remove excess velocity and set particle density to 0
-				i = 0;
-				while ( i < solidCount ){
-					velAvg 					+= particles[solid_index[i]].w/solidCount;
-					particles[solid_index[i]].dens 	 	= 0.0;
-					particles[solid_index[i]].dens_new	 = 0.0;
+				i = solidStartIndex;
+				while ( i <= solidEndIndex ){
+					velAvg 					+= particles[i].w/solidCount;
+					particles[i].dens 	 	= 0.0;
+					particles[i].dens_new	 = 0.0;
 
 					i++;
 				}
 
-				i = 0;
-				while ( i < solidCount ){
-					particles[solid_index[i]].w.X -= velAvg.X;
-					particles[solid_index[i]].w.Y -= velAvg.Y;
-					particles[solid_index[i]].w.Z -= velAvg.Z;
+				i = solidStartIndex;
+				while ( i <= solidEndIndex ){
+					particles[i].w.X -= velAvg.X;
+					particles[i].w.Y -= velAvg.Y;
+					particles[i].w.Z -= velAvg.Z;
 
-                    particles[solid_index[i]].rUnfolded.X = particles[solid_index[i]].r.X;
-                    particles[solid_index[i]].rUnfolded.Y = particles[solid_index[i]].r.Y;
-                    particles[solid_index[i]].rUnfolded.Z = particles[solid_index[i]].r.Z;
+                    particles[i].rUnfolded.X = particles[i].r.X;
+                    particles[i].rUnfolded.Y = particles[i].r.Y;
+                    particles[i].rUnfolded.Z = particles[i].r.Z;
 
 					i++;
 				}
@@ -770,11 +807,15 @@ class DPD {
 		void forceCalc(){
 
 			#if WALL_ON
+                /*
+                repParam_Inst = 0. + repParam * ( 0.5 * ( 1.0 + tanh( ( step - 10000. ) / 10000. ) ) );	
 
-                // Brep[0][1] = 0. + repParam * ( 0.5 * ( 1.0 + tanh( ( step - 5000. ) / 5000. ) ) );	// increase the repulsive forces slowly to reduce abrupt forces
-                // Brep[1][0] = 0. + repParam * ( 0.5 * ( 1.0 + tanh( ( step - 5000. ) / 5000. ) ) );	// increase the repulsive forces slowly to reduce abrupt forces
+                Brep[0][1] = repParam_Inst;     Brep[1][0] = repParam_Inst;
+                Brep[0][2] = repParam_Inst;     Brep[2][0] = repParam_Inst;
 
-				//std::cout << Bsl << std::endl;
+                Brep[3][1] = repParam_Inst;     Brep[1][3] = repParam_Inst;
+                Brep[3][2] = repParam_Inst;     Brep[2][3] = repParam_Inst;
+                */
 			#endif
 
 			for ( mi[x] = 0 ; mi[x] < NrCells[x] ; ++mi[x] )
@@ -901,12 +942,75 @@ class DPD {
 		//--------------------------------------- Integrate Equations of motion --------------------------------------//
 		void integrateEOM(){
 
-			#include "fluidParticles.h"
+			// #include "fluidParticles.h"
 
-			#include "solidParticles.h"
+			// #include "solidParticles.h"
+
+            #if SPRING_CONNECTED_SLD 
+                #include "springNetworkForceNew.h"  
+            #endif
+
+            i = 0;
+            while ( i < npart ){
+
+                #if BCKGRND_CONNECTED_SLD
+                    #include "fHarmonicNew.h"
+                #endif
+
+                // calculate total center of mass momentum
+                totCOM += particles[i].w; 
+
+                // store velocity (mid-step)
+                particles[i].w_old = particles[i].w;
+                    
+                // update velocities (mid-step)
+                particles[i].w += ( particles[i].fC       + 
+                                    particles[i].fD       + 
+                                    particles[i].fR       + 
+                                    particles[i].fHarmonic )*( dt/particles[i].m );
+                                    // particles[i].fext     +
+
+                // update position (integral time step) using the velocities (mid-step)
+                particles[i].r += particles[i].w*dt;				
+
+                // implement periodic boundary condition 
+                #include "pbcNew.h"
+                //#include "pbcNewReflecting.h"
+
+                // calculate velocity (integral time step)
+                particles[i].v = 0.5*( particles[i].w_old + particles[i].w );
+
+                #if HARD_SPHERES 
+                    /* WARNING : assumes that the solid particles are initialized from i=0 onwards */
+                    if ( i>= solidStartIndex && i <= solidEndIndex ){
+                        particles[i].rUnfolded += particles[i].w * dt;
+                        colloid_com_pos += particles[i].rUnfolded;
+                    }
+                #endif
+
+                #if PISTON
+                    if ( i >= pistonStartIndex && i <= pistonEndIndex ){
+                        forceOnPiston += particles[i].fC.Z;				                    // z-component of force on the piston due to fluid, the conservative force cancels out because internal forces
+                    }
+                #endif												
+
+                /* to be sorted out : calculate only for fluid particles */
+                /*#include "pNonIdealKinCalc.h"	*/
+	
+                // update count for fluid particles
+                i++;
+            }
 
 			// calculation of  pressure tensor 
-			#include "pTensCalc.h"
+			// #include "pTensCalc.h"
+
+            #if HARD_SPHERES
+                // #include "colloidBoxCrossing.h"
+                colloid_com_pos /= solidCount;
+            #endif
+            #if PISTON
+                #include "movePiston.h"
+            #endif 
 
 			// calculate auto-correlation
 			#if SACF
@@ -935,8 +1039,12 @@ class DPD {
 			momX		= 0.;
 			momY		= 0.;
 			momZ		= 0.;
+            #if PISTON
+                forceOnPiston = 0.;
+                forceOnPiston2 = 0.;
+            #endif
 
-            std::cout << step << ", " << totCOM/npart << std::endl;
+            // std::cout << step << ", " << totCOM/npart << std::endl;
 
             totCOM.X      = 0.;
             totCOM.Y      = 0.;
@@ -955,7 +1063,6 @@ class DPD {
 
             fWCA.setZero();
 
-			// simProg << " fi[0], fi[fluidCount - 1], fluidCount " << fluid_index[0] << " " << fluid_index[1] << " " << fluidCount << std::endl;	
 			for ( i = 0; i < npart ; ++i )		// traversing over all particles
 			{
 				#if DENS_EXACT	
@@ -975,12 +1082,6 @@ class DPD {
                 // springPotEn = 0;
 
 			} // set density equal to zero for solid type particles
-
-			#if CAPILLARY_CYLINDER || CAPILLARY_SQUARE
-				#if PISTON
-					forceOnPiston = 0.;
-				#endif
-			#endif
 
             /*
             #if CYLINDER_ARRAY || LOWER_WALL_ON
@@ -1067,7 +1168,7 @@ class DPD {
 			//loop over all contacts p=1..N-1, q=p+1..N to evaluate forces
              for( i=idxStart; i <= idxEnd-1; ++i ){
                  for ( j=i+1; j<= idxEnd; ++j ){
-					Rij     = particles[fluid_index[i]].r - particles[fluid_index[j]].r;	
+					Rij     = particles[i].r - particles[j].r;	
 
                     // nearest image distance
                     Rij.X   = Rij.X - boxEdge[x] * round( Rij.X / boxEdge[x] );		// rij shear-flow correction : dR
@@ -1344,12 +1445,10 @@ class DPD {
 				paraInfo << "Rescaled Noise(sqrt(12)*sigma*inv_sqrt_dt) :           " << noise << std::endl;
 				paraInfo << "Actual Noise level (sigma)                 :           " << noise/  ( std::sqrt(12.) * inv_sqrt_dt ) << std::endl;
 				paraInfo << "Friction parameter (gamma)                 :           " << friction << std::endl;
-                    #if MULTI_VISCOSITY_LIQUIDS
-                        paraInfo << "Liquid2 rescaled noise level (sigma2)      :           " << sigma[2][2] << std::endl;
-                        paraInfo << "Liquid2 friction parameter (gamma2)        :           " << gamma[2][2] << std::endl;
-                        paraInfo << "L1-L2 rescaled noise level (sigma2)        :           " << sigma[1][2] << std::endl;
-                        paraInfo << "L1-L2 friction parameter (gamma2)          :           " << gamma[1][2] << std::endl;
-                    #endif
+                paraInfo << "Liquid2 rescaled noise level (sigma2)      :           " << sigma[2][2] << std::endl;
+                paraInfo << "Liquid2 friction parameter (gamma2)        :           " << gamma[2][2] << std::endl;
+                paraInfo << "L1-L2 rescaled noise level (sigma2)        :           " << sigma[1][2] << std::endl;
+                paraInfo << "L1-L2 friction parameter (gamma2)          :           " << gamma[1][2] << std::endl;
 			#endif 
 			
 			#if WALL_ON
@@ -1361,10 +1460,8 @@ class DPD {
                 paraInfo << "Solid-Solid Attraction Strength   (Ass)    :           " << Aatt[0][0] << std::endl;
                 paraInfo << "Solid-Solid Repulsion  Strength   (Bss)    :           " << Brep[0][0] << std::endl;
                 paraInfo << "Solid-Liquid Attraction Strength   (asl)   :           " << Aatt[0][1] << std::endl;
-                    #if MULTI_VISCOSITY_LIQUIDS
-                        paraInfo << "Solid-Liquid2 Attraction Strength   (asl)  :           " << Aatt[0][2] << std::endl;
-                        paraInfo << "Liquid2-Liquid2 Attraction Strength (asl)  :           " << Aatt[2][2] << std::endl;
-                    #endif
+                paraInfo << "Solid-Liquid2 Attraction Strength   (asl)  :           " << Aatt[0][2] << std::endl;
+                paraInfo << "Liquid2-Liquid2 Attraction Strength (asl)  :           " << Aatt[2][2] << std::endl;
                 paraInfo << "Solid-Liquid Repulsion  Strength   (Bsl)   :           " << Brep[0][1] << std::endl;
                 paraInfo << "Soft Repulsive force Strength   (Brep)     :           " << Brep[0][0] << std::endl;
                 paraInfo << "Penetration tolerance (wallPenetration)    :           " << wallPenetration << std::endl;
@@ -1474,12 +1571,7 @@ class DPD {
 			#endif
 
 			// FILE_WRITE
-			#if STYLE_VMD                        
-                flagList << "STYLE_VMD FLAG                         :            " << "ON" << std::endl;  
-			#endif
-			#if STYLE_MERCURY_DPM                
-                flagList << "STYLE_MERCURY_DPM FLAG                 :            " << "ON" << std::endl;  
-			#endif
+            flagList << "STYLE_VMD FLAG                         :            " << "ON" << std::endl;  
 
 			// CORRELATION FUNCTIONS
 			#if SACF                              
@@ -1512,9 +1604,6 @@ class DPD {
                     flagList << "PISTON FLAG                            :            " << "ON" << std::endl;  
                 #endif
 			#endif
-            #if MULTI_VISCOSITY_LIQUIDS
-                flagList << "MULTI VISCOSITY LIQUID FLAG                  :            " << "ON" << std::endl;  
-            #endif
 
 		}
 
@@ -1722,17 +1811,6 @@ class DPD {
 		//--------------------------------------- VTK file writing routine--------------------------------------//
 		void vtkFileWritePosVel(){
 
-			/*
-			file << "<?xml version=\"1.0\"?>" << std::endl;
-			file << "<VTKFile type=\"UnstructuredGrid\" version=\"0.1\" byte_order=\"LittleEndian\">" << std::endl;
-			file << "<UnstructuredGrid>";
-			file << "<Piece NumberOfPoints=\""<< particles.size() <<"\" NumberOfCells=\"0\">" << std::endl;
-			file << "<Points>" << std::endl;
-			// position data -- particles 
-			file << "<DataArray type=\"Float32\" Name=\"Position\" NumberOfComponents=\"3\" format=\"ascii\">"<< std::endl;
-			*/
-
-			#if STYLE_VMD 
                 char filename[40];
                 char filename1[40];
 
@@ -1748,101 +1826,29 @@ class DPD {
                 file1 << particles.size() << std::endl;
                 file1 << "#vx vy vz" << std::endl;
 
+                i = 0;
+                while ( i < npart ){
 
-                if ( fluidCount != 0 ) {	
-                    i = 0;
-                    while ( i < fluidCount ){
-
-                        if ( particles[fluid_index[i]].type == 1 ){
-                            file  << "H" << "\t" << particles[fluid_index[i]].r  << "\t " << std::endl;
-                            file1 << "H" << "\t" << particles[fluid_index[i]].v << std::endl;}
-                        else if ( particles[fluid_index[i]].type == 2 ){
-                            file  << "C" << "\t" << particles[fluid_index[i]].r << "\t " <<  std::endl;
-                            file1 << "C" << "\t" << particles[fluid_index[i]].v << std::endl;}
+                         if ( particles[i].type == 0 ){
+                             file  << "O" << "\t" << particles[i].r << std::endl;
+                             file1 << "O" << "\t" << particles[i].v << std::endl;
+                         }
+                        else if ( particles[i].type == 1 ){
+                            file  << "H" << "\t" << particles[i].r  << "\t " << std::endl;
+                            file1 << "H" << "\t" << particles[i].v << std::endl;
+                        }
+                        else if ( particles[i].type == 2 ){
+                            file  << "C" << "\t" << particles[i].r << "\t " <<  std::endl;
+                            file1 << "C" << "\t" << particles[i].v << std::endl;
+                        }
+                        else if ( particles[i].type == 3 ){
+                            file  << "B" << "\t" << particles[i].r << std::endl;
+                            file1 << "B" << "\t" << particles[i].v << std::endl;
+                         }
 
                         i++;
-                    }
                 }
-                    #if WALL_ON	
-                         i = 0;
-                         while ( i < solidCount ){
-                             if ( particles[solid_index[i]].type == 0 ){
-                                 file  << "O" << "\t" << particles[solid_index[i]].r << std::endl;
-                                 file1 << "O" << "\t" << particles[solid_index[i]].v << std::endl;
-                             }
-                             else{
-                                 file  << "B" << "\t" << particles[solid_index[i]].r << std::endl;
-                                 file1 << "B" << "\t" << particles[solid_index[i]].v << std::endl;
-                             }
- 
-                             i++;
-                         }
-                    #endif
-
-			#endif
-
-
-			#if STYLE_MERCURY_DPM
-                char filename[40];
-                char filename1[40];
-
-                // sprintf( filename, "./data/data1_%d.vtu", step);  
-                sprintf( filename, "./data/fluid_XYZ%d.data", step);  
-                
-                std::ofstream file(filename);
-                std::ofstream file1(filename1);
-
-                file << particles.size() << ", " << step << " 0, 0, 0, " << boxEdge[x] << ", " << boxEdge[y] << ", " << boxEdge[z] << std::endl;
-                i = 0;
-                while ( i < fluidCount ){
-                    file  <<  particles[fluid_index[i]].r << " " 
-                          <<  particles[fluid_index[i]].v << " " 
-                          <<  particles[fluid_index[i]].a << " 0 0 0 0 0 0 " 
-                          <<  particles[fluid_index[i]].type << std::endl;
-
-                          i++;
-                }
-			#endif
-			/*
-			file << "</DataArray>"<<std::endl;
-			file << "</Points>" << std::endl;	
-
-			// velocity data
-			file << "<PointData Vectors=\"vector\">"<< std::endl;	
-			file << "<DataArray type=\"Float32\" Name=\"Velocity\" NumberOfComponents=\"3\" format=\"ascii\">" << std::endl;
-			for (Particle& p: particles)
-			{
-				file <<  p.v << std::endl;
-
-			}
-			file << "</DataArray>"<< std::endl;
-
-			// radius data
-			file << "<DataArray type=\"Float32\" Name=\"Radius\" format=\"ascii\">" << std::endl;
-			for (Particle& p: particles)
-			{
-				file <<  p.a << std::endl;
-
-			}
-			file << "</DataArray>"<< std::endl;
-			file << "</PointData>" << std::endl;	
-
-			// Cells data
-			file << "<Cells>"<< std::endl;	
-			file << "<DataArray type=\"Int32\" Name=\"connectivity\" format=\"ascii\"></DataArray>" << std::endl;
-			file << "<DataArray type=\"Int32\" Name=\"offsets\" format=\"ascii\"></DataArray>" << std::endl;
-			file << "<DataArray type=\"UInt8\" Name=\"types\" format=\"ascii\"></DataArray>" << std::endl;
-			file << "</Cells>" << std::endl;
-
-			// Piece
-			file << "</Piece>" << std::endl;
-			file << "</UnstructuredGrid>" << std::endl;
-			file << "</VTKFile>" << std::endl;
-			*/
-			file.close();
-
 		}
-
 		//-------------------- Final velocity and positions ----------------------//
 		void finalposvelWrite( std::ofstream& writeConfig ){
 
@@ -1878,26 +1884,6 @@ class DPD {
             #include "cellGridInit.h"
 
             simProg << "Box resized to " << boxEdge[z] << "and boxHalve[z], boxRecip[z], re-evaluated" << std::endl;
-
-            /*
-            i      = 0;
-            pCount = 0;
-            while ( i < solidCount ){
-
-                particleInSquareSmall = ( particles[solid_index[i]].r0.X >= sqXmin + capWallWdth ) && 
-                                        ( particles[solid_index[i]].r0.X <= sqXmax - capWallWdth ) && 
-                                        ( particles[solid_index[i]].r0.Y >= sqYmin + capWallWdth ) && 
-                                        ( particles[solid_index[i]].r0.Y <= sqYmax - capWallWdth );
-                
-                if ( particleInSquareSmall ){
-                    particles.erase( particles.begin() + i );
-                    pCount++;
-                }
-
-                i++;
-            }
-            simProg << pCount << " particles at the entrance of the capillary tube deleted" << std::endl;
-            */
         }
 
         //---------------------- Create cylinder array -----------------------------//
@@ -2023,58 +2009,154 @@ class DPD {
             simProg << "finished initialization of  " << pCount << " particles inside elliptical cylinder" << std::endl;
             simProg << "***************************************************" << std::endl;
         }
-		//------------------------------ Spring Network ------------------------------//
-		void springNetwork(){
+        /******************************* SQUARE **********************************************/
+        /*
+        void createSquareArray ( double squareCenterX, double squareCenterZ, double squareEdge, double rotationTheta ){
 
+            // defining variables
+            bool insideSquare;
+            double xindRotated;
+            double zindRotated;
 
-			for ( mi[x] = 0 ; mi[x] < NrCells[x] ; ++mi[x] )
-				for ( mi[y] = 0 ; mi[y] < NrCells[y] ; ++mi[y] )
-					for ( mi[z] = 0 ; mi[z] < NrCells[z] ; ++mi[z] )
-						for ( ii = 1 ; ii <= grid[mi[x]][mi[y]][mi[z]][0] ; ++ii ){
-							i = grid[mi[x]][mi[y]][mi[z]][ii];
-							// printf("i  %i %i %i %i %i \n",mix,miy,miz,ii,i);
+            // creating a rectangular region
+            double innerEdgeX    = - 0.5 * squareEdge;
+            double outerEdgeX    =   0.5 * squareEdge;
 
-							// particle j in same cell as i
-							dR.setZero();
+            double innerEdgeZ    = - 0.5 * squareEdge;
+            double outerEdgeZ    =   0.5 * squareEdge;
 
-							for ( jj = ii + 1 ; jj <= grid[mi[x]][mi[y]][mi[z]][0] ; ++jj )
-							{
-								j = grid[mi[x]][mi[y]][mi[z]][jj];
-								// simProg << "j1 "<<  mi[x] << " " << mi[y] << " " << mi[z] << " " << jj << " " << j << std::endl;
-                                
+            aCube = pow( 1. / initRho, 1./3. );
+
+            xind_min = -boxEdge[x];
+            yind_min = 0.01;
+            zind_min = -boxEdge[z];
+
+            xind_max = boxEdge[x];
+            yind_max = boxEdge[y];
+            zind_max = boxEdge[z];
+            
+            zind = zind_min;
+            aCube = pow( 1. / initRho, 1./3. );
+
+            simProg << "***************************************************" << std::endl;
+            // simProg << "cylinder with cylCenterX: " << cylCenterX << ", cylCenterZ: " << cylCenterZ << ", cylRad: " << cylRad << std::endl;
+
+            pCount = 0;
+            while ( zind < zind_max ){
+                xind = xind_min;
+                while ( xind < xind_max){
+                    yind = yind_min;
+                    while( yind < yind_max){
+
+                        insideSquare = ( (xind <= outerEdgeX ) && ( xind >= innerEdgeX  ) && (zind <= outerEdgeZ ) && ( zind >= innerEdgeZ ) ) ;
+
+                        if ( insideSquare ){
+
+                            // rotate co-ordinates
+                            xindRotated = xind * cos( rotationTheta ) - zind * sin( rotationTheta );
+                            zindRotated = xind * sin( rotationTheta ) + zind * cos( rotationTheta );
+
+                            particles.push_back( { 1.0, 1.0, {xindRotated + squareCenterX, yind, zindRotated + squareCenterZ}, {0., 0., 0.}, 0} );
+                            pCount++;
+
+                        }// inside square
+                        yind += aCube * rcutoff;
+                    }// yind			
+                    xind += aCube * rcutoff;
+                }
+                zind += aCube * rcutoff;
+            }// zind
+
+            simProg << "finished initialization of  " << pCount << " particles inside elliptical cylinder" << std::endl;
+            simProg << "***************************************************" << std::endl;
+        }
+        */
+        void createSquareArray ( double squareCenterX, double squareCenterZ, double squareEdge, double rotationTheta ){
+
+            for (auto p = particles.begin();  p!=particles.end(); ++p){
+
+                double Expr1 = p->r.Z + p->r.X - ( squareCenterZ + squareCenterX + 0.5 * squareEdge );
+                double Expr2 = p->r.Z + p->r.X - ( squareCenterZ + squareCenterX - 0.5 * squareEdge );
+                double Expr3 = p->r.Z - p->r.X - ( squareCenterZ - squareCenterX + 0.5 * squareEdge );
+                double Expr4 = p->r.Z - p->r.X - ( squareCenterZ - squareCenterX - 0.5 * squareEdge );
+
+                bool insideSquare = ( Expr1 <= 0. && Expr2 >=0. && Expr3 <=0. && Expr4 >= 0. );
+
+                if ( insideSquare ){
+                    p->type = 0;
+                    pCount++;
+                }
+
+                Expr1 = p->r.Z + p->r.X - ( squareCenterZ + squareCenterX + 0.2 * squareEdge );
+                Expr2 = p->r.Z + p->r.X - ( squareCenterZ + squareCenterX - 0.2 * squareEdge );
+                Expr3 = p->r.Z - p->r.X - ( squareCenterZ - squareCenterX + 0.2 * squareEdge );
+                Expr4 = p->r.Z - p->r.X - ( squareCenterZ - squareCenterX - 0.2 * squareEdge );
+
+                bool insideCore = ( Expr1 <= 0. && Expr2 >=0. && Expr3 <=0. && Expr4 >= 0. );
+
+                if ( insideCore ){
+                    p->type = 3;
+                    pCount++;
+                }
+
+            }
+
+        }
+        //------------------------------ Spring Network ------------------------------//
+        void springNetwork(){
+
+           totalBonds = 0;
+
+            for ( mi[x] = 0 ; mi[x] < NrCells[x] ; ++mi[x] )
+                for ( mi[y] = 0 ; mi[y] < NrCells[y] ; ++mi[y] )
+                    for ( mi[z] = 0 ; mi[z] < NrCells[z] ; ++mi[z] )
+                        for ( ii = 1 ; ii <= grid[mi[x]][mi[y]][mi[z]][0] ; ++ii ){
+                            i = grid[mi[x]][mi[y]][mi[z]][ii];
+                            // printf("i  %i %i %i %i %i \n",mix,miy,miz,ii,i);
+
+                            // particle j in same cell as i
+                            dR.setZero();
+
+                            for ( jj = ii + 1 ; jj <= grid[mi[x]][mi[y]][mi[z]][0] ; ++jj )
+                            {
+                                j = grid[mi[x]][mi[y]][mi[z]][jj];
+                                // simProg << "j1 "<<  mi[x] << " " << mi[y] << " " << mi[z] << " " << jj << " " << j << std::endl;
+
                                 #include "createBondIndex.h"
-                               
-							} // jj
 
-							// particle j in neighbour cell to i
-							for ( m = 0 ; m < 13 ; m++ ){
-								mj[x]	     = periodN[ mi[x] + dm[m][x] + 1 ][x];
-								mj[y]	     = periodN[ mi[y] + dm[m][y] + 1 ][y];
-								mj[z]	     = periodN[ mi[z] + dm[m][z] + 1 ][z];
-								
-								dR.X	     = periodR[ mi[x] + dm[m][x] + 1 ][x];
-								dR.Y	     = periodR[ mi[y] + dm[m][y] + 1 ][y];
-								dR.Z	     = periodR[ mi[z] + dm[m][z] + 1 ][z];
+                            } // jj
 
-								for ( jj = 1 ; jj <= grid[mj[x]][mj[y]][mj[z]][0] ; ++jj ){
-									j = grid[mj[x]][mj[y]][mj[z]][jj];
-									// simProg << "j2 " << m << " " << mj[x] << " " << mj[y] << " " << mj[z] << " " << jj << " " << j << std::endl;
+                            // particle j in neighbour cell to i
+                            for ( m = 0 ; m < 13 ; m++ ){
+                                mj[x]	     = periodN[ mi[x] + dm[m][x] + 1 ][x];
+                                mj[y]	     = periodN[ mi[y] + dm[m][y] + 1 ][y];
+                                mj[z]	     = periodN[ mi[z] + dm[m][z] + 1 ][z];
 
-                                    #include "createBondIndex.h"
+                                dR.X	     = periodR[ mi[x] + dm[m][x] + 1 ][x];
+                                dR.Y	     = periodR[ mi[y] + dm[m][y] + 1 ][y];
+                                dR.Z	     = periodR[ mi[z] + dm[m][z] + 1 ][z];
 
-								} // jj
+                                for ( jj = 1 ; jj <= grid[mj[x]][mj[y]][mj[z]][0] ; ++jj ){
+                                    j = grid[mj[x]][mj[y]][mj[z]][jj];
+                                    // simProg << "j2 " << m << " " << mj[x] << " " << mj[y] << " " << mj[z] << " " << jj << " " << j << std::endl;
 
-							} // m
+                                        #include "createBondIndex.h"
 
-						} // ii
+                                } // jj
 
-            i = 0;
-            while ( i < solidCount )
+                            } // m
+
+                        } // ii
+
+            #include "psfWrite.h"
+
+            i = solidStartIndex;
+            while ( i <= solidEndIndex )
             {
                 simProg << "************ Particle " << i << "************" << std::endl;
 
-                for ( k=1; k<= particles[solid_index[i]].bondIndex[0]; ++k )
-                    simProg << " Particle " << particles[solid_index[i]].bondIndex[k] << " , eq bond length = " << particles[i].eqBondLength[k] << std::endl; 
+                for ( k=1; k<= particles[i].bondIndex[0]; ++k )
+                    simProg << " Particle " << particles[i].bondIndex[k] << " , eq bond length = " << particles[i].eqBondLength[k] << std::endl; 
 
                 i++;
             }

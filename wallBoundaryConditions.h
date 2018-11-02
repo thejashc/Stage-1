@@ -97,7 +97,7 @@
             else if ( distInPiston > 0. ){
                 particles[fluid_index[i]].fext.X = 0;
                 particles[fluid_index[i]].fext.Y = 0;
-                particles[fluid_index[i]].fext.Z = -Brep * distInPiston; 
+                particles[fluid_index[i]].fext.Z = -Brep[0][1] * distInPiston; 
             }
         #endif
 

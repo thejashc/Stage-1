@@ -88,7 +88,14 @@ double rand_gen_velx;
 double rand_gen_vely;
 double rand_gen_velz;
 
+unsigned int solidStartIndex;
+unsigned int solidEndIndex;
+
+unsigned int fluidStartIndex;
+unsigned int fluidEndIndex;
+
 unsigned int fluidCount;	// number of fluid particles
+
 std::vector<int> fluid_index;	// index of fluid type
 std::vector<int> solid_index;	// index of solid type
 
@@ -307,10 +314,41 @@ int ig;		// index for r
 #endif // PLANAR_SLAB
 
 // defining wall
-#if WALL_ON
+
+    unsigned int totalBonds;
+    unsigned int repParam_Inst;
+    double resCOMVel;
+    double resCOMZ;
+
+    #if PISTON
+        unsigned int pistonParticles;
+
+        double pistonStart;
+        double pistonEnd;
+        double forceOnPiston;
+        double forceOnPiston2;
+        double distInPiston;
+
+        double pistonArea;
+
+        double pistonT0;
+        double pistonW; 
+
+        double appForce;
+        double appPressure;
+        double vzPist;
+        double vz0Pist;
+        double drPist;
+
+        double delForce;
+
+        unsigned int pistonStartIndex;
+        unsigned int pistonEndIndex;
+    #endif
 
     bool wcaInteraction;
 
+    Vec3D p0, p1, p2;
     double sigmaWCA;
     double epsilonWCA;
 
@@ -443,14 +481,14 @@ int ig;		// index for r
 		double capRad;
 		double capWallWdth;
 		double resWdth;
-		double resCOMZ;
 		double capThick;
 
 		bool innerRadius;					// to define the region within the inner cylinder
 		bool outerRadius;
+		bool middleInRadius;
+		bool middleOutRadius;
 		bool inCapTube;
 		bool notInPoreEntry;
-
 
 		double capTubeStart;
 		double capTubeEnd;
@@ -464,25 +502,6 @@ int ig;		// index for r
 
 		double rInner;
 		double rOuter;
-		#if PISTON
-			unsigned int pistonParticles;
-
-			double pistonStart;
-			double pistonEnd;
-			double forceOnPiston;
-			double distInPiston;
-
-			double pistonArea;
-
-			double pistonT0;
-			double pistonW; 
-
-			double appForce;
-			double appPressure;
-			double vzPist;
-			double vz0Pist;
-			double drPist;
-		#endif
 
 		double BslMin;
 		double BslMax;
@@ -565,7 +584,6 @@ int ig;		// index for r
 		double sqYmax;
 	#endif
 
-#endif // WALL_ON
 
 #if BODY_FORCE
 	double fBodyX;

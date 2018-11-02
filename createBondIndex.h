@@ -24,6 +24,7 @@ if ( ( dist < 0.80 ) && wcaInteraction ) {
     // increment the number of neighbors
     particles[i].bondIndex[0]    += 1;                    
     particles[i].eqBondLength[0] += 1;                 
+
 }
 
 // particles[j].bondIndex[particles[j].bondIndex[0] + 1] = i; -- for debugging and checking bonds
