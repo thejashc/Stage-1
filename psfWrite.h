@@ -1,11 +1,18 @@
 // calculating total number of bonds
 totalBonds = 0;
-i = solidStartIndex;
+
+j = 0;
+i = solid_index[j];
 simProg << "counting total number of bonds" << std::endl;
-while ( i <= solidEndIndex ){
-        totalBonds += particles[i].bondIndex[0];
-        i++;
+while ( j < solidCount  ){
+
+    totalBonds += particles[i].bondIndex[0];
+
+    j++;
+    i = solid_index[j];
 }
+
+simProg << " The total number of bonds encountered are : " << totalBonds << std::endl;
 
 // writing the psf file
 char filename[40];
@@ -28,11 +35,12 @@ while ( i < npart ){
 }
 
 // writing all the bonds now
-i=solidStartIndex;
+j = 0;
+i = solid_index[j];
 file << "\n" ;
 file << "   " << totalBonds << " !NBOND: bonds \n";
 unsigned int bondsPerLine = 0;
-while ( i <= solidEndIndex ){
+while ( j < solidCount ){
     for ( k = 1; k <= particles[i].bondIndex[0]; ++k ){
         if ( bondsPerLine < 4 ){
             file << std::setw(8) << i + 1 << std::setw(8) <<  particles[i].bondIndex[k] + 1 << std::setw(8); 
@@ -45,7 +53,8 @@ while ( i <= solidEndIndex ){
         }
     }
 
-    i++;
+    j++;
+    i = solid_index[j];
 }
 
 // last few lines

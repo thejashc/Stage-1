@@ -1,17 +1,17 @@
 resCOMVel = -0.05;
-double capRad = 5.0;
+double capRad = 7.5;
 capRadSqr = pow(capRad, 2.);
 pCount = 0;
 
 // co-ordinates of center of spherical Cap
 capSphXc = boxEdge[x] / 2.;
 capSphYc = boxEdge[y] / 2.;
-capSphZc = 40.;
+capSphZc = (3./5.) * boxEdge[z];
 
 // Droplet Initialization	
 xind_min = 0.;
 yind_min = 0.;
-zind_min = wallHeight;
+zind_min = 0.;
 xind_max = boxEdge[x];
 yind_max = boxEdge[y];
 zind_max = boxEdge[z];
@@ -40,9 +40,14 @@ while ( xind < xind_max){
 		zind = zind_min;
 		while( zind < zind_max){
 			// generate random velocities
+            /*
 			rand_gen_velx = ((double) rand() / (RAND_MAX));
 			rand_gen_vely = ((double) rand() / (RAND_MAX));
 			rand_gen_velz = ((double) rand() / (RAND_MAX));
+            */
+			rand_gen_velx = 0.;
+			rand_gen_vely = 0.;
+			rand_gen_velz = -0.05;
 
 			// initializing particle radius, mass, position and velocity and type
 			// check if ( x - xp )^2 + ( y - yp )^2 + ( z - zp )^2 <= capRadSqr

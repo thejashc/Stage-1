@@ -2,6 +2,9 @@
 std::vector<Particle> particles;     	// vector of DPD particles
 Particle *pointParticle;
 
+// particle index tracking
+unsigned int idx;
+
 // global parameters
 double boxEdge[3];	double boxHalve[3];     double boxRecip[3];			// (1) box length in x,y,z directions, (2) half box-length in x,y,z directions, (3)	reciprocal box-length in x,y,z directions
 double initRho;	double aCube;			// (1) initial placement density of atoms, (2) length of a side of cube corresponding to prescribed density			
@@ -15,11 +18,23 @@ double Asl1;
 double Asl2;        
 double Ass;         double Aatt[4][4];
 double repParam;    double Brep[4][4];                 // DPD Warren conservative force -- repulsive parameter
+double repParam2;
 double rcutoff;		double rc2;		// (1) cut-off distance -- attractive force, (2) square of the cutoff distance -- attractive force
 double rd_cutoff;	double rd2;		// (1) cut-off distance -- repulsive force, (2)  square of the cutoff distance -- repulsive force
 
 // wall parameters
-double kWall;
+double kWallBckg;
+double kWallNgbr;
+
+unsigned int ngbrIdxStart;
+unsigned int bckgIdxStart;
+
+unsigned int ngbrIdxEnd;
+unsigned int bckgIdxEnd;
+
+unsigned int ngbrIdxParticles;
+unsigned int bckgIdxParticles;
+
 double wallPenetration;
 double initWallRho;
 double wallHeight;
@@ -35,7 +50,7 @@ int step, stepMax;				// counter for step, total number of steps
 int rstrtFwrtFreq;			// The frequency of writing a restart file ( writes positions and mid-step velocities )
 unsigned int saveCount;		// number of timestep between saves
 unsigned int psaveCount;	// number of timestep between saves for pressure calculation
-    Vec3D totCOM;
+Vec3D totCOM;
 
 // Till Line 30 of paramIn.h
 
@@ -88,12 +103,6 @@ double rand_gen_velx;
 double rand_gen_vely;
 double rand_gen_velz;
 
-unsigned int solidStartIndex;
-unsigned int solidEndIndex;
-
-unsigned int fluidStartIndex;
-unsigned int fluidEndIndex;
-
 unsigned int fluidCount;	// number of fluid particles
 
 std::vector<int> fluid_index;	// index of fluid type
@@ -101,7 +110,7 @@ std::vector<int> solid_index;	// index of solid type
 
 // geometry initialization
 #if SPHERICAL_DROPLET 
-double dropBox;
+double sphDropRad;
 #elif CYLINDER_DROPLET 
 double cylCenterX;
 double cylCenterY;
@@ -143,25 +152,25 @@ int mz;
 
 #if LEES_EDWARDS_BC
 int dm_LEbc[16][3] = {	
-	{  0,  0,  1 },			
-	{  1,  0, -1 },                 
-	{  1,  0,  0 },                 
-	{  1,  0,  1 },                 
-                                        
-	{  0,  1, -1 },                 // Cells in the xy plane in ( z - 1 )
-	{  0,  1, -1 },                                                      
-	{  0,  1, -1 },                                                      
-	{  0,  1, -1 },                                                      
-                                                                             
-	{  0,  1,  0 },                 // Cells in the xy plane in ( z + 0 )                                     
-	{  0,  1,  0 },                 
-	{  0,  1,  0 },                                                      
-	{  0,  1,  0 },                                                      
-                                                                             
-	{  0,  1,  1 },                 // Cells in the xy plane in ( z + 1 )                                     
-	{  0,  1,  1 },                                                      
-	{  0,  1,  1 },
-	{  0,  1,  1 }                  
+    {  0,  0,  1 },			
+    {  1,  0, -1 },                 
+    {  1,  0,  0 },                 
+    {  1,  0,  1 },                 
+
+    {  0,  1, -1 },                 // Cells in the xy plane in ( z - 1 )
+    {  0,  1, -1 },                                                      
+    {  0,  1, -1 },                                                      
+    {  0,  1, -1 },                                                      
+
+    {  0,  1,  0 },                 // Cells in the xy plane in ( z + 0 )                                     
+    {  0,  1,  0 },                 
+    {  0,  1,  0 },                                                      
+    {  0,  1,  0 },                                                      
+
+    {  0,  1,  1 },                 // Cells in the xy plane in ( z + 1 )                                     
+    {  0,  1,  1 },                                                      
+    {  0,  1,  1 },
+    {  0,  1,  1 }                  
 };
 
 double gammaDot;
@@ -182,22 +191,22 @@ int i3;
 #endif
 
 int dm[13][3] = {	
-	{  0,  0,  1 },			
-	{  1,  0, -1 },                 
-	{  1,  0,  0 },                 
-	{  1,  0,  1 },                 
-                                        
-	{ -1,  1, -1 },                 // Cells in the xy plane in ( z - 1 )
-	{  0,  1, -1 },                                                      
-	{  1,  1, -1 },                                                      
-                                                                             
-	{ -1,  1,  0 },                 // Cells in the xy plane in ( z + 0 )                                     
-	{  0,  1,  0 },                 
-	{  1,  1,  0 },                                                      
-                                                                             
-	{ -1,  1,  1 },                 // Cells in the xy plane in ( z + 1 )                                     
-	{  0,  1,  1 },                                                      
-	{  1,  1,  1 }                  
+    {  0,  0,  1 },			
+    {  1,  0, -1 },                 
+    {  1,  0,  0 },                 
+    {  1,  0,  1 },                 
+
+    { -1,  1, -1 },                 // Cells in the xy plane in ( z - 1 )
+    {  0,  1, -1 },                                                      
+    {  1,  1, -1 },                                                      
+
+    { -1,  1,  0 },                 // Cells in the xy plane in ( z + 0 )                                     
+    {  0,  1,  0 },                 
+    {  1,  1,  0 },                                                      
+
+    { -1,  1,  1 },                 // Cells in the xy plane in ( z + 1 )                                     
+    {  0,  1,  1 },                                                      
+    {  1,  1,  1 }                  
 };
 
 std::vector< std::vector < std::vector< std::vector<int> > > > grid;	// define grid as vectors
@@ -243,21 +252,21 @@ Vec3D fDij;
 Vec3D wij;
 Vec3D sumForce;
 
-	#if MULTI_VISCOSITY_LIQUIDS
+#if MULTI_VISCOSITY_LIQUIDS
 
-        unsigned int fluidType1_idxStart;
-        unsigned int fluidType1_idxEnd;
-        unsigned int fluidType2_idxStart;
-        unsigned int fluidType2_idxEnd;
+unsigned int fluidType1_idxStart;
+unsigned int fluidType1_idxEnd;
+unsigned int fluidType2_idxStart;
+unsigned int fluidType2_idxEnd;
 
 
-	#endif
+#endif
 double uniRand;
 double thetaij;
 double magRand;
 double rDotv;
 double magDiss;
-	
+
 #endif
 
 // file writing parameters
@@ -282,354 +291,377 @@ int ig;		// index for r
 
 // rhoZ calculation-- liquid density calculation
 #if PLANAR_SLAB
-	double rhoZ_Zmin;		// minimum Z for rhoZ
-	double rhoZ_Zdelta;		// thickness of differential slab 
-	double rhoZ_Zmax;		// maximum Z for rhoZ
-	double vol;			// volume of differential slab
-	
-	int rhoZ_bins;			// number of bins for rhoZ
-	
-	std::vector<double> rhoZ;// keeps count of rhoZ at given Z
-	
-	int iRhoZ;			// index -- bookkeeping
-	
-	double Zpos;
-	
-	char filename[40];		// filename for data writing
+double rhoZ_Zmin;		// minimum Z for rhoZ
+double rhoZ_Zdelta;		// thickness of differential slab 
+double rhoZ_Zmax;		// maximum Z for rhoZ
+double vol;			// volume of differential slab
+
+int rhoZ_bins;			// number of bins for rhoZ
+
+std::vector<double> rhoZ;// keeps count of rhoZ at given Z
+
+int iRhoZ;			// index -- bookkeeping
+
+double Zpos;
+
+char filename[40];		// filename for data writing
 
 #elif CYLINDER_DROPLET
-	double rhor_rmin;
-	double rhor_rdelta;
-	double rhor_rmax;
-	double vol;
-	
-	int rhor_bins;
-	
-	std::vector<double> rhor;
-	
-	int iRhor;
-	double radPos;
-	
-	char filename[40];
+double rhor_rmin;
+double rhor_rdelta;
+double rhor_rmax;
+double vol;
+
+int rhor_bins;
+
+std::vector<double> rhor;
+
+int iRhor;
+double radPos;
+
+char filename[40];
 #endif // PLANAR_SLAB
 
 // defining wall
 
-    unsigned int totalBonds;
-    unsigned int repParam_Inst;
-    double resCOMVel;
-    double resCOMZ;
+unsigned int totalBonds;
+unsigned int repParam_Inst;
+double resCOMVel;
+double resCOMZ;
 
-    #if PISTON
-        unsigned int pistonParticles;
+#if PISTON
+double pistonForce;
+double finalHeight;
+unsigned int pistonParticles;
 
-        double pistonStart;
-        double pistonEnd;
-        double forceOnPiston;
-        double forceOnPiston2;
-        double distInPiston;
+double pistonStart;
+double pistonEnd;
+double forceOnPiston;
+double forceOnPistonPerParticle;
+double distInPiston;
 
-        double pistonArea;
+double pistonArea;
 
-        double pistonT0;
-        double pistonW; 
+double pistonT0;
+double pistonW; 
 
-        double appForce;
-        double appPressure;
-        double vzPist;
-        double vz0Pist;
-        double drPist;
+double pistonZStart;
+double pistonThickness;
+double appForce;
+double appPressure;
+double vzPist;
+double vz0Pist;
+double drPist;
 
-        double delForce;
+double delForce;
 
-        unsigned int pistonStartIndex;
-        unsigned int pistonEndIndex;
-    #endif
+unsigned int pistonStartIndex;
+unsigned int pistonEndIndex;
 
-    bool wcaInteraction;
+unsigned int upperPistonIdxStart;
+unsigned int lowerPistonIdxStart;
 
-    Vec3D p0, p1, p2;
-    double sigmaWCA;
-    double epsilonWCA;
+unsigned int upperPistonIdxEnd;  
+unsigned int lowerPistonIdxEnd;  
 
-    double r2i;
-    double r6i;
-    double rc2i;
-    double rc6i;
-    double ecutLJ;
-    double ecutWCA;
-    double ff;
-    double sig2;
-    double sig6;
-    double twoPower1_3_sigma2;
+double pistonVelZUpper;
+double pistonVelZLower;
 
-    Vec3D fWCA;
+double upperPistonCOMZ;
+double lowerPistonCOMZ;
 
-    unsigned int topLayer[300];
-    unsigned int bottomLayer[300];
+#endif
 
-    Vec3D colloid_com_Vel;
-    Vec3D colloid_com_pos;
-    Vec3D colloid_boxCrossing;
+bool wcaInteraction;
 
-    double colloid_com_Vel_Av;
-    double springPotEn;
-    double springKinEn;
-    double springTotEn;
-	double capRadSqr;	
-	double strength;
-	double capSphXc;
-	double capSphYc;
-	double capSphZc;
-	
-	double fSL;
-	double w1P;
-	double w2P;
-	double root2;
-	double asl;
-	double Bsl;
-	double fWallcutoff;
-	
-	Vec3D fCWij;
-	Vec3D fCW;
+Vec3D p0, p1, p2;
+double sigmaWCA;
+double epsilonWCA;
 
-    double ext;
-    double refExt;
-    Vec3D springForce;
-	
-	std::vector<std::vector<int>> nZ;
-	int nZ_indz;
-	int nZ_indx;
-	double nZ_zbinWidth;
-	double nZ_xbinWidth;
-	int nZ_xbins;
-	int nZ_zbins;
-	
-	double nZ_xMin;
-	double nZ_xMax;
-	double nZ_zMin;
-	double nZ_zMax;
-	
-	double nZ_tStart;
-	
-	double segPlane_zMin;
-	double segPlane_zMax;
-	double segPlane_zDelta;
-	int segPlane_bins;
-	int segPlane_ind;
+#if HARD_SPHERES 
+unsigned int NColloids;
+#endif
 
-	double wallLowPos;
-	double wallTopPos;
-	double wallLowDist;
-	double wallTopDist;
-	double wallTemp;
+double r2i;
+double r6i;
+double rc2i;
+double rc6i;
+double ecutLJ;
+double ecutWCA;
+double ff;
+double sig2;
+double sig6;
+double twoPower1_3_sigma2;
 
-	unsigned int solidCount;
+Vec3D fWCA;
 
-	std::vector<double> segPlane_xCOM;
-	std::vector<double> segPlane_zCOM;
-	std::vector<int> segPlane_count;
+unsigned int topLayer[300];
+unsigned int bottomLayer[300];
 
-    #if CYLINDER_ARRAY         
-           double zOld;
-           double tApp;
-           double tSep;
+Vec3D colloid_com_Vel;
+Vec3D colloid_com_pos;
+Vec3D colloid_boxCrossing;
 
-           double shortestDist;
-           Vec3D p0, p1, p2;
-           Vec3D x012Cross;
+double colloid_com_Vel_Av;
+double springPotEn;
+double springKinEn;
+double springTotEn;
+double capRadSqr;	
+double strength;
+double capSphXc;
+double capSphYc;
+double capSphZc;
 
-           double Num;
-           double Den;
-           unsigned int resizeBoxSizeTo;
+double fSL;
+double w1P;
+double w2P;
+double root2;
+double asl;
+double Bsl;
+double fWallcutoff;
 
-           Vec3D x01; Vec3D x02; Vec3D x21;
+Vec3D fCWij;
+Vec3D fCW;
 
-           double droplet_Zcom;
-           double droplet_ZcomNew;
+double ext;
+double refExt;
+Vec3D springForce;
 
-           double residual;
-    #endif
+std::vector<std::vector<int>> nZ;
+int nZ_indz;
+int nZ_indx;
+double nZ_zbinWidth;
+double nZ_xbinWidth;
+int nZ_xbins;
+int nZ_zbins;
 
-	#if LOWER_WALL_ON
-		double zindLW_min;
-		double zindLW_max;
-	
-		unsigned int lwp;					// counts the number of lower wall particles
-		
-		double zOld;
-		double tApp;
-		double tSep;
-           
-        double droplet_Zcom;
-        double droplet_ZcomNew;
+double nZ_xMin;
+double nZ_xMax;
+double nZ_zMin;
+double nZ_zMax;
 
-        double residual;
-	#endif
-	#if UPPER_WALL_ON
-		double zindUW_min;
-		double zindUW_max;
-		
-		unsigned int uwp;					// counts the number of upper wall particles
-	#endif
+double nZ_tStart;
 
-	#if CAPILLARY_CYLINDER
-		double cylCenterX;
-		double cylCenterY;
-		double bufferLen;
-		double capLen;
-		double capRad;
-		double capWallWdth;
-		double resWdth;
-		double capThick;
+double segPlane_zMin;
+double segPlane_zMax;
+double segPlane_zDelta;
+int segPlane_bins;
+int segPlane_ind;
 
-		bool innerRadius;					// to define the region within the inner cylinder
-		bool outerRadius;
-		bool middleInRadius;
-		bool middleOutRadius;
-		bool inCapTube;
-		bool notInPoreEntry;
+double wallLowPos;
+double wallTopPos;
+double wallLowDist;
+double wallTopDist;
+double wallTemp;
 
-		double capTubeStart;
-		double capTubeEnd;
-		double penDist;
-		double perDist;
+unsigned int solidCount;
 
-		double zOld;
-		double tApp;
-		double tSep;
+std::vector<double> segPlane_xCOM;
+std::vector<double> segPlane_zCOM;
+std::vector<int> segPlane_count;
 
+#if CYLINDER_ARRAY         
+double zOld;
+double tApp;
+double tSep;
 
-		double rInner;
-		double rOuter;
+double shortestDist;
+Vec3D p0, p1, p2;
+Vec3D x012Cross;
 
-		double BslMin;
-		double BslMax;
-		double BslW;
-		double BslT0;
-	#endif
-	#if CAPILLARY_SQUARE
-        double capEntrance_startIndex;
-        double capEntrance_endIndex;
-		double cylCenterX;
-		double cylCenterY;
-		double bufferLen;
-		double capRad;
-		double capLen;
-		double capWallWdth;
-		double resWdth;
-		double capThick;
+double Num;
+double Den;
+unsigned int resizeBoxSizeTo;
 
-		bool particleInSquareSmall;
-		bool particleInSquareLarge;
-		bool outerRadius;
-		bool inCapTube;
-		bool notInPoreEntry;
+Vec3D x01; Vec3D x02; Vec3D x21;
 
-		bool reg1, reg2, reg3, reg4;
+double droplet_Zcom;
+double droplet_ZcomNew;
 
-		double sqEdge;
-		double sqInnerEdgeXmin;
-		double sqInnerEdgeXmax;
-                double sqInnerEdgeYmin;
-                double sqInnerEdgeYmax;
+double residual;
+#endif
 
-		double distInLeftWall; 	
-                double distInRightWall; 
-                double distInBottomWall;
-                double distInTopWall;	
+#if LOWER_WALL_ON
+double zindLW_min;
+double zindLW_max;
 
-		double capTubeStart;
-		double capTubeEnd;
-		double penDist;
-		double perDist;
+unsigned int lwp;					// counts the number of lower wall particles
 
-		double zOld;
-		double tApp;
-		double tSep;
+double zOld;
+double tApp;
+double tSep;
+
+double droplet_Zcom;
+double droplet_ZcomNew;
+
+double residual;
+#endif
+#if UPPER_WALL_ON
+double zindUW_min;
+double zindUW_max;
+
+unsigned int uwp;					// counts the number of upper wall particles
+#endif
+
+//***************** CAPILLARY_CYLINDER *****************//
+#if CAPILLARY_CYLINDER
+double cylCenterX;
+double cylCenterY;
+double bufferLen;
+double capLen;
+double capRad;
+double capWallWdth;
+double resWdth;
+double capThick;
+
+bool innerRadius;					// to define the region within the inner cylinder
+bool outerRadius;
+bool middleInRadius;
+bool middleOutRadius;
+bool inCapTube;
+bool notInPoreEntry;
+
+double capTubeStart;
+double capTubeEnd;
+double penDist;
+double perDist;
+
+double zOld;
+double tApp;
+double tSep;
 
 
-		double rInner;
-		double rOuter;
-        #if PISTON 
-			unsigned int pistonParticles;
+double rInner;
+double rOuter;
 
-			double pistonStart;
-			double pistonEnd;
-			double forceOnPiston;
-			double distInPiston;
+double BslMin;
+double BslMax;
+double BslW;
+double BslT0;
+#endif
+//***************** CAPILLARY_CYLINDER *****************//
+#if CAPILLARY_SQUARE
+double capEntrance_startIndex;
+double capEntrance_endIndex;
+double cylCenterX;
+double cylCenterY;
+double bufferLen;
+double capRad;
+double capLen;
+double capWallWdth;
+double resWdth;
+double capThick;
 
-			double pistonArea;
+bool particleInSquareSmall;
+bool particleInSquareLarge;
+bool outerRadius;
+bool inCapTube;
+bool notInPoreEntry;
 
-			double pistonT0;
-			double pistonW; 
+bool reg1, reg2, reg3, reg4;
 
-			double appForce;
-			double appPressure;
-			double vzPist;
-			double vz0Pist;
-			double drPist;
+double sqEdge;
+double sqInnerEdgeXmin;
+double sqInnerEdgeXmax;
+double sqInnerEdgeYmin;
+double sqInnerEdgeYmax;
 
-			double delForce;
-		#endif
+double distInLeftWall; 	
+double distInRightWall; 
+double distInBottomWall;
+double distInTopWall;	
 
-		double BslMin;
-		double BslMax;
-		double BslW;
-		double BslT0;
+double capTubeStart;
+double capTubeEnd;
+double penDist;
+double perDist;
 
-		double sqXmin;
-		double sqYmin;
-		double sqXmax;
-		double sqYmax;
-	#endif
+double zOld;
+double tApp;
+double tSep;
+
+
+double rInner;
+double rOuter;
+#if PISTON 
+unsigned int pistonParticles;
+
+double pistonStart;
+double pistonEnd;
+double forceOnPiston;
+double distInPiston;
+
+double pistonArea;
+
+double pistonT0;
+double pistonW; 
+
+double appForce;
+double appPressure;
+double vzPist;
+double vz0Pist;
+double drPist;
+
+double delForce;
+#endif
+
+double BslMin;
+double BslMax;
+double BslW;
+double BslT0;
+
+double sqXmin;
+double sqYmin;
+double sqXmax;
+double sqYmax;
+#endif
 
 
 #if BODY_FORCE
-	double fBodyX;
+double fBodyX;
 #endif
 
 #if SACF
-	std::vector<std::vector<std::vector<double>>> aCorr;	// raw-data on which the correlation will be performed
-	std::vector<std::vector<std::vector<double>>> fCorr;	// the correlated data
-	std::vector<std::vector<std::vector<double>>> fCorrAv;	// the averaged correlated data -- used for writing data
-	std::vector<std::vector<std::vector<double>>> nCorr;	// the number of samples over which the data is correlated 
-	std::vector<std::vector<int>> pointCorr;		// points to the latest element added 
-	std::vector<double> normalizeCorr;		// used for normalizing the first point
-	std::vector<double> normalizeCorrAv;		// used for normalizing the first point -- average value -- used for writing data
-	
-	unsigned int sacpunt;
-	unsigned int n_vars;	// number of elements over which the correlation should be considered 
-	unsigned int n_vars_counter;	// number of elements over which the correlation should be considered 
-	unsigned int corLevels; // number of levels in the multi-tau correlator
-	unsigned int pCorr;	// number of blocks within a level
-	unsigned int pCorr2;	// pCorr/2 
-	unsigned int mCorr;	// number of blocks over data is averaged
-	unsigned int point;	// pointer in the aCorr array
-	unsigned int normalizeCorr_count;
-	unsigned int nf1;
-	unsigned int nf2;
-	unsigned int nf3;
-	unsigned int n_base;
-	
-	double Sxx;
-	double SxyC;
-	double SxyR;
-	double SxyD;
-	double SxyVxy;
-	double Sxz;
-	
-	double Syx;
-	double Syy;
-	double Syz;
-	
-	double Szx;
-	double Szy;
-	double Szz;
-	
-	double Nxy;
-	double Nyz;
-	double Nzx;
+std::vector<std::vector<std::vector<double>>> aCorr;	// raw-data on which the correlation will be performed
+std::vector<std::vector<std::vector<double>>> fCorr;	// the correlated data
+std::vector<std::vector<std::vector<double>>> fCorrAv;	// the averaged correlated data -- used for writing data
+std::vector<std::vector<std::vector<double>>> nCorr;	// the number of samples over which the data is correlated 
+std::vector<std::vector<int>> pointCorr;		// points to the latest element added 
+std::vector<double> normalizeCorr;		// used for normalizing the first point
+std::vector<double> normalizeCorrAv;		// used for normalizing the first point -- average value -- used for writing data
+
+unsigned int sacpunt;
+unsigned int n_vars;	// number of elements over which the correlation should be considered 
+unsigned int n_vars_counter;	// number of elements over which the correlation should be considered 
+unsigned int corLevels; // number of levels in the multi-tau correlator
+unsigned int pCorr;	// number of blocks within a level
+unsigned int pCorr2;	// pCorr/2 
+unsigned int mCorr;	// number of blocks over data is averaged
+unsigned int point;	// pointer in the aCorr array
+unsigned int normalizeCorr_count;
+unsigned int nf1;
+unsigned int nf2;
+unsigned int nf3;
+unsigned int n_base;
+
+double Sxx;
+double SxyC;
+double SxyR;
+double SxyD;
+double SxyVxy;
+double Sxz;
+
+double Syx;
+double Syy;
+double Syz;
+
+double Szx;
+double Szy;
+double Szz;
+
+double Nxy;
+double Nyz;
+double Nzx;
 #endif
 
 // momentum calculation
@@ -694,6 +726,18 @@ std::default_random_engine seed{rdev()};
 std::default_random_engine seedRstrt;
 #endif
 
+#if READ_FROM_FILE
+unsigned int movingParticles[200000]; 
+unsigned int noOfParticlesMoving;
+#endif
+
+// file reading
+unsigned int nPartPerStructure = 0;     // setting nPartPerStructure
+char posfname[100];
+char dummyString[100];
+char type;
+std::ifstream readConfig;
+
 // Mersenne twister PRNG, initialized with seed from previous random device instance
 // usage d{mean, std}
 // std::normal_distribution<double> d{0,1};
@@ -702,6 +746,6 @@ std::uniform_real_distribution<double> randNumGen{0.0,1.0};
 // File streams
 std::string buffer;
 std::string emptyLine;
-	
+
 std::ofstream simProg;
 std::ofstream flagList;

@@ -11,6 +11,7 @@ rm -f *.dat
 rm -f ./data/*.xyz
 rm -f ./data/*.dat
 rm -f ./data/*.vtu
+rm -f ./data/*.psf
 rm -f ./plots/*.eps
 rm -f param.out
 

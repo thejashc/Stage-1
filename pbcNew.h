@@ -4,7 +4,8 @@ mz = (int) round( ( particles[i].r.Z - boxHalve[z] ) * boxRecip[z] );
 
 if ( abs(mx) > 1 || abs(my) > 1 || abs(mz) > 1 )     // unacceptably large displacement
 {
-    simProg << "*** particle " << i << " has escaped" << std::endl;
+    simProg << "*** particle " << i << " of type " << particles[i].type 
+            << " with positions : " << particles[i].r << " has escaped in step " << step << std::endl;
     simProg << mx << "  " << my << "  " << mz << std::endl;
     abort();
 } // abs(mx)

@@ -1,3 +1,4 @@
+bckgIdxStart = 0;
 // Set max and min dimensions of planar slab
 xind_min = 0.01;	// avoid boundary edge -- non-moving case
 xind_max = boxEdge[x];
@@ -6,12 +7,18 @@ yind_max = boxEdge[y];
 
 aCube = pow( 1. / initRho, 1./3. );
 #if LOWER_WALL_ON 
-    zindLW_max = wallHeight;
-    zindLW_min = 0.01; 
+    /*zindLW_max = wallHeight;
+    zindLW_min = 0.01; */
+    zindLW_max = 0.5 * boxEdge[z] + wallHeight * 0.5;
+    zindLW_min = 0.5 * boxEdge[z] - wallHeight * 0.5; 
 #endif 
 #if UPPER_WALL_ON 
+    zindUW_max = 0.5 * boxEdge[z] + wallHeight * 0.5;
+    zindUW_min = 0.5 * boxEdge[z] - wallHeight * 0.5; 
+    /*
     zindUW_min = boxEdge[z] - wallHeight; 
     zindUW_max = boxEdge[z]; 
+    */
 #endif 
 
 xind = xind_min;
@@ -40,9 +47,12 @@ xind = xind_min;
                 //			 (3) position 
                 //           (4) mid step velocity 
                 //			 (5) particle type
-                particles.push_back( { 1.0, 1.0, {xind, yind, zind}, {0., 0., 0.}, 0} );
-                lwp++;
+                if ( zind < zindLW_min + 0.5*wallHeight )
+                    particles.push_back( { 1.0, 1.0, {xind, yind, zind}, {0., 0., 0.}, 3} );
+                else
+                    particles.push_back( { 1.0, 1.0, {xind, yind, zind}, {0., 0., 0.}, 0} );
 
+                lwp++;
                 // update zind
                 zind -= aCube*rcutoff;
             }// end of zind
@@ -50,22 +60,7 @@ xind = xind_min;
         }// end of yind			
         xind += aCube*rcutoff;
     }// end of xind
-
-/*
-    particles.push_back( { 1.0, 1.0, {7.5, 7.5, 6.00}, {0., 0., 1.0}, 0} );
-    particles.push_back( { 1.0, 1.0, {7.5, 7.5, 6.25}, {0., 0., 0.0}, 0} );
-    particles.push_back( { 1.0, 1.0, {7.5, 7.5, 6.50}, {0., 0., 0.0}, 0} );
-    particles.push_back( { 1.0, 1.0, {7.5, 7.5, 6.75}, {0., 0., 0.0}, 0} );
-    particles.push_back( { 1.0, 1.0, {7.5, 7.5, 7.00}, {0., 0., 0.0}, 0} );
-    particles.push_back( { 1.0, 1.0, {7.5, 7.5, 7.25}, {0., 0., 0.0}, 0} );
-    particles.push_back( { 1.0, 1.0, {7.5, 7.5, 7.50}, {0., 0., 0.0}, 0} );
-    particles.push_back( { 1.0, 1.0, {7.5, 7.5, 7.75}, {0., 0., 0.0}, 0} );
-    particles.push_back( { 1.0, 1.0, {7.5, 7.5, 8.00}, {0., 0., 0.0}, 0} );
-    particles.push_back( { 1.0, 1.0, {7.5, 7.5, 8.25}, {0., 0., 0.0}, 0} );
-    particles.push_back( { 1.0, 1.0, {7.5, 7.5, 8.50}, {0., 0., 0.0}, 0} );
-    particles.push_back( { 1.0, 1.0, {7.5, 7.5, 8.75}, {0., 0., 0.0}, 0} );
-    particles.push_back( { 1.0, 1.0, {7.5, 7.5, 9.00}, {0., 0., -1.0}, 0} );
-*/
+    bckgIdxEnd += lwp;
 #endif 
 
 xind = xind_min;
@@ -89,8 +84,12 @@ xind = xind_min;
             zind = zindUW_min;
             while( zind < zindUW_max){
 
+                if ( zind > zindUW_min + 0.5*wallHeight )
+                    particles.push_back( { 1.0, 1.0, {xind, yind, zind}, {0., 0., 0.}, 3} );
+                else
+                    particles.push_back( { 1.0, 1.0, {xind, yind, zind}, {0., 0., 0.}, 0} );
+
                 // initializing particle radius, mass, position and velocity
-                particles.push_back({1.0,1.0,{xind, yind, zind},{0., 0., 0.}, 0});
                 uwp++;
 
                 // update zind
@@ -103,4 +102,6 @@ xind = xind_min;
 
     simProg << "finished initialization of  " << uwp << " lower wall particles" << std::endl;
     simProg << "***************************************************" << std::endl;
+    bckgIdxEnd += uwp - 1;
 #endif 
+

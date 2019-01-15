@@ -1,6 +1,6 @@
 #!/bin/tcsh
 
-# draw the simulation box
+# read parameters from param.in
 set minx 0
 set miny 0
 set minz 0
@@ -17,26 +17,11 @@ set startFile $delta
 set endFile [exec tail -1 "simProg.txt" | awk {{print $1}}]
 set incrFile [expr {$delta - 1}]
 
+# drawing the simulation box
 draw color white
 
-draw line "$minx $miny $minz" "$minx $maxy $minz"
-draw line "$minx $miny $minz" "$minx $miny $maxz"
-
-draw line "$maxx $miny $minz" "$maxx $maxy $minz"
-draw line "$maxx $miny $minz" "$maxx $miny $maxz"
-
-draw line "$minx $maxy $minz" "$maxx $maxy $minz"
-draw line "$minx $maxy $minz" "$minx $maxy $maxz"
-
-draw line "$minx $miny $maxz" "$maxx $miny $maxz"
-draw line "$minx $miny $maxz" "$minx $maxy $maxz"
-
-draw line "$maxx $maxy $maxz" "$maxx $maxy $minz"
-draw line "$maxx $maxy $maxz" "$minx $maxy $maxz"
-draw line "$maxx $maxy $maxz" "$maxx $miny $maxz"
-
-draw line "$minx $miny $minz" "$maxx $miny $minz"
-draw line "$minx $miny $minz" "$maxx $miny $minz"
+set cell [pbc set {$maxx $maxy $maxz} -all]
+pbc box -center origin -shiftcenter {$cx $cy $cz} -color white -width 1
 
 puts "the simulation box is drawn"
 
