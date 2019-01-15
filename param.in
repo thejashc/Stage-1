@@ -1,19 +1,21 @@
 boxEdgeX            20.0	# box dimensions
 boxEdgeY            20.0
-boxEdgeZ            30.0
+boxEdgeZ            100.0
 initRho             6.00
 #
-repParam             25.0        # interaction paramters
+Bll1                 25.0   # interaction paramters
+Bll2                 25.0        
 All1                -40.0
 All2                -40.0
-All12               -5.0
+All12               -40.0
 Ass                 -40.0
-Asl1                -40.0
-Asl2                -5.0
+Asl1                -10.0
+Asl2                -10.0
 rcutoff             1.0		
 rd_cutoff           0.75
 #
-kWall               125.0        # WALL_PARAMETERS 
+kWallBckg           12.5        # WALL_PARAMETERS 
+kWallNgbr           3000.0
 wallPenetration     0.25
 initWallRho         5.00
 wallHeight          2.0			# WALL_ON
@@ -24,10 +26,10 @@ noise2              6.0
 noise12             6.0
 dim                 3			# dimensions
 #
-dt                  0.01     # time parameters	
-stepMax             50000
+dt                  0.01        # time parameters	
+stepMax             30000
 rstrtFWrtFreq       10000
-saveCount           5000
+saveCount           500
 psaveCount          1000
 pCorrTime           500
 #
@@ -47,6 +49,8 @@ rhoZ_Zmin           0.00
 rhoZ_Zdelta         0.05	
 segPlane_zDelta     0.05
 #
+sphDropRad          7.5		# SPHERICAL DROPLET
+#
 cylRad              4.0			# CYLINDRICAL_SLAB 
 cylHeight           10.0
 rhor_rmin           0.00
@@ -60,16 +64,22 @@ pCorr               64
 mCorr               2
 #
 bufferLength        10.0		# CAPILLARIES
-capLen              20.0
+capLen              40.0
 capRad              5.0
 capWallWdth         1.5
-resWdth             7.5
-resComZ             52.0
-resComVel          -0.5
+resWdth             15.0
+resComZ             53.0
+resComVel          -0.05
 #
-appPressure         10.0
+pistonZStart        74.0 
+pistonThickness     0.5
+appPressure         2.8
 pistonT0	        1000.0
 pistonW             1000.0
 #
 sigmaWCA            0.8
 epsilonWCA          10.0
+#
+NColloids           0
+#
+finalHeight         20.0
