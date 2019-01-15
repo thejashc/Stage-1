@@ -1,5 +1,7 @@
-if ( i >= solidStartIndex && i <= solidEndIndex ){
-
+j = 0;
+i = solid_index[j];
+while ( j < solidCount )
+{
     Rij = particles[i].r - particles[i].r0;	
 
     Rij.X = Rij.X - boxEdge[x] * round( Rij.X / boxEdge[x] );
@@ -17,4 +19,7 @@ if ( i >= solidStartIndex && i <= solidEndIndex ){
     particles[i].fHarmonic.X = -1. * kWall * dist * capRij.X;	// spring force on the solid particle
     particles[i].fHarmonic.Y = -1. * kWall * dist * capRij.Y;	
     particles[i].fHarmonic.Z = -1. * kWall * dist * capRij.Z;	
+
+    j++;
+    i = solid_index[j];
 } // if there are no harmonic forces then that is taken care by resetVar() func where everything is set to 0
