@@ -1,11 +1,11 @@
-xind_min = 0.;
-yind_min = 0.;
+xind_min = 0.01;
+yind_min = 0.01;
 zind_min = resCOMZ - resWdth * 0.5;
 xind_max = boxEdge[x];
 yind_max = boxEdge[y];
 zind_max = resCOMZ + resWdth * 0.5; 
 
-pCount	 = 0;
+double resComVel = 0.;
 
 simProg << "***************************************************" << std::endl;
 simProg << "Started initialization of the wetting liquid above the reservoir" << std::endl;
@@ -26,7 +26,7 @@ while ( xind < xind_max){
         zind = zind_min;
         while( zind < zind_max){
 
-                particles.push_back({0.5,1.0,{xind, yind, zind + 20. },{0., 0., 0.},2});
+                particles.push_back({1.0,1.0,{xind, yind, zind + 20. },{0., 0., resComVel},1});
                 pCount++;
 
             // update zind
