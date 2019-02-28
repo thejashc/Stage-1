@@ -18,7 +18,7 @@
 #define SPHERICAL_DROPLET		0
 #define SPHERICAL_CAP			0
 #define CYLINDER_DROPLET		0
-#define PLANAR_SLAB			    1
+#define PLANAR_SLAB			    0
 #define CRYSTAL				    0
 #define RESTART				    0
 
@@ -27,17 +27,17 @@
 #define LOWER_WALL_ON			0
 #define UPPER_WALL_ON			0
 #define ROUGH_WALL			    0
-#define SPRING_CONNECTED_SLD    1
+#define SPRING_CONNECTED_SLD    0
 #define BCKGRND_CONNECTED_SLD   1
 
-#define CAPILLARY_CYLINDER		1
-#define CAPILLARY_SQUARE		0
-#define PISTON				    1
+#define CAPILLARY_CYLINDER		0
+#define CAPILLARY_SQUARE		1
+#define PISTON				    0
 #define CYLINDER_ARRAY          0
 #define HARD_SPHERES            0
 #define SLIM                    0
 #define RANDOM_FIBRE_BUNDLE     0
-#define READ_FROM_FILE          1
+#define READ_FROM_FILE          0
 
 // FILE_WRITE
 #define STYLE_VMD			    0
@@ -253,7 +253,7 @@ class DPD {
                         pistonStartIndex = ngbrIdxStart;
                         pistonEndIndex = ngbrIdxEnd;
                         pistonParticles = ngbrIdxEnd - ngbrIdxStart + 1;
-                        pistonForce = - ( appPressure * pistonArea ) / pistonParticles; 
+                        pistonForce = -appPressure * pistonArea ; 
                     #endif
 					// #include "reservoir.h"
                     //#include "nonWettingReservoir.h" 
@@ -277,7 +277,8 @@ class DPD {
                 #endif
 
 				#if CAPILLARY_SQUARE
-					#include "squarecapillaryTube.h"
+					//#include "squarecapillaryTube.h"
+                    #include "rectangularCapillaryTube.h"
 					#include "reservoir.h"
                 #endif
 
@@ -1139,10 +1140,18 @@ class DPD {
             }
             */
 
+          #include "penetrationIntoSquare.h"  // background repulsive potential
+
           #if PISTON
-                forceOnPistonPerParticle = forceOnPiston / pistonParticles;
+            //if ( ( step % saveCount == 0 )  && ( step > pistonT0 )  ){
+            if ( step % saveCount == 0 ){
+
+                forceOnPiston /= saveCount;
+
+                forceOnPistonPerParticle = ( pistonForce - 0.01*( forceOnPiston - pistonForce ) ) / pistonParticles;
 
                 forceOnPiston = 0.;
+            }
           #endif   
 
           i = 0;
@@ -1156,7 +1165,7 @@ class DPD {
                    
                 #if PISTON
                 if ( i >= pistonStartIndex && i <= pistonEndIndex ){
-                    particles[i].fext.Z = ( pistonForce - forceOnPistonPerParticle ) * ( 1. + exp(-step*dt/pistonW ) );     // adding the force deficit per particle
+                    particles[i].fext.Z = forceOnPistonPerParticle;     // adding the force deficit per particle
                     // particles[i].fext.Z = pistonForce;     // adding the force deficit per particle
                 }
                 #endif
@@ -1172,8 +1181,8 @@ class DPD {
                 particles[i].r += particles[i].w*dt;				
 
                 // implement periodic boundary condition 
-                #include "pbcNew.h"
-                //#include "pbcNewReflecting.h"
+                //#include "pbcNew.h"
+                #include "pbcNewReflecting.h"
 
                 // calculate velocity (integral time step)
                 particles[i].v = 0.5*( particles[i].w_old + particles[i].w );
@@ -1211,7 +1220,7 @@ class DPD {
                 i++;
           }
 
-            std::cout << step << "\t\t\t" << ( forceOnPiston / pistonArea ) << std::endl;
+            //std::cout << step << "\t\t\t" << (forceOnPistonPerParticle*pistonParticles)/pistonArea << "\t\t\t" << (forceOnPiston/pistonArea) << std::endl;
 
 			// calculation of  pressure tensor 
 			// #include "pTensCalc.h"

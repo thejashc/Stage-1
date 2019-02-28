@@ -18,8 +18,8 @@ sqInnerEdgeYmax	= sqYmax - capWallWdth;
 capThick	= 2.;
 pCount 		= 0;
 
-xind_min 	= 0.;
-yind_min 	= 0.;
+xind_min 	= 0.01;
+yind_min 	= 0.01;
 zind_min 	= bufferLen;
 
 xind_max	= boxEdge[x];
@@ -68,8 +68,8 @@ simProg << "finished initialization of  " << pCount << " particles inside square
 simProg << "***************************************************" << std::endl;
 
 // Set max and min dimensions of boxy
-xind_min = 0.;
-yind_min = 0.;
+xind_min = 0.01;
+yind_min = 0.01;
 zind_min = bufferLen + capLen;
 xind_max = boxEdge[x];
 yind_max = boxEdge[y];

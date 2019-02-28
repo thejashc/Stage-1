@@ -19,8 +19,8 @@ if ( abs(mz) == 1.0 ) {
     // simProg << " initial particle position = " << particles[i].r.Z << ", initial particle velocity = " << particles[i].w.Z << std::endl;
 
     zOld                = particles[i].r.Z - particles[i].w.Z * dt;	// calculate the previous z-position
-    tApp                = ( particles[i].w.Z > 0. ) ? ( ( boxEdge[z] - zOld ) / particles[i].w.Z ) : ( zOld / fabs( particles[i].w.Z ) ); 
-    tSep                = dt - tApp;					// time in which particle separates from top face of the box
+    tApp                = ( particles[i].w.Z > 0. ) ? ( ( boxEdge[z] - zOld ) / particles[i].w.Z ) : ( -zOld / particles[i].w.Z ); 
+    tSep                = dt - tApp;				// time in which particle separates from top face of the box
     particles[i].w.Z 	*= -1.0;					// reverse the velocity of the particle: away from the top of the box
 
     // simProg << " zOld = " << zOld << ", tApp = " << tApp << ", tSep = " << tSep << std::endl;

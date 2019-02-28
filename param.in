@@ -1,5 +1,5 @@
-boxEdgeX            20.0	# box dimensions
-boxEdgeY            20.0
+boxEdgeX            15.0	# box dimensions
+boxEdgeY            15.0
 boxEdgeZ            100.0
 initRho             6.00
 #
@@ -66,9 +66,9 @@ mCorr               2
 bufferLength        10.0		# CAPILLARIES
 capLen              40.0
 capRad              5.0
-capWallWdth         1.5
+capWallWdth         2.5
 resWdth             15.0
-resComZ             53.0
+resComZ             75.0
 resComVel          -0.05
 #
 pistonZStart        74.0 

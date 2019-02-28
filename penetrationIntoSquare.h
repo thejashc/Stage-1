@@ -2,75 +2,115 @@
 // std::cout << "capTubeEnd = " << capTubeEnd << std::endl;
 
 // exit(0);
+//
+idx = 0;
+i = fluid_index[idx];
 
-if ( particles[fluid_index[i]].r.Z > capTubeStart  && particles[fluid_index[i]].r.Z < capTubeEnd ){
+/*
+std::cout   <<  sqInnerEdgeXmin << ", " << 
+                sqInnerEdgeXmax << ", " << 
+                sqInnerEdgeYmin << ", " << 
+                sqInnerEdgeYmax << ", " <<
+                wallLowPos << ", " <<
+                capTubeStart << ", " <<
+                capTubeEnd << ", " <<
+                wallPenetration;
+*/
 
-	distInLeftWall 	= particles[fluid_index[i]].r.X -  ( sqInnerEdgeXmin - wallPenetration );
-	distInRightWall = particles[fluid_index[i]].r.X -  ( sqInnerEdgeXmax + wallPenetration );
-	distInBottomWall= particles[fluid_index[i]].r.Y -  ( sqInnerEdgeYmin - wallPenetration );
-	distInTopWall	= particles[fluid_index[i]].r.Y -  ( sqInnerEdgeYmax + wallPenetration );
+while ( idx < fluidCount ){
 
-	reg1	= ( distInLeftWall   < 0.  ) && ( particles[fluid_index[i]].r.X > sqXmin ) ; 
-	reg2	= ( distInRightWall  > 0.  ) && ( particles[fluid_index[i]].r.X < sqXmax ) ; 
-	reg3	= ( distInBottomWall < 0.  ) && ( particles[fluid_index[i]].r.Y > sqYmin ) ; 
-	reg4	= ( distInTopWall    > 0.  ) && ( particles[fluid_index[i]].r.Y < sqYmax ) ; 
+    if ( ( particles[i].r.Z > capTubeStart )  && ( particles[i].r.Z < capTubeEnd ) ){
 
-	if ( reg1 ) {
+        distInLeftWall 	= particles[i].r.X -  ( sqInnerEdgeXmin - wallPenetration );
+        distInRightWall = particles[i].r.X -  ( sqInnerEdgeXmax + wallPenetration );
+        distInBottomWall= particles[i].r.Y -  ( sqInnerEdgeYmin - wallPenetration );
+        distInTopWall	= particles[i].r.Y -  ( sqInnerEdgeYmax + wallPenetration );
 
-		if ( reg3 ){
+        reg1	= ( distInLeftWall   < 0.  ) && ( particles[i].r.X > sqXmin ) ; 
+        reg2	= ( distInRightWall  > 0.  ) && ( particles[i].r.X < sqXmax ) ; 
+        reg3	= ( distInBottomWall < 0.  ) && ( particles[i].r.Y > sqYmin ) ; 
+        reg4	= ( distInTopWall    > 0.  ) && ( particles[i].r.Y < sqYmax ) ; 
 
-			particles[fluid_index[i]].fext.X = -Brep[0][1] * distInLeftWall;
-			particles[fluid_index[i]].fext.Y = -Brep[0][1] * distInBottomWall;
-			particles[fluid_index[i]].fext.Z = 0.;
+        if ( reg1 ) {
 
-		}
-		else if ( reg4 ){
+            if ( reg3 ){
 
-			particles[fluid_index[i]].fext.X = -Brep[0][1] * distInLeftWall;
-			particles[fluid_index[i]].fext.Y = -Brep[0][1] * distInTopWall;
-			particles[fluid_index[i]].fext.Z = 0.;
-		}
-		else{
-			particles[fluid_index[i]].fext.X = -Brep[0][1] * distInLeftWall;
-			particles[fluid_index[i]].fext.Y = 0.;
-			particles[fluid_index[i]].fext.Z = 0.;
-		}
-	}   // reg1
-	else if ( reg2 ){
+                particles[i].fext.X = -Brep[0][1] * distInLeftWall;
+                particles[i].fext.Y = -Brep[0][1] * distInBottomWall;
+                particles[i].fext.Z = 0.;
 
-		if ( reg3 ){
+            }
+            else if ( reg4 ){
 
-			particles[fluid_index[i]].fext.X = -Brep[0][1] * distInRightWall;
-			particles[fluid_index[i]].fext.Y = -Brep[0][1] * distInBottomWall;
-			particles[fluid_index[i]].fext.Z = 0.;
-		}
-		else if ( reg4 ){
+                particles[i].fext.X = -Brep[0][1] * distInLeftWall;
+                particles[i].fext.Y = -Brep[0][1] * distInTopWall;
+                particles[i].fext.Z = 0.;
+            }
+            else{
+                particles[i].fext.X = -Brep[0][1] * distInLeftWall;
+                particles[i].fext.Y = 0.;
+                particles[i].fext.Z = 0.;
+            }
+        }   // reg1
+        else if ( reg2 ){
 
-			particles[fluid_index[i]].fext.X = -Brep[0][1] * distInRightWall;
-			particles[fluid_index[i]].fext.Y = -Brep[0][1] * distInTopWall;
-			particles[fluid_index[i]].fext.Z = 0.;
-		}
-		else{
+            if ( reg3 ){
 
-			particles[fluid_index[i]].fext.X = -Brep[0][1] * distInRightWall;
-			particles[fluid_index[i]].fext.Y = 0.;
-			particles[fluid_index[i]].fext.Z = 0.;
+                particles[i].fext.X = -Brep[0][1] * distInRightWall;
+                particles[i].fext.Y = -Brep[0][1] * distInBottomWall;
+                particles[i].fext.Z = 0.;
+            }
+            else if ( reg4 ){
 
-		}
+                particles[i].fext.X = -Brep[0][1] * distInRightWall;
+                particles[i].fext.Y = -Brep[0][1] * distInTopWall;
+                particles[i].fext.Z = 0.;
+            }
+            else{
 
-	}   // reg2 
-	else if ( reg3 ){
+                particles[i].fext.X = -Brep[0][1] * distInRightWall;
+                particles[i].fext.Y = 0.;
+                particles[i].fext.Z = 0.;
 
-		particles[fluid_index[i]].fext.X = 0.;
-		particles[fluid_index[i]].fext.Y = -Brep[0][1] * distInBottomWall;
-		particles[fluid_index[i]].fext.Z = 0.;
+            }
 
-	}   // reg3
-	else if ( reg4 ){
+        }   // reg2 
+        else if ( reg3 ){
 
-		particles[fluid_index[i]].fext.X = 0.;
-		particles[fluid_index[i]].fext.Y = -Brep[0][1] * distInTopWall;
-		particles[fluid_index[i]].fext.Z = 0.;
+            particles[i].fext.X = 0.;
+            particles[i].fext.Y = -Brep[0][1] * distInBottomWall;
+            particles[i].fext.Z = 0.;
 
-	}   // reg4
+        }   // reg3
+        else if ( reg4 ){
+
+            particles[i].fext.X = 0.;
+            particles[i].fext.Y = -Brep[0][1] * distInTopWall;
+            particles[i].fext.Z = 0.;
+
+        }   // reg4
+    }
+    else if ( ( particles[i].r.Z > capTubeEnd ) && ( particles[i].r.Z < wallLowPos ) ){
+
+        // (1)  wall force can be in the region where the reservoir separating wall is present
+        wallLowDist 	= particles[i].r.Z - ( wallLowPos - wallPenetration );
+
+        // make sure that the force is applied only particles inside the wall
+        notInPoreEntry  =   ( particles[i].r.X > sqInnerEdgeXmax ) || 
+                            ( particles[i].r.X < sqInnerEdgeXmin ) || 
+                            ( particles[i].r.Y > sqInnerEdgeYmax ) || 
+                            ( particles[i].r.Y < sqInnerEdgeYmin ); 
+
+        // apply external force if particle is below the threshold penetration distance and not in the pore entry
+        if ( wallLowDist < 0. && notInPoreEntry ){
+
+            particles[i].fext.X = 0;
+            particles[i].fext.Y = 0;
+            particles[i].fext.Z = -Brep[0][1] * wallLowDist ; 
+        }
+    }
+
+    // update particle index
+    idx++;
+    i = fluid_index[idx];
 }

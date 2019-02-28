@@ -1,11 +1,14 @@
 xind_min = 0.01;
 yind_min = 0.01;
 zind_min = resCOMZ - resWdth * 0.5;
+
 xind_max = boxEdge[x];
 yind_max = boxEdge[y];
 zind_max = resCOMZ + resWdth * 0.5; 
 
-double resComVel = 0.;
+pCount = 0;
+
+bool flagA = 1;
 
 simProg << "***************************************************" << std::endl;
 simProg << "Started initialization of the wetting liquid above the reservoir" << std::endl;
@@ -26,11 +29,31 @@ while ( xind < xind_max){
         zind = zind_min;
         while( zind < zind_max){
 
-                particles.push_back({1.0,1.0,{xind, yind, zind + 20. },{0., 0., resComVel},1});
-                pCount++;
+            particles.push_back({1.0,1.0,{xind, yind, zind},{0., 0., resCOMVel},1});
+            pCount++;
 
             // update zind
-            zind += aCube * rcutoff;
+            zind += 2. * aCube * rcutoff;
+
+        } // end of zind
+        yind += aCube * rcutoff;
+    } // end of yind			
+    xind += aCube * rcutoff;
+} // end of xind
+
+xind = xind_min;
+// Particle position intialization in a crystal structure 
+while ( xind < xind_max){
+    yind = yind_min;
+    while( yind < yind_max){
+        zind = zind_min + aCube * rcutoff;
+        while( zind < zind_max){
+
+            particles.push_back({1.0,1.0,{xind, yind, zind},{0., 0., resCOMVel},2});
+            pCount++;
+
+            // update zind
+            zind += 2. * aCube * rcutoff;
 
         } // end of zind
         yind += aCube * rcutoff;
