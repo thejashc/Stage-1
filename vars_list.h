@@ -330,45 +330,52 @@ double resCOMVel;
 double resCOMZ;
 
 #if PISTON
-double pistonForce;
-double finalHeight;
-unsigned int pistonParticles;
+    double pistonForce;
+    double finalHeight;
+    unsigned int pistonParticles;
+    unsigned int avgWindow;
 
-double pistonStart;
-double pistonEnd;
-double forceOnPiston;
-double forceOnPistonPerParticle;
-double distInPiston;
+    double pistonStart;
+    double pistonEnd;
+    double forceOnPistonInst;
+    double forceOnPistonCumulative;
+    double forceOnPistonPerParticle;
+    double distInPiston;
 
-double pistonArea;
+    double pistonArea;
 
-double pistonT0;
-double pistonW; 
+    double pistonT0;
+    double pistonW; 
 
-double pistonZStart;
-double pistonThickness;
-double appForce;
-double appPressure;
-double vzPist;
-double vz0Pist;
-double drPist;
+    double pistonZStart;
+    double pistonThickness;
+    double appForce;
+    double appPressure;
+    double vzPist;
+    double vz0Pist;
+    double drPist;
 
-double delForce;
+    double fOld;
+    double fNew;
+    double expFactor;
+    double delOverTau;
 
-unsigned int pistonStartIndex;
-unsigned int pistonEndIndex;
+    double delForce;
 
-unsigned int upperPistonIdxStart;
-unsigned int lowerPistonIdxStart;
+    unsigned int pistonStartIndex;
+    unsigned int pistonEndIndex;
 
-unsigned int upperPistonIdxEnd;  
-unsigned int lowerPistonIdxEnd;  
+    unsigned int upperPistonIdxStart;
+    unsigned int lowerPistonIdxStart;
 
-double pistonVelZUpper;
-double pistonVelZLower;
+    unsigned int upperPistonIdxEnd;  
+    unsigned int lowerPistonIdxEnd;  
 
-double upperPistonCOMZ;
-double lowerPistonCOMZ;
+    double pistonVelZUpper;
+    double pistonVelZLower;
+
+    double upperPistonCOMZ;
+    double lowerPistonCOMZ;
 
 #endif
 
@@ -497,123 +504,102 @@ double droplet_ZcomNew;
 double residual;
 #endif
 #if UPPER_WALL_ON
-double zindUW_min;
-double zindUW_max;
+    double zindUW_min;
+    double zindUW_max;
 
-unsigned int uwp;					// counts the number of upper wall particles
+    unsigned int uwp;					// counts the number of upper wall particles
 #endif
 
 //***************** CAPILLARY_CYLINDER *****************//
 #if CAPILLARY_CYLINDER
-double cylCenterX;
-double cylCenterY;
-double bufferLen;
-double capLen;
-double capRad;
-double capWallWdth;
-double resWdth;
-double capThick;
+    double cylCenterX;
+    double cylCenterY;
+    double bufferLen;
+    double capLen;
+    double capRad;
+    double capWallWdth;
+    double resWdth;
+    double capThick;
 
-bool innerRadius;					// to define the region within the inner cylinder
-bool outerRadius;
-bool middleInRadius;
-bool middleOutRadius;
-bool inCapTube;
-bool notInPoreEntry;
+    bool innerRadius;					// to define the region within the inner cylinder
+    bool outerRadius;
+    bool middleInRadius;
+    bool middleOutRadius;
+    bool inCapTube;
+    bool notInPoreEntry;
 
-double capTubeStart;
-double capTubeEnd;
-double penDist;
-double perDist;
+    double capTubeStart;
+    double capTubeEnd;
+    double penDist;
+    double perDist;
 
-double zOld;
-double tApp;
-double tSep;
+    double zOld;
+    double tApp;
+    double tSep;
 
 
-double rInner;
-double rOuter;
+    double rInner;
+    double rOuter;
 
-double BslMin;
-double BslMax;
-double BslW;
-double BslT0;
+    double BslMin;
+    double BslMax;
+    double BslW;
+    double BslT0;
 #endif
 //***************** CAPILLARY_CYLINDER *****************//
 #if CAPILLARY_SQUARE
-double capEntrance_startIndex;
-double capEntrance_endIndex;
-double cylCenterX;
-double cylCenterY;
-double bufferLen;
-double capRad;
-double capLen;
-double capWallWdth;
-double resWdth;
-double capThick;
+    double capEntrance_startIndex;
+    double capEntrance_endIndex;
+    double cylCenterX;
+    double cylCenterY;
+    double bufferLen;
+    double capRad;
+    double capLen;
+    double capWallWdth;
+    double resWdth;
+    double capThick;
 
-bool particleInSquareSmall;
-bool particleInSquareLarge;
-bool outerRadius;
-bool inCapTube;
-bool notInPoreEntry;
+    bool particleInSquareSmall;
+    bool particleInSquareLarge;
+    bool outerRadius;
+    bool inCapTube;
+    bool notInPoreEntry;
 
-bool reg1, reg2, reg3, reg4;
+    bool reg1, reg2, reg3, reg4;
 
-double sqEdge;
-double sqInnerEdgeXmin;
-double sqInnerEdgeXmax;
-double sqInnerEdgeYmin;
-double sqInnerEdgeYmax;
+    double sqEdge;
+    double sqInnerEdgeXmin;
+    double sqInnerEdgeXmax;
+    double sqInnerEdgeYmin;
+    double sqInnerEdgeYmax;
 
-double distInLeftWall; 	
-double distInRightWall; 
-double distInBottomWall;
-double distInTopWall;	
+    double distInLeftWall; 	
+    double distInRightWall; 
+    double distInBottomWall;
+    double distInTopWall;	
 
-double capTubeStart;
-double capTubeEnd;
-double penDist;
-double perDist;
+    double capTubeStart;
+    double capTubeEnd;
+    double penDist;
+    double perDist;
 
-double zOld;
-double tApp;
-double tSep;
+    double zOld;
+    double tApp;
+    double tSep;
 
 
-double rInner;
-double rOuter;
-#if PISTON 
-unsigned int pistonParticles;
+    double rInner;
+    double rOuter;
 
-double pistonStart;
-double pistonEnd;
-double forceOnPiston;
-double distInPiston;
+    double BslMin;
+    double BslMax;
+    double BslW;
+    double BslT0;
 
-double pistonArea;
-
-double pistonT0;
-double pistonW; 
-
-double appForce;
-double appPressure;
-double vzPist;
-double vz0Pist;
-double drPist;
-
-double delForce;
-#endif
-
-double BslMin;
-double BslMax;
-double BslW;
-double BslT0;
-
-double sqXmin;
-double sqYmin;
-double sqXmax;
-double sqYmax;
+    double sqXmin;
+    double sqYmin;
+    double sqXmax;
+    double sqYmax;
 #endif
 
 

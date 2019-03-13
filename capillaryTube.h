@@ -1,7 +1,7 @@
 cylCenterX		= boxEdge[x] / 2.;
 cylCenterY		= boxEdge[y] / 2.;
 
-bool wallBelowTube = 0;
+bool wallBelowTube = 1;
 bool wallAboveTube = 1;
 
 capThick		= 2.;
@@ -33,17 +33,22 @@ if ( wallBelowTube ){
             zind = zind_min;
             while( zind < zind_max){
 
+                innerRadius = ( pow( xind - cylCenterX, 2.0 ) + pow( yind - cylCenterY, 2.0 ) >= pow( capRad, 2.0 ) );
+                middleInRadius = ( pow( xind - cylCenterX, 2.0 ) + pow( yind - cylCenterY, 2.0 ) <= pow( capRad + 0.5*capThick, 2.0 ) );
+                middleOutRadius = ( pow( xind - cylCenterX, 2.0 ) + pow( yind - cylCenterY, 2.0 ) >= pow( capRad + 0.5*capThick, 2.0 ) );
                 outerRadius = ( pow( xind - cylCenterX, 2.0 ) + pow( yind - cylCenterY, 2.0 ) <= pow( capRad + capThick, 2.0 ) );
-                innerRadius = ( pow( xind - cylCenterX, 2.0 ) + pow( yind - cylCenterY, 2.0 ) <= pow( capRad, 2.0 ) );
 
-                if ( !(outerRadius) && ( zind > zind_max - 0.5 * capWallWdth ) ){
+                if ( middleOutRadius && ( zind >= zind_max - 0.5 * capWallWdth )  ){
                     // initializing particle radius, mass, position and velocity
-                    particles.push_back({0.5,1.0,{xind, yind, zind},{0., 0., 0.},3});
+                    particles.push_back({1.0,1.0,{xind, yind, zind},{0., 0., 0.},3});
                     pCount++;
                 }
-                else if( !(innerRadius) && ( zind < zind_max - 0.5 * capWallWdth ) ){ 
-                    // initializing particle radius, mass, position and velocity
-                    particles.push_back({0.5,1.0,{xind, yind, zind},{0., 0., 0.},0});
+                else if ( innerRadius && middleInRadius ){
+                    particles.push_back({1.0,1.0,{xind, yind, zind},{0., 0., 0.},0});
+                    pCount++;
+                }
+                else if (middleOutRadius && ( zind <= zind_max - 0.5 * capWallWdth )){
+                    particles.push_back({1.0,1.0,{xind, yind, zind},{0., 0., 0.},0});
                     pCount++;
                 }
 
@@ -147,17 +152,22 @@ if ( wallAboveTube ){
             zind = zind_min;
             while( zind < zind_max){
 
+                innerRadius = ( pow( xind - cylCenterX, 2.0 ) + pow( yind - cylCenterY, 2.0 ) >= pow( capRad, 2.0 ) );
+                middleInRadius = ( pow( xind - cylCenterX, 2.0 ) + pow( yind - cylCenterY, 2.0 ) <= pow( capRad + 0.5*capThick, 2.0 ) );
+                middleOutRadius = ( pow( xind - cylCenterX, 2.0 ) + pow( yind - cylCenterY, 2.0 ) >= pow( capRad + 0.5*capThick, 2.0 ) );
                 outerRadius = ( pow( xind - cylCenterX, 2.0 ) + pow( yind - cylCenterY, 2.0 ) <= pow( capRad + capThick, 2.0 ) );
-                innerRadius = ( pow( xind - cylCenterX, 2.0 ) + pow( yind - cylCenterY, 2.0 ) <= pow( capRad, 2.0 ) );
 
-                if ( !(outerRadius) && ( zind < zind_min + 0.6 * capWallWdth ) ){
+                if ( middleOutRadius && ( zind <= zind_min + 0.5 * capWallWdth )  ){
                     // initializing particle radius, mass, position and velocity
-                    particles.push_back({0.5,1.0,{xind, yind, zind},{0., 0., 0.},3});
+                    particles.push_back({1.0,1.0,{xind, yind, zind},{0., 0., 0.},3});
                     pCount++;
                 }
-                else if ( !(innerRadius) && ( zind > zind_min + 0.6 * capWallWdth ) ){
-                    // initializing particle radius, mass, position and velocity
-                    particles.push_back({0.5,1.0,{xind, yind, zind},{0., 0., 0.},0});
+                else if ( innerRadius && middleInRadius ){
+                    particles.push_back({1.0,1.0,{xind, yind, zind},{0., 0., 0.},0});
+                    pCount++;
+                }
+                else if (middleOutRadius && ( zind >= zind_min + 0.5 * capWallWdth )){
+                    particles.push_back({1.0,1.0,{xind, yind, zind},{0., 0., 0.},0});
                     pCount++;
                 }
 

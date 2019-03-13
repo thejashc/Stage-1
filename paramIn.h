@@ -257,6 +257,10 @@ ecutWCA = -1.0;
 		wallLowPos   = capTubeEnd + capWallWdth;
 
 		#if PISTON
+            delOverTau = 1. / pistonW;
+            expFactor = exp( -delOverTau );
+            avgWindow = 10. * pistonW;
+
 			pistonStart	= wallLowPos + resWdth; 
 			pistonEnd 	= pistonStart + capWallWdth;	// thickness of piston is same as that of the wall adjacent to capillary
 

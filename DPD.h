@@ -27,12 +27,12 @@
 #define LOWER_WALL_ON			0
 #define UPPER_WALL_ON			0
 #define ROUGH_WALL			    0
-#define SPRING_CONNECTED_SLD    0
+#define SPRING_CONNECTED_SLD    1
 #define BCKGRND_CONNECTED_SLD   1
 
-#define CAPILLARY_CYLINDER		0
-#define CAPILLARY_SQUARE		1
-#define PISTON				    0
+#define CAPILLARY_CYLINDER		1
+#define CAPILLARY_SQUARE		0
+#define PISTON				    1
 #define CYLINDER_ARRAY          0
 #define HARD_SPHERES            0
 #define SLIM                    0
@@ -242,21 +242,26 @@ class DPD {
                     bckgIdxStart = pCount;
                     //#include "wettingLiquidInCapillaryTube.h" 
                     //#include "definePiston.h"
-					//#include "capillaryTube.h"
-                    //#include "readPiston.h"
-                    #include "readCapillaryTube.h"
+					#include "capillaryTube.h"
                     bckgIdxEnd = pCount - 1;
-                    ngbrIdxStart = pCount;
-                    #include "singleLayerWall.h"
-                    ngbrIdxEnd = pCount;
+
+                    //#include "readPiston.h"
+                    //#include "readCapillaryTube.h"
+                    //bckgIdxEnd = pCount - 1;
                     #if PISTON
+                        ngbrIdxStart = pCount;
+                        #include "singleLayerWall.h"
+                        ngbrIdxEnd = pCount;
+
                         pistonStartIndex = ngbrIdxStart;
                         pistonEndIndex = ngbrIdxEnd;
                         pistonParticles = ngbrIdxEnd - ngbrIdxStart + 1;
                         pistonForce = -appPressure * pistonArea ; 
                     #endif
-					// #include "reservoir.h"
-                    //#include "nonWettingReservoir.h" 
+
+                    #include "cylindricalFluids.h"
+					//#include "reservoir.h"
+                    #include "nonWettingReservoir.h" 
                     //#include "separateReservoir.h"
                     //
 					//#include "mixedReservoir.h"
@@ -279,6 +284,15 @@ class DPD {
 				#if CAPILLARY_SQUARE
 					//#include "squarecapillaryTube.h"
                     #include "rectangularCapillaryTube.h"
+                    ngbrIdxStart = particles.size();              // no of particles present + 1 -- particles.size() takes care of that
+                    #include "singleLayerWall.h"
+                    ngbrIdxEnd = particles.size() - 1;
+                    #if PISTON
+                        pistonStartIndex = ngbrIdxStart;
+                        pistonEndIndex = ngbrIdxEnd;
+                        pistonParticles = ngbrIdxEnd - ngbrIdxStart + 1;
+                        pistonForce = -appPressure * pistonArea ; 
+                    #endif
 					#include "reservoir.h"
                 #endif
 
@@ -1140,19 +1154,23 @@ class DPD {
             }
             */
 
-          #include "penetrationIntoSquare.h"  // background repulsive potential
+          #if CAPILLARY_SQUARE
+              #include "penetrationIntoSquare.h"  // background repulsive potential
+          #endif
 
+          /*
           #if PISTON
             //if ( ( step % saveCount == 0 )  && ( step > pistonT0 )  ){
             if ( step % saveCount == 0 ){
 
                 forceOnPiston /= saveCount;
-
+            
                 forceOnPistonPerParticle = ( pistonForce - 0.01*( forceOnPiston - pistonForce ) ) / pistonParticles;
 
                 forceOnPiston = 0.;
             }
           #endif   
+          */
 
           i = 0;
           while ( i < npart ){
@@ -1164,10 +1182,8 @@ class DPD {
                 particles[i].w_old = particles[i].w;
                    
                 #if PISTON
-                if ( i >= pistonStartIndex && i <= pistonEndIndex ){
+                if ( i >= pistonStartIndex && i <= pistonEndIndex )
                     particles[i].fext.Z = forceOnPistonPerParticle;     // adding the force deficit per particle
-                    // particles[i].fext.Z = pistonForce;     // adding the force deficit per particle
-                }
                 #endif
 
                 // update velocities (mid-step)
@@ -1200,7 +1216,8 @@ class DPD {
 
                 #if PISTON
                     if ( i >= pistonStartIndex && i <= pistonEndIndex ){
-                        forceOnPiston += particles[i].fC.Z;				                    // z-component of force on the piston due to fluid, the conservative force cancels out because internal forces
+                        /*forceOnPiston += particles[i].fC.Z;*/				                    // z-component of force on the piston due to fluid, the conservative force cancels out because internal forces
+                        forceOnPistonInst += particles[i].fC.Z + particles[i].fR.Z + particles[i].fD.Z;	// z-component of force on the piston due to fluid, the conservative force cancels out because internal forces
                     }
 
                     /*
@@ -1220,7 +1237,49 @@ class DPD {
                 i++;
           }
 
-            //std::cout << step << "\t\t\t" << (forceOnPistonPerParticle*pistonParticles)/pistonArea << "\t\t\t" << (forceOnPiston/pistonArea) << std::endl;
+            #if PISTON
+
+                /*
+                std::cout << pistonT0 << ", " 
+                          << avgWindow << ", " 
+                          << pistonW << ", " 
+                          << expFactor << ", "
+                          << delOverTau << ", " 
+                          << pistonForce << ", "
+                          << pistonParticles << std::endl;*/
+
+                if ( step <= pistonT0 - avgWindow ){
+                    //forceOnPistonPerParticle = pistonForce / pistonParticles;
+                    forceOnPistonPerParticle = 0.;
+                }
+                else if ( step > pistonT0 - avgWindow &&  step < pistonT0 ){
+
+                    forceOnPistonPerParticle = pistonForce / pistonParticles;
+                    // std::cout << step << "\t\t\t" << forceOnPistonInst << "\t\t\t" << exp( -( pistonT0 - step ) / pistonW ) << std::endl;
+                    forceOnPistonCumulative += forceOnPistonInst * exp( -( pistonT0 - step ) / pistonW );
+                }
+                else if ( step == pistonT0 ) {
+                    forceOnPistonPerParticle = pistonForce / pistonParticles;
+
+                    // std::cout << step << "\t\t\t" << forceOnPistonInst << "\t\t\t" << exp( -( pistonT0 - step ) / pistonW ) << std::endl;
+                    forceOnPistonCumulative += forceOnPistonInst;       // basically, the exponential factor becomes one at step = tStart
+                    fOld = forceOnPistonCumulative/pistonW; 
+                }           // pistonW is the normalization factor
+                else if ( step > pistonT0 ) {
+                    fNew = expFactor * fOld  +  delOverTau * forceOnPistonInst;   // F(t) = expFactor * F(t-1) + delOverTau * f(t), F(4001) = expFactor * F(4000) + delOvertau * f(4001) 
+                    // fOld = fNew;        // swap values, for example : Fold = F(4001). 
+
+                    std::cout << forceOnPistonInst << "\t\t\t" << fNew << std::endl;
+                    // forceOnPistonPerParticle = -fNew / pistonParticles; 
+                    forceOnPistonPerParticle = pistonForce / pistonParticles;
+                }
+
+                forceOnPistonInst = 0.;
+            #endif
+
+            //std::cout << step << "\t\t\t" << (forceOnPistonPerParticle*pistonParticles)/pistonArea << std::endl;
+            // std::cout << step << "\t\t\t" << fNew << "\t\t\t" << (forceOnPistonPerParticle*pistonParticles)/pistonArea << std::endl;
+
 
 			// calculation of  pressure tensor 
 			// #include "pTensCalc.h"
@@ -1924,8 +1983,8 @@ class DPD {
 									#if PISTON
                                     enStats     << std::setw(20) << std::setprecision(15) << pot_en << "\t" 
                                                 << std::setw(20) << std::setprecision(15) << kin_en << "\t" 
-                                                << std::setw(20) << std::setprecision(15) << tot_en << "\t"
-                                                << std::setw(20) << std::setprecision(15) << forceOnPiston << std::endl;
+                                                << std::setw(20) << std::setprecision(15) << tot_en << "\t" << std::endl;
+                                                // << std::setw(20) << std::setprecision(15) << forceOnPiston << std::endl;
                                     #else 
                                        enStats     << std::setw(20) << std::setprecision(15) << pot_en << "\t" 
                                                     << std::setw(20) << std::setprecision(15) << kin_en << "\t" 

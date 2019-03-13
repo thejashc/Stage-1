@@ -1,5 +1,5 @@
 double slitWidth = 5.;
-double slitHeight = 50.;
+double slitHeight = 5.;
 
 // defining the limits in the x direction
 double xMin1 = 0.5 * boxEdge[x] - 0.5 * slitWidth - capWallWdth;        // biggest rectangle -- Region 1

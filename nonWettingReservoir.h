@@ -1,13 +1,13 @@
 /**************************** ABOVE RESERVOIR **************************************/
-// Set max and min dimensions of boxy
-xind_min = 0.;
-yind_min = 0.;
-zind_min = bufferLen + capLen + capWallWdth + wettingLiquidLength + 2.5 * rcutoff;
+xind_min = 0.01;
+yind_min = 0.01;
+zind_min = resCOMZ - resWdth * 0.5;
+
 xind_max = boxEdge[x];
 yind_max = boxEdge[y];
-zind_max = zind_min + nonWettingLiquidLength;
+zind_max = resCOMZ + resWdth * 0.5; 
 
-pCount	 = 0;
+pCount = 0;
 
 simProg << "***************************************************" << std::endl;
 simProg << "Started initialization of the non-wetting liquid above the reservoir" << std::endl;
@@ -29,7 +29,7 @@ while ( xind < xind_max){
 		while( zind < zind_max){
 
 				// initializing particle radius, mass, position and velocity
-				particles.push_back({0.5,1.0,{xind, yind, zind},{0., 0., 0.},2});
+				particles.push_back({1.0,1.0,{xind, yind, zind},{0., 0., resCOMVel},2});
 				pCount++;
 
 			// update zind
