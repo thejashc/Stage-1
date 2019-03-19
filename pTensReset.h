@@ -52,3 +52,15 @@ pRandom[1][2] = 0.;
 pRandom[2][0] = 0.;
 pRandom[2][1] = 0.;
 pRandom[2][2] = 0.;
+
+#if HARD_SPHERES
+    pBondInteractions[0][0] = 0.;
+    pBondInteractions[0][1] = 0.;
+    pBondInteractions[0][2] = 0.;
+    pBondInteractions[1][0] = 0.;
+    pBondInteractions[1][1] = 0.;
+    pBondInteractions[1][2] = 0.;
+    pBondInteractions[2][0] = 0.;
+    pBondInteractions[2][1] = 0.;
+    pBondInteractions[2][2] = 0.;
+#endif
