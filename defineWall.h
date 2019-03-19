@@ -7,18 +7,20 @@ yind_max = boxEdge[y];
 
 aCube = pow( 1. / initRho, 1./3. );
 #if LOWER_WALL_ON 
-    /*zindLW_max = wallHeight;
-    zindLW_min = 0.01; */
+    zindLW_max = wallHeight;
+    zindLW_min = 0.01; 
+    /*
     zindLW_max = 0.5 * boxEdge[z] + wallHeight * 0.5;
     zindLW_min = 0.5 * boxEdge[z] - wallHeight * 0.5; 
+    */
 #endif 
 #if UPPER_WALL_ON 
+    /*
     zindUW_max = 0.5 * boxEdge[z] + wallHeight * 0.5;
     zindUW_min = 0.5 * boxEdge[z] - wallHeight * 0.5; 
-    /*
+    */
     zindUW_min = boxEdge[z] - wallHeight; 
     zindUW_max = boxEdge[z]; 
-    */
 #endif 
 
 xind = xind_min;
