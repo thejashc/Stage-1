@@ -34,7 +34,6 @@ if ( NColloids != 0 ){
         readColloidPos >> colloidPos[i][0];
         readColloidPos >> colloidPos[i][1];
         readColloidPos >> colloidPos[i][2];
-
     }
 
     readColloidPos.close();

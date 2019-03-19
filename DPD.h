@@ -28,13 +28,13 @@
 #define UPPER_WALL_ON			0
 #define ROUGH_WALL			    0
 #define SPRING_CONNECTED_SLD    1
-#define BCKGRND_CONNECTED_SLD   1
+#define BCKGRND_CONNECTED_SLD   0
 
-#define CAPILLARY_CYLINDER		1
+#define CAPILLARY_CYLINDER		0
 #define CAPILLARY_SQUARE		0
-#define PISTON				    1
+#define PISTON				    0
 #define CYLINDER_ARRAY          0
-#define HARD_SPHERES            0
+#define HARD_SPHERES            1
 #define SLIM                    0
 #define RANDOM_FIBRE_BUNDLE     0
 #define READ_FROM_FILE          0
@@ -46,7 +46,7 @@
 #define SACF				    0
 
 // LEES-EDWARDS BOUNDARY CONDITION
-#define LEES_EDWARDS_BC			0
+#define LEES_EDWARDS_BC			1
 
 // DENSITY CALCULATION
 #define DENS_EXACT			    0    
@@ -142,11 +142,8 @@ class DPD {
 			paraInfo.close();
 
 			simProg << " ********************* STARTING SIMULATION ************************* " << std::endl;	
-            /*
-            for ( i = 1; i <= noOfParticlesMoving ; ++i )
-                simProg << " movingParticles[ " << i << "] = " << movingParticles[i] << std::endl;
-            */
 			while (step<= stepMax) {
+
 
 				createGridList();
 				#if DENS_EXACT
@@ -277,16 +274,16 @@ class DPD {
                 #endif
 
 				#if PLANAR_SLAB
-					//#include "planarSlabInit.h" 
-                    #include "readPlanarSlabInit.h"
+					#include "planarSlabInit.h" 
+                    //#include "readPlanarSlabInit.h"
                 #endif
 
 				#if CAPILLARY_SQUARE
 					//#include "squarecapillaryTube.h"
                     #include "rectangularCapillaryTube.h"
-                    ngbrIdxStart = particles.size();              // no of particles present + 1 -- particles.size() takes care of that
-                    #include "singleLayerWall.h"
-                    ngbrIdxEnd = particles.size() - 1;
+                    //ngbrIdxStart = particles.size();              // no of particles present + 1 -- particles.size() takes care of that
+                    //#include "singleLayerWall.h"
+                    //ngbrIdxEnd = particles.size() - 1;
                     #if PISTON
                         pistonStartIndex = ngbrIdxStart;
                         pistonEndIndex = ngbrIdxEnd;
@@ -301,7 +298,7 @@ class DPD {
                     #include "ellipseArray.h"
                 #endif
                 #if HARD_SPHERES
-                    // #include "sphericalColloids.h"
+                    #include "sphericalColloids.h"
                 #endif
                 #if SLIM
                     //#include "definePiston.h"
@@ -323,8 +320,6 @@ class DPD {
                     #include "readConfigFromFile.h"
                     bckgIdxEnd = npart - 1;         // this is a temporary workaround
 				#endif
-            #endif
-            /*
 			#else
 				#if SPHERICAL_DROPLET 
 					#include "sphDropInit.h"
@@ -340,7 +335,6 @@ class DPD {
 					#include "restartConfig.h"
 				#endif
 			#endif // WALL_ON
-            */
 
 			// Initialize the gR_nCount array
             gR_nCount.resize( gR_nElem );
@@ -428,6 +422,8 @@ class DPD {
 
             //fluidEndIndex = 0;
            // solidEndIndex = 0;
+            simProg << "***************************************************" << std::endl;
+            simProg << "Counting total particles" << std::endl;
 
 			for ( i = 0; i < particles.size(); ++i ){
                 if ( particles[i].type == 1 || particles[i].type == 2 ){
@@ -485,7 +481,9 @@ class DPD {
                 //simProg << pistonEndIndex << " : end index of piston particles \n" << std::endl; 
             #endif
 
-            simProg << fluidCount + solidCount << " total particles indexed \n" << std::endl;
+            simProg << fluidCount << " fluid particles indexed" << std::endl;
+            simProg << solidCount << " solid particles indexed" << std::endl;
+            simProg << fluidCount + solidCount << " total particles indexed" << std::endl;
 
 			#if WALL_ON
                 /*
@@ -512,12 +510,13 @@ class DPD {
                 */
 
                 #if SPRING_CONNECTED_SLD
+                simProg << "***************************************************" << std::endl;
+                simProg << "Spring Connected Solid Structures" << std::endl;
 				idx = 0;
                 ngbrIdxParticles=0;
                 i = solid_index[idx];
 
                 // simProg << " i = "  << i << ", ngbrIdxStart= " << ngbrIdxStart << " , ngbrIdxEnd " << ngbrIdxEnd << std::endl;
-
 
                     while( idx < solidCount ){
 
@@ -525,16 +524,11 @@ class DPD {
                             particles[i].bondIndex[0] = 0;
                             ngbrIdxParticles++;
                         }
-                        else{
-                            particles[i].r0 = particles[i].r;
-                            bckgIdxParticles++;
-                        }
 
                         idx++;
                         i = solid_index[idx];
                     }
                     simProg << "\n" << ngbrIdxParticles << " solid particles from " << ngbrIdxStart << " and " << ngbrIdxEnd  << " have their bond indices set to 0" << std::endl;
-                    simProg << "\n" << ngbrIdxParticles + bckgIdxParticles << " solid particles in total" << std::endl;
 
                     #if RANDOM_FIBRE_BUNDLE
                         //#include "springConnectionsFibre.h"
@@ -547,6 +541,8 @@ class DPD {
                         */
                 #endif
                 #if BCKGRND_CONNECTED_SLD
+                simProg << "***************************************************" << std::endl;
+                simProg << "Background Connected Solid Structures" << std::endl;
 				idx = 0;
                 bckgIdxParticles=0;
                 i = solid_index[idx];
@@ -566,7 +562,6 @@ class DPD {
                         }
                     #endif
                     simProg << "\n" << bckgIdxParticles << " solid particles from " << bckgIdxStart << " and " << bckgIdxEnd  << " have their positions attached to their initial position" << std::endl;
-                    simProg << "\n" << ngbrIdxParticles + bckgIdxParticles << " solid particles in total" << std::endl;
                 #endif
 			#endif // WALL_ON
 			
@@ -746,12 +741,12 @@ class DPD {
             Brep[1][0] = repParam;  Aatt[1][0] = Aatt[0][1];
             Brep[1][1] = repParam;  Aatt[1][1] = All1;
             Brep[1][2] = repParam;  Aatt[1][2] = All12;
-            Brep[1][3] = repParam;  Aatt[1][3] = All12;
+            Brep[1][3] = repParam;  Aatt[1][3] = Asl1;     // Interaction of liquid 1 with both 0 and 3 is same
 
-            Brep[2][0] = repParam;  Aatt[2][0] = Aatt[0][2];
+            Brep[2][0] = repParam;  Aatt[2][0] = Aatt[0][2];    
             Brep[2][1] = repParam;  Aatt[2][1] = Aatt[1][2];
             Brep[2][2] = repParam2; Aatt[2][2] = All2;
-            Brep[2][3] = repParam;  Aatt[2][3] = All2;
+            Brep[2][3] = repParam;  Aatt[2][3] = Asl2;   // Interaction of liquid 2 with both 0 and 3 is same
 
             Brep[3][0] = repParam;  Aatt[3][0] = Ass;
             Brep[3][1] = repParam;  Aatt[3][1] = Asl1;
@@ -1124,39 +1119,11 @@ class DPD {
                 #include "backgroundForceOnly.h"  
             #endif
 
-            //#if BCKGRND_CONNECTED_SLD
-            //    #include "fHarmonicNew.h"
-            //#endif
-
-            /*
-            idx=1;
-            while( idx <= noOfParticlesMoving ){
-
-                i = movingParticles[idx];
-
-                // store velocity (mid-step)
-                particles[i].w_old = particles[i].w;
-                    
-                // update velocities (mid-step)
-                particles[i].w += ( particles[i].fC         + 
-                                      particles[i].fD       + 
-                                      particles[i].fR       + 
-                                      particles[i].fHarmonic )*( dt/particles[i].m );
-                                    // particles[i].fext     +
-
-                // update position (integral time step) using the velocities (mid-step)
-                particles[i].r += particles[i].w*dt;				
-
-                // implement periodic boundary condition 
-                #include "pbcNew.h"
-
-                idx++;
-            }
-            */
-
+          /*
           #if CAPILLARY_SQUARE
               #include "penetrationIntoSquare.h"  // background repulsive potential
           #endif
+          */
 
           /*
           #if PISTON
@@ -1197,11 +1164,15 @@ class DPD {
                 particles[i].r += particles[i].w*dt;				
 
                 // implement periodic boundary condition 
-                //#include "pbcNew.h"
-                #include "pbcNewReflecting.h"
+                #include "pbcNew.h"
+                //#include "pbcNewReflecting.h"
 
                 // calculate velocity (integral time step)
                 particles[i].v = 0.5*( particles[i].w_old + particles[i].w );
+
+                momX += particles[i].w.X;
+                momY += particles[i].w.Y;
+                momZ += particles[i].w.Z;
 
                 #if HARD_SPHERES 
                     /* WARNING : THIS WORKS ( MAKES SENSE ) ONLY FOR A SINGLE COLLOIDAL PARTICLE IN  A BATH OF FLUID ONLY*/
@@ -1231,7 +1202,7 @@ class DPD {
                 #endif												
 
                 /* to be sorted out : calculate only for fluid particles */
-                /*#include "pNonIdealKinCalc.h"	*/
+                #include "pNonIdealKinCalc.h"
 	
                 // update count for fluid particles
                 i++;
@@ -1282,7 +1253,7 @@ class DPD {
 
 
 			// calculation of  pressure tensor 
-			// #include "pTensCalc.h"
+			#include "pTensCalc.h"
 
             #if HARD_SPHERES
                 // #include "colloidBoxCrossing.h"
@@ -1387,9 +1358,11 @@ class DPD {
 			pNonIdeal_temp[0][0] = 0.;
 			pNonIdeal_temp[0][1] = 0.;
 			pNonIdeal_temp[0][2] = 0.;
+
 			pNonIdeal_temp[1][0] = 0.;
 			pNonIdeal_temp[1][1] = 0.;
 			pNonIdeal_temp[1][2] = 0.;
+
 			pNonIdeal_temp[2][0] = 0.;
 			pNonIdeal_temp[2][1] = 0.;
 			pNonIdeal_temp[2][2] = 0.;
@@ -1397,36 +1370,56 @@ class DPD {
 			pNonIdealKin_temp[0][0] = 0.;
 			pNonIdealKin_temp[0][1] = 0.;
 			pNonIdealKin_temp[0][2] = 0.;
+
 			pNonIdealKin_temp[1][0] = 0.;
 			pNonIdealKin_temp[1][1] = 0.;
 			pNonIdealKin_temp[1][2] = 0.;
+
 			pNonIdealKin_temp[2][0] = 0.;
 			pNonIdealKin_temp[2][1] = 0.;
 			pNonIdealKin_temp[2][2] = 0.;
 
 			#if RANDOM_DISSIPATIVE
-			// Dissipative
-			pDissipative_temp[0][0] = 0.;
-			pDissipative_temp[0][1] = 0.;
-			pDissipative_temp[0][2] = 0.;
-			pDissipative_temp[1][0] = 0.;
-			pDissipative_temp[1][1] = 0.;
-			pDissipative_temp[1][2] = 0.;
-			pDissipative_temp[2][0] = 0.;
-			pDissipative_temp[2][1] = 0.;
-			pDissipative_temp[2][2] = 0.;
+                // Dissipative
+                pDissipative_temp[0][0] = 0.;
+                pDissipative_temp[0][1] = 0.;
+                pDissipative_temp[0][2] = 0.;
 
-			// Random
-			pRandom_temp[0][0] = 0.;
-			pRandom_temp[0][1] = 0.;
-			pRandom_temp[0][2] = 0.;
-			pRandom_temp[1][0] = 0.;
-			pRandom_temp[1][1] = 0.;
-			pRandom_temp[1][2] = 0.;
-			pRandom_temp[2][0] = 0.;
-			pRandom_temp[2][1] = 0.;
-			pRandom_temp[2][2] = 0.;
+                pDissipative_temp[1][0] = 0.;
+                pDissipative_temp[1][1] = 0.;
+                pDissipative_temp[1][2] = 0.;
+
+                pDissipative_temp[2][0] = 0.;
+                pDissipative_temp[2][1] = 0.;
+                pDissipative_temp[2][2] = 0.;
+
+                // Random
+                pRandom_temp[0][0] = 0.;
+                pRandom_temp[0][1] = 0.;
+                pRandom_temp[0][2] = 0.;
+
+                pRandom_temp[1][0] = 0.;
+                pRandom_temp[1][1] = 0.;
+                pRandom_temp[1][2] = 0.;
+
+                pRandom_temp[2][0] = 0.;
+                pRandom_temp[2][1] = 0.;
+                pRandom_temp[2][2] = 0.;
 			#endif
+
+            #if HARD_SPHERES
+                pBondInteractions_temp[0][0] = 0.;
+                pBondInteractions_temp[0][1] = 0.;
+                pBondInteractions_temp[0][2] = 0.;
+
+                pBondInteractions_temp[1][0] = 0.;
+                pBondInteractions_temp[1][1] = 0.;
+                pBondInteractions_temp[1][2] = 0.;
+
+                pBondInteractions_temp[2][0] = 0.;
+                pBondInteractions_temp[2][1] = 0.;
+                pBondInteractions_temp[2][2] = 0.;
+            #endif
 
             /*
             #if CAPILLARY_CYLINDER || CAPILLARY_SQUARE || CYLINDER_ARRAY
@@ -1904,6 +1897,8 @@ class DPD {
 
 			// separate module for pressure -- requires better averaging
 			if ( pcounter >= psaveCount ) {
+
+                // std::cout << "pCounter = " << pcounter << ", at step = " << step << std::endl;
 				
 				// average and reset the pTensor
 				#include "pTensAverage.h"
@@ -1957,7 +1952,24 @@ class DPD {
 		        			<<  pRandom[1][2]                << " "
 			        		<<  pRandom[2][0]                << " "
 		        			<<  pRandom[2][1]                << " "
-			        		<<  pRandom[2][2]                << std::endl;
+                            #if HARD_SPHERES
+                                <<  pRandom[2][2]                << " "
+
+                                <<  pBondInteractions[0][0]                << " " 
+                                <<  pBondInteractions[0][1]                << " " 
+                                <<  pBondInteractions[0][2]                << " "
+
+                                <<  pBondInteractions[1][0]                << " "
+                                <<  pBondInteractions[1][1]                << " "
+                                <<  pBondInteractions[1][2]                << " "
+
+                                <<  pBondInteractions[2][0]                << " "
+                                <<  pBondInteractions[2][1]                << " "
+                                <<  pBondInteractions[2][2]                << std::endl;
+
+                            #else
+                                <<  pRandom[2][2]                << std::endl;
+                            #endif
 						
 				#include "pTensReset.h"
 
