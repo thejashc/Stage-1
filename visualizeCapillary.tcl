@@ -20,8 +20,9 @@ set incrFile [expr {$delta - 1}]
 # drawing the simulation box
 draw color white
 
-set cell [pbc set {$maxx $maxy $maxz} -all]
-pbc box -center origin -shiftcenter {$cx $cy $cz} -color white -width 1
+#set cell [pbc set {$maxx $maxy $maxz} -all]
+#pbc box -center origin -shiftcenter {$cx $cy $cz} -color white -width 1
+
 
 puts "the simulation box is drawn"
 
@@ -32,6 +33,8 @@ for {set x $startFile} {$x < $endFile} {incr x} {
 
 #mol new /storage/thejas/stage1/code/data/XYZ1.xyz
 
+pbc set {20 20 20} -all
+draw pbcbox -width 5
 puts "the molecule for this problem is 0"
 
 # type H - fluid
