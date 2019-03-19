@@ -184,6 +184,8 @@ readParam >> emptyLine;			readParam.ignore(256,'\n');			    // L62
 	readParam.ignore(256, '\n');
 	readParam.ignore(256, '\n');
 	readParam.ignore(256, '\n');
+	readParam.ignore(256, '\n');
+	readParam.ignore(256, '\n');
 #endif
 
 readParam >> emptyLine;			        readParam.ignore(256,'\n');		// L74
