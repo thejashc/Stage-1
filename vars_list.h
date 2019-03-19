@@ -387,6 +387,8 @@ double epsilonWCA;
 
 #if HARD_SPHERES 
 unsigned int NColloids;
+double pBondInteractions_temp[3][3];		// Interactions due to springs
+double pBondInteractions[3][3];		        // Interactions due to springs
 #endif
 
 double r2i;
