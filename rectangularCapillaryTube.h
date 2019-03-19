@@ -1,5 +1,5 @@
 double slitWidth = 5.;
-double slitHeight = 5.;
+double slitHeight = 10.;
 
 // defining the limits in the x direction
 double xMin1 = 0.5 * boxEdge[x] - 0.5 * slitWidth - capWallWdth;        // biggest rectangle -- Region 1
@@ -95,7 +95,7 @@ while ( zind < zind_max ){
             region3 = ( xind >= xMin3 ) && ( xind <= xMax3 ) && ( yind >= yMin3 ) && ( yind <= yMax3 );
 
             if ( region1 && !(region2) ){
-                particles.push_back( {1.0, 1.0, {xind, yind, zind}, {0., 0., 0.}, 0} );
+                particles.push_back( {1.0, 1.0, {xind, yind, zind}, {0., 0., 0.}, 3} );
                 pCount++;
 
                 if ( pCount != 0 ){
@@ -106,13 +106,13 @@ while ( zind < zind_max ){
                     xindReflect = 0.5 * boxEdge[x] - delX;
                     yindReflect = 0.5 * boxEdge[y] - delY;
 
-                    particles.push_back( {1.0, 1.0, {xind, yindReflect, zind}, {0., 0., 0.}, 0} );
+                    particles.push_back( {1.0, 1.0, {xind, yindReflect, zind}, {0., 0., 0.}, 3} );
                     pCount++;
 
-                    particles.push_back( {1.0, 1.0, {xindReflect, yind, zind}, {0., 0., 0.}, 0} );
+                    particles.push_back( {1.0, 1.0, {xindReflect, yind, zind}, {0., 0., 0.}, 3} );
                     pCount++;
 
-                    particles.push_back( {1.0, 1.0, {xindReflect, yindReflect, zind}, {0., 0., 0.}, 0} );
+                    particles.push_back( {1.0, 1.0, {xindReflect, yindReflect, zind}, {0., 0., 0.}, 3} );
                     pCount++;
                 }
             } // should entirely be type 3 -- if not background potential
@@ -197,29 +197,29 @@ while ( xind < xind_max){
             if ( zind < zind_min + 0.5 * entranceWallWdth ){
 
                 if ( !region1 ){
-                    particles.push_back({1.0,1.0,{xind, yind, zind},{0., 0., 0.},0});
+                    particles.push_back({1.0,1.0,{xind, yind, zind},{0., 0., 0.},3});
                     pCount++;
 
-                    particles.push_back( {1.0, 1.0, {xind, yindReflect, zind}, {0., 0., 0.}, 0} );
+                    particles.push_back( {1.0, 1.0, {xind, yindReflect, zind}, {0., 0., 0.}, 3} );
                     pCount++;
 
-                    particles.push_back( {1.0, 1.0, {xindReflect, yind, zind}, {0., 0., 0.}, 0} );
+                    particles.push_back( {1.0, 1.0, {xindReflect, yind, zind}, {0., 0., 0.}, 3} );
                     pCount++;
 
-                    particles.push_back( {1.0, 1.0, {xindReflect, yindReflect, zind}, {0., 0., 0.}, 0} );
+                    particles.push_back( {1.0, 1.0, {xindReflect, yindReflect, zind}, {0., 0., 0.}, 3} );
                     pCount++;
                 } // should entirely be typ 3 -- if not background potential
                 else if ( region1 && !region2 ){
-                    particles.push_back({1.0,1.0,{xind, yind, zind},{0., 0., 0.},0});
+                    particles.push_back({1.0,1.0,{xind, yind, zind},{0., 0., 0.},3});
                     pCount++;
 
-                    particles.push_back( {1.0, 1.0, {xind, yindReflect, zind}, {0., 0., 0.}, 0} );
+                    particles.push_back( {1.0, 1.0, {xind, yindReflect, zind}, {0., 0., 0.}, 3} );
                     pCount++;
 
-                    particles.push_back( {1.0, 1.0, {xindReflect, yind, zind}, {0., 0., 0.}, 0} );
+                    particles.push_back( {1.0, 1.0, {xindReflect, yind, zind}, {0., 0., 0.}, 3} );
                     pCount++;
 
-                    particles.push_back( {1.0, 1.0, {xindReflect, yindReflect, zind}, {0., 0., 0.}, 0} );
+                    particles.push_back( {1.0, 1.0, {xindReflect, yindReflect, zind}, {0., 0., 0.}, 3} );
                     pCount++;
 
                 }// should entirely be typ 3 -- if not background potential
