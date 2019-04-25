@@ -21,6 +21,8 @@ simProg << "The maximum x-coord of wall is: "<< xind_max << std::endl;
 simProg << "The maximum y-coord of wall is: "<< yind_max << std::endl;
 simProg << "The maximum z-coord of wall is: "<< zind_max << std::endl;
 
+aCube 		= pow( 1. / initRho, 1./3. );
+
 xind = xind_min;
 // Particle position intialization in a crystal structure 
 while ( xind < xind_max){
@@ -33,7 +35,7 @@ while ( xind < xind_max){
             pCount++;
 
             // update zind
-            zind += 2. * aCube * rcutoff;
+            zind += 2.0 * aCube * rcutoff;
 
         } // end of zind
         yind += aCube * rcutoff;
@@ -53,7 +55,7 @@ while ( xind < xind_max){
             pCount++;
 
             // update zind
-            zind += 2. * aCube * rcutoff;
+            zind += 2.0 * aCube * rcutoff;
 
         } // end of zind
         yind += aCube * rcutoff;
@@ -63,3 +65,8 @@ while ( xind < xind_max){
 
 simProg << "finished initialization of  " << pCount << " particles of the wetting liquid" << std::endl;
 simProg << "***************************************************" << std::endl;
+
+double ratio_HtoC = 0.5;
+unsigned int typeHParticles = ratio_HtoC * pCount;
+
+simProg << typeHParticles  << " of the total of  " <<  pCount << " fluid particles are converted to type H" <<  std::endl;

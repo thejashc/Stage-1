@@ -1,5 +1,6 @@
 //sprintf(posfname, "./restart/frozenParticlePositions/Asl_m_%d_%d_XYZ_Init.xyz", int(-Asl2), int(-Asl1) );
-sprintf(posfname, "./readConfig/solids/CAPILLARY_CYLINDER/Lx_%d_Ly_%d_capLen_%d_capRad_%d_r0.xyz", int(boxEdge[x]), int(boxEdge[y]), int(capLen), int(capRad) );
+//sprintf(posfname, "./readConfig/solids/CAPILLARY_CYLINDER/Lx_%d_Ly_%d_capLen_%d_capRad_%d_r0.xyz", int(boxEdge[x]), int(boxEdge[y]), int(capLen), int(capRad) );
+sprintf(posfname, "./restart/capImb/XYZ1.xyz");
 
 readConfig.open(posfname, std::ifstream::in);
 

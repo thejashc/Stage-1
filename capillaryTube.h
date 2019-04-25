@@ -1,7 +1,7 @@
 cylCenterX		= boxEdge[x] / 2.;
 cylCenterY		= boxEdge[y] / 2.;
 
-bool wallBelowTube = 1;
+bool wallBelowTube = 0;
 bool wallAboveTube = 1;
 
 capThick		= 2.;
@@ -128,7 +128,7 @@ if ( wallAboveTube ){
     // Set max and min dimensions of boxy
     xind_min = 0.01;
     yind_min = 0.01;
-    zind_min = bufferLen + capLen;
+    zind_min = zind;      // startOff exactly where the previous z ends
     xind_max = boxEdge[x];
     yind_max = boxEdge[y];
     zind_max = zind_min + capWallWdth;

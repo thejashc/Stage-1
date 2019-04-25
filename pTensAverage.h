@@ -64,14 +64,16 @@ pRandom[2][1] /= ( pcounter * volume );
 pRandom[2][2] /= ( pcounter * volume );
 
 // pBondInteractions 
-pBondInteractions[0][0] /= ( pcounter * volume );
-pBondInteractions[0][1] /= ( pcounter * volume );
-pBondInteractions[0][2] /= ( pcounter * volume );
+#if HARD_SPHERES
+    pBondInteractions[0][0] /= ( pcounter * volume );
+    pBondInteractions[0][1] /= ( pcounter * volume );
+    pBondInteractions[0][2] /= ( pcounter * volume );
 
-pBondInteractions[1][0] /= ( pcounter * volume );
-pBondInteractions[1][1] /= ( pcounter * volume );
-pBondInteractions[1][2] /= ( pcounter * volume );
+    pBondInteractions[1][0] /= ( pcounter * volume );
+    pBondInteractions[1][1] /= ( pcounter * volume );
+    pBondInteractions[1][2] /= ( pcounter * volume );
 
-pBondInteractions[2][0] /= ( pcounter * volume );
-pBondInteractions[2][1] /= ( pcounter * volume );
-pBondInteractions[2][2] /= ( pcounter * volume );
+    pBondInteractions[2][0] /= ( pcounter * volume );
+    pBondInteractions[2][1] /= ( pcounter * volume );
+    pBondInteractions[2][2] /= ( pcounter * volume );
+#endif

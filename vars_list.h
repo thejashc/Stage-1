@@ -43,6 +43,7 @@ double wallHeight;
 double kBT;				// DPD fluid temperature
 double noise, friction; std::vector<std::vector<double>> sigma, gamma; // noise and friction  
 double noise2, friction2, noise12, friction12; // noise and friction for 2nd fluid if MC on
+double orig_noise, orig_friction, orig_noise2, orig_friction2, orig_noise12, orig_friction12;
 double dim;				// dimension of system
 
 double dt, inv_sqrt_dt, half_dt, half_dt_sqr, sqrtTwelve;				// time step, sqrt of inverse of time step, half of dt, square of half of dt

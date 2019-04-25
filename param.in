@@ -1,6 +1,6 @@
-boxEdgeX            20.0	# box dimensions
+boxEdgeX            40.0	# box dimensions
 boxEdgeY            20.0
-boxEdgeZ            20.0
+boxEdgeZ            10.0
 initRho             6.00
 #
 Bll1                 25.0   # interaction paramters
@@ -10,14 +10,14 @@ All2                -40.0
 All12               -40.0
 Ass                 -40.0
 Asl1                -40.0
-Asl2                -10.0
+Asl2                -25.0
 rcutoff             1.0		
 rd_cutoff           0.75
 #
 kWallBckg           12.5        # WALL_PARAMETERS 
 kWallNgbr           3000.0
 wallPenetration     0.25
-initWallRho         5.00
+initWallRho         6.00
 wallHeight          2.0			# WALL_ON
 #
 kBT                 1.0 		# temperature	
@@ -27,11 +27,11 @@ noise12             6.0
 dim                 3			# dimensions
 #
 dt                  0.01        # time parameters	
-stepMax             5000000
-rstrtFWrtFreq       10000
-saveCount           500
+stepMax             2000
+rstrtFWrtFreq       500
+saveCount           100
 psaveCount          1000
-pCorrTime           1
+pCorrTime           500
 #
 gR_radMin           0.0			# g(r) calculation
 gR_radDelta         0.01	
@@ -44,7 +44,7 @@ velHist_velMax       25.0
 velHist_tStart       50000
 velHist_tDelta       100
 #
-slabWidth           7.5		# PLANAR_SLAB
+slabWidth           20.0	     #PLANAR_SLAB
 rhoZ_Zmin           0.00		
 rhoZ_Zdelta         0.05	
 segPlane_zDelta     0.05
@@ -56,7 +56,7 @@ cylHeight           10.0
 rhor_rmin           0.00
 rhor_rdelta         0.05
 #
-gammaDot            0.01		# LEES_EDWARDS_BC
+gammaDot            0.05		# LEES_EDWARDS_BC
 #
 n_vars              4			# SACF 
 corLevels           20
@@ -64,16 +64,16 @@ pCorr               64
 mCorr               2
 #
 bufferLength        10.0		# CAPILLARIES
-capLen              15.0
+capLen              140.0
 capRad              5.0
-capWallWdth         2.0
-resWdth             5.0
-resComZ             45.0
-resComVel          -0.00
+capWallWdth         2.5
+resWdth             25.0
+resComZ             214.5
+resComVel          -0.05
 #
-pistonZStart        50.0 
+pistonZStart        57.5 
 pistonThickness     0.5
-appPressure         1.8
+appPressure         3.2
 pistonT0	        2500.0
 pistonW             100.0
 #

@@ -37,7 +37,7 @@ public:
     // std::vector<Vec3D> equiBondLength;
 
     Vec3D rUnfolded;
-
+    Vec3D dR;
 };
 
 #endif

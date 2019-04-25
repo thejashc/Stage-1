@@ -20,10 +20,6 @@ set incrFile [expr {$delta - 1}]
 # drawing the simulation box
 draw color white
 
-#set cell [pbc set {$maxx $maxy $maxz} -all]
-#pbc box -center origin -shiftcenter {$cx $cy $cz} -color white -width 1
-
-
 puts "the simulation box is drawn"
 
 for {set x $startFile} {$x < $endFile} {incr x} {	 
@@ -33,8 +29,9 @@ for {set x $startFile} {$x < $endFile} {incr x} {
 
 #mol new /storage/thejas/stage1/code/data/XYZ1.xyz
 
-pbc set {20 20 20} -all
-draw pbcbox -width 5
+#pbc set {20 15 145} -all
+#draw pbcbox -width 5
+
 puts "the molecule for this problem is 0"
 
 # type H - fluid
@@ -59,9 +56,9 @@ mol modstyle  3 0 Points 3.0
 
 puts "the Points representation is chosen for both solids and fluids"
 
-mol modcolor  0 0 ColorID 4
+mol modcolor  0 0 ColorID 0
 mol modcolor  1 0 ColorID 1
-mol modcolor  2 0 ColorID 0
+mol modcolor  2 0 ColorID 7
 mol modcolor  3 0 ColorID 2
 
 puts "the solid is red in color and the fluid is blue in color"

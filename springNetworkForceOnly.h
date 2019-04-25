@@ -11,7 +11,7 @@ while ( idx < solidCount )
             j = particles[i].bondIndex[k];     // jth particle
 
             // find the vector separating the particles
-            Rij = particles[i].r - particles[j].r;
+            Rij = particles[i].r - ( particles[j].r + particles[j].dR);
 
             // nearest image distance
             Rij.X = Rij.X - boxEdge[x] * round( Rij.X / boxEdge[x] );

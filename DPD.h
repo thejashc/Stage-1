@@ -20,21 +20,21 @@
 #define CYLINDER_DROPLET		0
 #define PLANAR_SLAB			    0
 #define CRYSTAL				    0
-#define RESTART				    0
+#define RESTART				    1
 
 // WALL flags
 #define WALL_ON				    1
 #define LOWER_WALL_ON			0
 #define UPPER_WALL_ON			0
 #define ROUGH_WALL			    0
-#define SPRING_CONNECTED_SLD    1
+#define SPRING_CONNECTED_SLD    0
 #define BCKGRND_CONNECTED_SLD   0
 
 #define CAPILLARY_CYLINDER		0
 #define CAPILLARY_SQUARE		0
 #define PISTON				    0
 #define CYLINDER_ARRAY          0
-#define HARD_SPHERES            1
+#define HARD_SPHERES            0
 #define SLIM                    0
 #define RANDOM_FIBRE_BUNDLE     0
 #define READ_FROM_FILE          0
@@ -46,7 +46,7 @@
 #define SACF				    0
 
 // LEES-EDWARDS BOUNDARY CONDITION
-#define LEES_EDWARDS_BC			1
+#define LEES_EDWARDS_BC			0
 
 // DENSITY CALCULATION
 #define DENS_EXACT			    0    
@@ -118,6 +118,13 @@ class DPD {
 				forceCalc();
 				
 				resetVar();
+            #else
+                i = 0;
+                while( i < npart ){
+                    #include "pbcNew.h"
+                    i++;
+                }
+				createGridList();       // density calculation is taken care of
 			#endif
 
 			#if RESTART	
@@ -143,7 +150,6 @@ class DPD {
 
 			simProg << " ********************* STARTING SIMULATION ************************* " << std::endl;	
 			while (step<= stepMax) {
-
 
 				createGridList();
 				#if DENS_EXACT
@@ -196,9 +202,8 @@ class DPD {
 					if ( step % 100000 == 0 ) { writeCorr(); }
 				#endif
 
-				// change wettability of the capillary tube
-				// from lyophobic to lyophilic
 
+				// from lyophobic to lyophilic
 				step += 1;						// increment time step
 
 			}//end time loop
@@ -256,9 +261,9 @@ class DPD {
                         pistonForce = -appPressure * pistonArea ; 
                     #endif
 
-                    #include "cylindricalFluids.h"
-					//#include "reservoir.h"
-                    #include "nonWettingReservoir.h" 
+                    //#include "cylindricalFluids.h"
+					#include "reservoir.h"
+                    //#include "nonWettingReservoir.h" 
                     //#include "separateReservoir.h"
                     //
 					//#include "mixedReservoir.h"
@@ -280,7 +285,8 @@ class DPD {
 
 				#if CAPILLARY_SQUARE
 					//#include "squarecapillaryTube.h"
-                    #include "rectangularCapillaryTube.h"
+                    //#include "rectangularCapillaryTube.h"
+                    #include "rectangularCapillaryTubeOpen.h"
                     //ngbrIdxStart = particles.size();              // no of particles present + 1 -- particles.size() takes care of that
                     //#include "singleLayerWall.h"
                     //ngbrIdxEnd = particles.size() - 1;
@@ -290,7 +296,8 @@ class DPD {
                         pistonParticles = ngbrIdxEnd - ngbrIdxStart + 1;
                         pistonForce = -appPressure * pistonArea ; 
                     #endif
-					#include "reservoir.h"
+					//#include "reservoir.h"
+					#include "reservoirNew.h"
                 #endif
 
                 #if CYLINDER_ARRAY
@@ -317,8 +324,12 @@ class DPD {
                 #endif
                 #if READ_FROM_FILE & !(CAPILLARY_CYLINDER)
                     pCount = 0;
-                    #include "readConfigFromFile.h"
+                    //#include "readConfigFromFile.h"
+                    #include "SLIM_capillary.h"
                     bckgIdxEnd = npart - 1;         // this is a temporary workaround
+				#endif
+				#if RESTART 
+					#include "restartConfig.h"
 				#endif
 			#else
 				#if SPHERICAL_DROPLET 
@@ -549,10 +560,20 @@ class DPD {
 
                     #if READ_FROM_FILE
                         #include "readInitPosFromFile.h"
+                    #elif RESTART
+                        while( idx < solidCount ){
+
+                            if ( i >= bckgIdxStart && i <= bckgIdxEnd ){
+                                bckgIdxParticles++;
+                            }
+                            idx++;
+                            i = solid_index[idx];
+                        }
                     #else
                         while( idx < solidCount ){
 
                             if ( i >= bckgIdxStart && i <= bckgIdxEnd ){
+
                                 particles[i].r0 = particles[i].r;
                                 bckgIdxParticles++;
                             }
@@ -998,6 +1019,7 @@ class DPD {
 							{
 								j = grid[mi[x]][mi[y]][mi[z]][jj];
 								// simProg << "j1 "<<  mi[x] << " " << mi[y] << " " << mi[z] << " " << jj << " " << j << std::endl;
+                                particles[j].dR = dR;
                                 
                                 #include "pairforce.h"
 
@@ -1041,7 +1063,8 @@ class DPD {
 									{
 										j = grid[mj[x]][mj[y]][mj[z]][jj];
 										// simProg << "j2 " << m << " " << mj[x] << " " << mj[y] << " " << mj[z] << " " << jj << " " << j << std::endl;
-
+                                        particles[j].dR = dR;
+                                        
 										#include "pairforce.h"
 
 									} // jj
@@ -1069,6 +1092,7 @@ class DPD {
 									{
 										j = grid[mj[x]][mj[y]][mj[z]][jj];
 										// simProg << "j2 " << m << " " << mj[x] << " " << mj[y] << " " << mj[z] << " " << jj << " " << j << std::endl;
+                                        particles[j].dR = dR;
 
 											#include "pairforce.h"
 									} // jj
@@ -1093,6 +1117,7 @@ class DPD {
 								{
 									j = grid[mj[x]][mj[y]][mj[z]][jj];
 									// simProg << "j2 " << m << " " << mj[x] << " " << mj[y] << " " << mj[z] << " " << jj << " " << j << std::endl;
+                                    particles[j].dR = dR;
 
                                     #include "pairforce.h"
 
@@ -1153,6 +1178,15 @@ class DPD {
                     particles[i].fext.Z = forceOnPistonPerParticle;     // adding the force deficit per particle
                 #endif
 
+                /*
+                #if CAPILLARY_CYLINDER 
+                    // WARNING : Just implementing this for a single experiment
+                    if ( i >= fluid_index[0] && i <= fluid_index[fluidCount-1] ){
+                        particles[i].fext.Z = 0.1;
+                    }
+                #endif
+                */
+
                 // update velocities (mid-step)
                 particles[i].w += ( particles[i].fC       + 
                                     particles[i].fD       + 
@@ -1164,8 +1198,8 @@ class DPD {
                 particles[i].r += particles[i].w*dt;				
 
                 // implement periodic boundary condition 
-                #include "pbcNew.h"
-                //#include "pbcNewReflecting.h"
+                //#include "pbcNew.h"
+                #include "pbcNewReflecting.h"
 
                 // calculate velocity (integral time step)
                 particles[i].v = 0.5*( particles[i].w_old + particles[i].w );
@@ -1421,25 +1455,67 @@ class DPD {
                 pBondInteractions_temp[2][2] = 0.;
             #endif
 
-            /*
-            #if CAPILLARY_CYLINDER || CAPILLARY_SQUARE || CYLINDER_ARRAY
-                if ( step == 20000 )
-                        boxResize( int( boxEdge[z] * 1.5 ) );
+            if ( step == 20000 ){
 
-                if ( step == 25000 ){ 
+                noise = orig_noise;
+                noise2 = orig_noise2;
+                noise12 = orig_noise12;
 
-                    simProg << " Changing the wettability of pore from hydrophobic to hydrophilic with Asl =  -40" << std::endl;
-                    i = 0;
-                    while ( i < solidCount ){
-                        Aatt[0][1] = -40.;
-                        Aatt[0][2] = -40.;
-                        Aatt[1][0] = -40.;
-                        Aatt[2][0] = -40.;
-                        i++;
-                    }
-                }
-            #endif
-            */
+                friction   = pow( noise, 2.0 )/( 2.0 * kBT ); 	    // DPD dissipative force parameter
+                noise	  *= sqrtTwelve * inv_sqrt_dt;	    // Rescale sigma - sqrt(12) and inv_sqrt_dt
+
+                friction2	= pow( noise2, 2.0 )/( 2.0 * kBT );     // DPD dissipative force parameter
+                noise2 	  *= sqrtTwelve * inv_sqrt_dt;    // Rescale sigma - sqrt(12) and inv_sqrt_dt
+
+                friction12	= pow( noise12, 2.0 )/( 2.0 * kBT );     // DPD dissipative force parameter
+                noise12   *= sqrtTwelve * inv_sqrt_dt;    // Rescale sigma - sqrt(12) and inv_sqrt_dt
+
+                simProg  << "noise and friction parameters are changed to " << std::endl;
+                simProg  << "friction = " << friction << ", \n "
+                         << "friction2 = " << friction2 << ", \n" 
+                         << "noise = " << noise << ", \n" 
+                         << "noise2 = " << noise2 << std::endl;
+
+                sigma[0][0] 	= noise;						// S1-S1 
+                sigma[0][1] 	= noise;                        // S1-L1
+                sigma[0][2] 	= noise;                        // S1-L2
+                sigma[0][3] 	= noise;                        // S1-S2
+
+                sigma[1][0] 	= sigma[0][1];                  // L1-S1 
+                sigma[1][1] 	= noise;       					// L1-L1    
+                sigma[1][2] 	= noise12;                      // L1-L2
+                sigma[1][3] 	= sigma[0][3];                  // L1-S2
+
+                sigma[2][0] 	= sigma[0][2];                  // L2-S1
+                sigma[2][1] 	= sigma[1][2];                  // L2-L1 
+                sigma[2][2] 	= noise2;        			    // L2-L2		
+                sigma[2][3] 	= sigma[2][0];        			// L2-S2		
+
+                sigma[3][0] 	= noise;						// S2-S1 
+                sigma[3][1] 	= noise;                        // S2-L1
+                sigma[3][2] 	= noise;                        // S2-L2
+                sigma[3][3] 	= noise;                        // S2-S2
+
+                gamma[0][0] 	= friction;						// S1-S1 
+                gamma[0][1] 	= friction;                     // S1-L1
+                gamma[0][2] 	= friction;                     // S1-L2
+                gamma[0][3] 	= friction;                     // S1-S2
+
+                gamma[1][0] 	= gamma[0][1];                  // L1-S1
+                gamma[1][1] 	= friction;       		        // L1-L1     
+                gamma[1][2] 	= friction12;                   // L1-L2     
+                gamma[1][3] 	= gamma[1][0];                  // L1-S2     
+
+                gamma[2][0] 	= gamma[0][2];                  // L2-S1
+                gamma[2][1] 	= gamma[1][2];                  // L2-L1
+                gamma[2][2] 	= friction2;        	        // L2-L2	
+                gamma[2][3] 	= gamma[2][0];        	        // L2-S2	
+
+                gamma[3][0] 	= friction;						// S2-S1 
+                gamma[3][1] 	= friction;                     // S2-L1
+                gamma[3][2] 	= friction;                     // S2-L2
+                gamma[3][3] 	= friction;                     // S2-S2
+            }
 		}
 
 		//--------------------------------------- g(r) sampling --------------------------------------//
@@ -2130,20 +2206,20 @@ class DPD {
                 while ( i < npart ){
 
                          if ( particles[i].type == 0 ){
-                             file  << "O" << "\t" << particles[i].r << std::endl;
-                             file1 << "O" << "\t" << particles[i].v << std::endl;
+                             file  << "O" << "\t" << std::setprecision(10) << particles[i].r << std::endl;
+                             file1 << "O" << "\t" << std::setprecision(10) << particles[i].v << std::endl;
                          }
                         else if ( particles[i].type == 1 ){
-                            file  << "H" << "\t" << particles[i].r  << "\t " << std::endl;
-                            file1 << "H" << "\t" << particles[i].v << std::endl;
+                            file  << "H" << "\t" << std::setprecision(10) << particles[i].r  << "\t " << std::endl;
+                            file1 << "H" << "\t" << std::setprecision(10) << particles[i].v << std::endl;
                         }
                         else if ( particles[i].type == 2 ){
-                            file  << "C" << "\t" << particles[i].r << "\t " <<  std::endl;
-                            file1 << "C" << "\t" << particles[i].v << std::endl;
+                            file  << "C" << "\t" << std::setprecision(10) << particles[i].r << "\t " <<  std::endl;
+                            file1 << "C" << "\t" << std::setprecision(10) << particles[i].v << std::endl;
                         }
                         else if ( particles[i].type == 3 ){
-                            file  << "B" << "\t" << particles[i].r << std::endl;
-                            file1 << "B" << "\t" << particles[i].v << std::endl;
+                            file  << "B" << "\t" << std::setprecision(10) << particles[i].r << std::endl;
+                            file1 << "B" << "\t" << std::setprecision(10) <<particles[i].v << std::endl;
                          }
 
                         i++;
@@ -2153,39 +2229,38 @@ class DPD {
 		void finalposvelWrite( std::ofstream& writeConfig ){
 
 			writeConfig.write( reinterpret_cast< const char * >( &npart ), sizeof( npart ) );
-			writeConfig.write( reinterpret_cast< const char * >( &step ), sizeof( step ) );
-			writeConfig.write( reinterpret_cast< const char * >( &seed ), sizeof( std::default_random_engine ) );
+            #if WALL_ON
+                writeConfig.write( reinterpret_cast< const char * >( &bckgIdxStart ), sizeof( bckgIdxStart ) );
+                writeConfig.write( reinterpret_cast< const char * >( &bckgIdxEnd ),   sizeof( bckgIdxEnd ) );
+            #endif
+			writeConfig.write( reinterpret_cast< const char * >( &step ),  sizeof( step ) );
+			writeConfig.write( reinterpret_cast< const char * >( &seed ),  sizeof( std::default_random_engine ) );
 
 			for (Particle& p : particles){
+                // particle types
+				writeConfig.write( reinterpret_cast< const char * >( &p.type ), sizeof( p.type ) );
+
+                // particle positions
 				writeConfig.write( reinterpret_cast< const char * >( &p.r.X ), sizeof( p.r.X ) );
-				//writeConfig.write( &tab, sizeof( tab ) );
 				writeConfig.write( reinterpret_cast< const char * >( &p.r.Y ), sizeof( p.r.Y ) );
-				//writeConfig.write( &tab, sizeof( tab ) );
 				writeConfig.write( reinterpret_cast< const char * >( &p.r.Z ), sizeof( p.r.Z ) );
-				//writeConfig.write( &tab, sizeof( tab ) );
+
+                // mid-step velocities ( from Verlet ) 
 				writeConfig.write( reinterpret_cast< const char * >( &p.w.X ), sizeof( p.w.X ) );
-				//writeConfig.write( &tab, sizeof( tab ) );
 				writeConfig.write( reinterpret_cast< const char * >( &p.w.Y ), sizeof( p.w.Y ) );
-				//writeConfig.write( &tab, sizeof( tab ) );
 				writeConfig.write( reinterpret_cast< const char * >( &p.w.Z ), sizeof( p.w.Z ) );
-				//myFile.write( &newline, sizeof( newline ) );
+
+                // many body densities of the particles
+				writeConfig.write( reinterpret_cast< const char * >( &p.dens ), sizeof( p.dens ) );
+
+                // solid particles attached to the background by a spring
+                #if WALL_ON 
+                    writeConfig.write( reinterpret_cast< const char * >( &p.r0.X ), sizeof( p.r0.X ) );
+                    writeConfig.write( reinterpret_cast< const char * >( &p.r0.Y ), sizeof( p.r0.Y ) );
+                    writeConfig.write( reinterpret_cast< const char * >( &p.r0.Z ), sizeof( p.r0.Z ) );
+                #endif
 			}
-
 		}
-
-		//-------------------- Resize boxsize in z dirn ----------------------//
-        void boxResize(unsigned resizeBoxTo){
-
-            // remove the piston particles used for mixing the liquids
-            boxEdge[z]  = resizeBoxTo; 
-            boxHalve[z] = boxEdge[z] / 2.0;
-            boxRecip[z] = 1.0 / boxEdge[z]; 
-
-            #include "cellGridInit.h"
-
-            simProg << "Box resized to " << boxEdge[z] << "and boxHalve[z], boxRecip[z], re-evaluated" << std::endl;
-        }
-
         //---------------------- Create cylinder array -----------------------------//
         #if CYLINDER_ARRAY 
         void createCylinderArray ( Vec3D p1, Vec3D p2, double cylRad ){
