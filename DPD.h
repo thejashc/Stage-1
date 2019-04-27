@@ -18,12 +18,12 @@
 #define SPHERICAL_DROPLET		0
 #define SPHERICAL_CAP			0
 #define CYLINDER_DROPLET		0
-#define PLANAR_SLAB			    0
+#define PLANAR_SLAB			    1
 #define CRYSTAL				    0
-#define RESTART				    1
+#define RESTART				    0
 
 // WALL flags
-#define WALL_ON				    1
+#define WALL_ON				    0
 #define LOWER_WALL_ON			0
 #define UPPER_WALL_ON			0
 #define ROUGH_WALL			    0
@@ -189,7 +189,8 @@ class DPD {
                 #endif
 
 				resetVar();						// reset variables to zero
-				
+			
+                /*
 				if ( step % rstrtFwrtFreq == 0 ){
 					// write position velocity stats 
 					std::ofstream writeConfig;
@@ -197,6 +198,7 @@ class DPD {
 					finalposvelWrite( writeConfig );	
 					writeConfig.close();
 				}
+                */
 
 				#if SACF 
 					if ( step % 100000 == 0 ) { writeCorr(); }
@@ -754,25 +756,35 @@ class DPD {
             simProg << " ********************************************************************* " << std::endl;
             simProg << " Defining the matrix of repulsion parameters and attraction parameters " << std::endl;
 
-            Brep[0][0] = repParam;  Aatt[0][0] = Ass;
-            Brep[0][1] = repParam;  Aatt[0][1] = Asl1;
-            Brep[0][2] = repParam;  Aatt[0][2] = Asl2;
-            Brep[0][3] = repParam;  Aatt[0][3] = Ass;
+            Brep[0][0] = repParam;  Aatt[0][0] = Ass;           // S1-S1
+            Brep[0][1] = repParam;  Aatt[0][1] = Asl1;          // S1-L1 
+            Brep[0][2] = repParam;  Aatt[0][2] = Asl2;          // S1-L2 
+            Brep[0][3] = repParam;  Aatt[0][3] = Ass;           // S1-S2
+            Brep[0][4] = repParam;  Aatt[0][4] = Asl4;          // S1-L3 ( Liquid 3 is type 4 )
 
-            Brep[1][0] = repParam;  Aatt[1][0] = Aatt[0][1];
-            Brep[1][1] = repParam;  Aatt[1][1] = All1;
-            Brep[1][2] = repParam;  Aatt[1][2] = All12;
-            Brep[1][3] = repParam;  Aatt[1][3] = Asl1;     // Interaction of liquid 1 with both 0 and 3 is same
+            Brep[1][0] = repParam;  Aatt[1][0] = Aatt[0][1];    // L1-S1
+            Brep[1][1] = repParam;  Aatt[1][1] = All1;          // L1-L1
+            Brep[1][2] = repParam;  Aatt[1][2] = All12;         // L1-L2
+            Brep[1][3] = repParam;  Aatt[1][3] = Asl1;          // L1-S2
+            Brep[1][4] = repParam;  Aatt[1][4] = All14;         // L1-L3
 
-            Brep[2][0] = repParam;  Aatt[2][0] = Aatt[0][2];    
-            Brep[2][1] = repParam;  Aatt[2][1] = Aatt[1][2];
-            Brep[2][2] = repParam2; Aatt[2][2] = All2;
-            Brep[2][3] = repParam;  Aatt[2][3] = Asl2;   // Interaction of liquid 2 with both 0 and 3 is same
+            Brep[2][0] = repParam;  Aatt[2][0] = Aatt[0][2];    // L2-S1
+            Brep[2][1] = repParam;  Aatt[2][1] = Aatt[1][2];    // L2-L1
+            Brep[2][2] = repParam2; Aatt[2][2] = All2;          // L2-L2
+            Brep[2][3] = repParam;  Aatt[2][3] = Asl2;          // L2-S2
+            Brep[2][4] = repParam;  Aatt[2][4] = All24;         // L2-L3
 
-            Brep[3][0] = repParam;  Aatt[3][0] = Ass;
-            Brep[3][1] = repParam;  Aatt[3][1] = Asl1;
-            Brep[3][2] = repParam;  Aatt[3][2] = Asl2;
-            Brep[3][3] = repParam;  Aatt[3][3] = Ass;
+            Brep[3][0] = repParam;  Aatt[3][0] = Ass;           // S2-S1
+            Brep[3][1] = repParam;  Aatt[3][1] = Asl1;          // S2-L1
+            Brep[3][2] = repParam;  Aatt[3][2] = Asl2;          // S2-L2
+            Brep[3][3] = repParam;  Aatt[3][3] = Ass;           // S2-S2
+            Brep[3][4] = repParam;  Aatt[3][4] = Asl4;          // S2-L3
+
+            Brep[4][0] = repParam;  Aatt[4][0] = Aatt[0][4];    // L3-S1
+            Brep[4][1] = repParam;  Aatt[4][1] = Aatt[1][4];    // L3-L1
+            Brep[4][2] = repParam;  Aatt[4][2] = Aatt[2][4];    // L3-L2
+            Brep[4][3] = repParam;  Aatt[4][3] = Aatt[3][4];    // L3-S2
+            Brep[4][4] = repParam4;  Aatt[4][4] = All4;          // L3-L3
 
             simProg << " Finished defining the matrix of repulsion parameters and attraction parameters " << std::endl;
             simProg << " ********************************************************************* " << std::endl;
@@ -782,12 +794,12 @@ class DPD {
                 simProg << " ********************************************************************* " << std::endl;
                 simProg << " Defining the matrix of noise and friction parameters " << std::endl;
 
-                sigma.resize( 4 );
-                gamma.resize( 4 );
+                sigma.resize( 5 );
+                gamma.resize( 5 );
 
-                for ( i=0; i < 4; ++i ){
-                    sigma[i].resize( 4 );
-                    gamma[i].resize( 4 );
+                for ( i=0; i < 5; ++i ){
+                    sigma[i].resize( 5 );
+                    gamma[i].resize( 5 );
                 }
 
                 // defining the elements of the sigma and gamma array
@@ -795,41 +807,61 @@ class DPD {
                sigma[0][1] 	= noise;                        // S1-L1
                sigma[0][2] 	= noise;                        // S1-L2
                sigma[0][3] 	= noise;                        // S1-S2
+               sigma[0][4] 	= noise;                        // S1-L3
 
                sigma[1][0] 	= sigma[0][1];                  // L1-S1 
                sigma[1][1] 	= noise;       					// L1-L1    
                sigma[1][2] 	= noise12;                      // L1-L2
    	 		   sigma[1][3] 	= sigma[0][3];                  // L1-S2
+   	 		   sigma[1][4] 	= noise14;                      // L1-L3
 
                sigma[2][0] 	= sigma[0][2];                  // L2-S1
                sigma[2][1] 	= sigma[1][2];                  // L2-L1 
                sigma[2][2] 	= noise2;        			    // L2-L2		
                sigma[2][3] 	= sigma[2][0];        			// L2-S2		
+               sigma[2][4] 	= noise24;             			// L2-L3
 
                sigma[3][0] 	= noise;						// S2-S1 
                sigma[3][1] 	= noise;                        // S2-L1
                sigma[3][2] 	= noise;                        // S2-L2
                sigma[3][3] 	= noise;                        // S2-S2
+               sigma[3][4] 	= noise;                        // S2-L3
+
+               sigma[4][0] 	= sigma[0][4];					// L3-S1 
+               sigma[4][1] 	= sigma[1][4];                  // L3-L1
+               sigma[4][2] 	= sigma[2][4];                  // L3-L2
+               sigma[4][3] 	= sigma[3][4];                  // L3-S2
+               sigma[4][4] 	= noise4;                       // L3-L3
 
    			   gamma[0][0] 	= friction;						// S1-S1 
                gamma[0][1] 	= friction;                     // S1-L1
                gamma[0][2] 	= friction;                     // S1-L2
                gamma[0][3] 	= friction;                     // S1-S2
+               gamma[0][4] 	= friction;                     // S1-L4
 
                gamma[1][0] 	= gamma[0][1];                  // L1-S1
                gamma[1][1] 	= friction;       		        // L1-L1     
                gamma[1][2] 	= friction12;                   // L1-L2     
                gamma[1][3] 	= gamma[1][0];                  // L1-S2     
+               gamma[1][4] 	= friction14;                   // L1-L3
 
                gamma[2][0] 	= gamma[0][2];                  // L2-S1
                gamma[2][1] 	= gamma[1][2];                  // L2-L1
                gamma[2][2] 	= friction2;        	        // L2-L2	
                gamma[2][3] 	= gamma[2][0];        	        // L2-S2	
+               gamma[2][4] 	= friction24;        	        // L2-L3
 
                gamma[3][0] 	= friction;						// S2-S1 
                gamma[3][1] 	= friction;                     // S2-L1
                gamma[3][2] 	= friction;                     // S2-L2
                gamma[3][3] 	= friction;                     // S2-S2
+               gamma[3][4] 	= friction;                     // S2-L4
+
+               gamma[4][0] 	= gamma[0][4];					// L3-S1 
+               gamma[4][1] 	= gamma[1][4];                  // L3-L1
+               gamma[4][2] 	= gamma[2][4];                  // L3-L2
+               gamma[4][3] 	= gamma[3][4];                  // L3-S2
+               gamma[4][4] 	= friction4;                    // L3-L3
 
                simProg << " ********************************************************************* " << std::endl;
                simProg << " Finished defining the matrix of noise and friction parameters " << std::endl;
@@ -1187,6 +1219,8 @@ class DPD {
                 #endif
                 */
 
+                // std::cout << particles[i].fHarmonic << ", " << particles[i].fext << std::endl;
+
                 // update velocities (mid-step)
                 particles[i].w += ( particles[i].fC       + 
                                     particles[i].fD       + 
@@ -1198,8 +1232,8 @@ class DPD {
                 particles[i].r += particles[i].w*dt;				
 
                 // implement periodic boundary condition 
-                //#include "pbcNew.h"
-                #include "pbcNewReflecting.h"
+                #include "pbcNew.h"
+                //#include "pbcNewReflecting.h"
 
                 // calculate velocity (integral time step)
                 particles[i].v = 0.5*( particles[i].w_old + particles[i].w );
@@ -1455,46 +1489,77 @@ class DPD {
                 pBondInteractions_temp[2][2] = 0.;
             #endif
 
+            /*
             if ( step == 20000 ){
 
-                noise = orig_noise;
-                noise2 = orig_noise2;
+                noise   = orig_noise;
+                noise2  = orig_noise2;
+                noise4  = orig_noise4;
+
                 noise12 = orig_noise12;
+                noise14 = orig_noise14;
+                noise24 = orig_noise24;
 
                 friction   = pow( noise, 2.0 )/( 2.0 * kBT ); 	    // DPD dissipative force parameter
-                noise	  *= sqrtTwelve * inv_sqrt_dt;	    // Rescale sigma - sqrt(12) and inv_sqrt_dt
+                noise	  *= inv_sqrt_dt;	    // Rescale sigma - sqrt(12) and inv_sqrt_dt
 
-                friction2	= pow( noise2, 2.0 )/( 2.0 * kBT );     // DPD dissipative force parameter
-                noise2 	  *= sqrtTwelve * inv_sqrt_dt;    // Rescale sigma - sqrt(12) and inv_sqrt_dt
+                friction2  = pow( noise2, 2.0 )/( 2.0 * kBT );     // DPD dissipative force parameter
+                noise2 	  *= inv_sqrt_dt;    // Rescale sigma - sqrt(12) and inv_sqrt_dt
 
-                friction12	= pow( noise12, 2.0 )/( 2.0 * kBT );     // DPD dissipative force parameter
-                noise12   *= sqrtTwelve * inv_sqrt_dt;    // Rescale sigma - sqrt(12) and inv_sqrt_dt
+                friction4  = pow( noise4, 2.0 )/( 2.0 * kBT );     // DPD dissipative force parameter
+                noise4 	  *= inv_sqrt_dt;    // Rescale sigma - sqrt(12) and inv_sqrt_dt
+
+                friction12 = pow( noise12, 2.0 )/( 2.0 * kBT );     // DPD dissipative force parameter
+                noise12   *= inv_sqrt_dt;    // Rescale sigma - sqrt(12) and inv_sqrt_dt
+
+                friction14	= pow( noise14, 2.0 )/( 2.0 * kBT );     // DPD dissipative force parameter
+                noise14   *= inv_sqrt_dt;    // Rescale sigma - sqrt(12) and inv_sqrt_dt
+
+                friction24	= pow( noise24, 2.0 )/( 2.0 * kBT );     // DPD dissipative force parameter
+                noise24   *= inv_sqrt_dt;    // Rescale sigma - sqrt(12) and inv_sqrt_dt
 
                 simProg  << "noise and friction parameters are changed to " << std::endl;
                 simProg  << "friction = " << friction << ", \n "
                          << "friction2 = " << friction2 << ", \n" 
                          << "noise = " << noise << ", \n" 
                          << "noise2 = " << noise2 << std::endl;
+                         << "noise4 = " << noise4 << std::endl;
 
                 sigma[0][0] 	= noise;						// S1-S1 
                 sigma[0][1] 	= noise;                        // S1-L1
                 sigma[0][2] 	= noise;                        // S1-L2
                 sigma[0][3] 	= noise;                        // S1-S2
+                sigma[0][4] 	= noise;                        // S1-S2
 
                 sigma[1][0] 	= sigma[0][1];                  // L1-S1 
                 sigma[1][1] 	= noise;       					// L1-L1    
                 sigma[1][2] 	= noise12;                      // L1-L2
                 sigma[1][3] 	= sigma[0][3];                  // L1-S2
+                sigma[1][4] 	= noise14;                      // L1-S2
 
                 sigma[2][0] 	= sigma[0][2];                  // L2-S1
                 sigma[2][1] 	= sigma[1][2];                  // L2-L1 
                 sigma[2][2] 	= noise2;        			    // L2-L2		
                 sigma[2][3] 	= sigma[2][0];        			// L2-S2		
+                sigma[2][4] 	= noise24;            			// L2-S2		
 
                 sigma[3][0] 	= noise;						// S2-S1 
                 sigma[3][1] 	= noise;                        // S2-L1
                 sigma[3][2] 	= noise;                        // S2-L2
                 sigma[3][3] 	= noise;                        // S2-S2
+                sigma[3][4] 	= noise;                        // S2-S2
+
+                sigma[3][0] 	= noise;						// S2-S1 
+                sigma[3][1] 	= noise;                        // S2-L1
+                sigma[3][2] 	= noise;                        // S2-L2
+                sigma[3][3] 	= noise;                        // S2-S2
+                sigma[3][4] 	= noise;                        // S2-S2
+
+                sigma[4][0] 	= sigma[0][4];						// S2-S1 
+                sigma[4][1] 	= noise;                        // S2-L1
+                sigma[4][2] 	= noise;                        // S2-L2
+                sigma[4][3] 	= noise;                        // S2-S2
+                sigma[4][4] 	= noise;                        // S2-S2
 
                 gamma[0][0] 	= friction;						// S1-S1 
                 gamma[0][1] 	= friction;                     // S1-L1
@@ -1516,6 +1581,7 @@ class DPD {
                 gamma[3][2] 	= friction;                     // S2-L2
                 gamma[3][3] 	= friction;                     // S2-S2
             }
+            */
 		}
 
 		//--------------------------------------- g(r) sampling --------------------------------------//
@@ -2226,6 +2292,7 @@ class DPD {
                 }
 		}
 		//-------------------- Final velocity and positions ----------------------//
+        /*
 		void finalposvelWrite( std::ofstream& writeConfig ){
 
 			writeConfig.write( reinterpret_cast< const char * >( &npart ), sizeof( npart ) );
@@ -2261,6 +2328,7 @@ class DPD {
                 #endif
 			}
 		}
+        */
         //---------------------- Create cylinder array -----------------------------//
         #if CYLINDER_ARRAY 
         void createCylinderArray ( Vec3D p1, Vec3D p2, double cylRad ){

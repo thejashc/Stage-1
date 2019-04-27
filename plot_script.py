@@ -163,7 +163,7 @@ if ( TEMPERATURE == 1 ):
 
 #------- VELOCITY DISTRIBUTION ------#
 if ( VEL_DIST == 1 ):
-	data = np.genfromtxt( './data/velDist_data.dat', skip_header=1 )
+	data = np.genfromtxt( './data/velDist_data.dat', skip_header=2 )
 
 	# probability distributions
 	velBin 	 	= data[:,0]

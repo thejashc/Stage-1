@@ -61,23 +61,32 @@ if ( r2 <= rc2 ) {
                  Aatt[0][1] << ", \n" << 
                  Aatt[0][2] << ", \n" << 
                  Aatt[0][3] << ", \n" << 
+                 Aatt[0][4] << ", \n" << 
                  
                  Aatt[1][0] << ", \n" << 
                  Aatt[1][1] << ", \n" << 
                  Aatt[1][2] << ", \n" << 
                  Aatt[1][3] << ", \n" << 
+                 Aatt[1][4] << ", \n" << 
                  
                  Aatt[2][0] << ", \n" <<
                  Aatt[2][1] << ", \n" <<
                  Aatt[2][2] << ", \n" << 
                  Aatt[2][3] << ", \n" <<
+                 Aatt[2][4] << ", \n" << 
                  
                  Aatt[3][0] << ", \n" <<
                  Aatt[3][1] << ", \n" <<
                  Aatt[3][2] << ", \n" << 
-                 Aatt[3][3] << ", \n" << std::endl;
-    exit(0);
-    */
+                 Aatt[3][3] << ", \n" << 
+                 Aatt[3][4] << ", \n" << 
+            
+                 Aatt[4][0] << ", \n" <<
+                 Aatt[4][1] << ", \n" <<
+                 Aatt[4][2] << ", \n" << 
+                 Aatt[4][3] << ", \n" << 
+                 Aatt[4][4] << ", \n" << std::endl;
+                 */
 
     if ( r2 <= twoPower1_3_sigma2 && wcaInteraction ){
 
@@ -106,11 +115,15 @@ if ( r2 <= rc2 ) {
 
 #if RANDOM_DISSIPATIVE
     // random force	
+    /*
     uniRand = randNumGen(seed);
     thetaij = uniRand - 0.5; 
+    */
+    thetaij = normalDistribution(gen);
     magRand = sigma[particles[i].type][particles[j].type] * wCij * thetaij;
 
-    // std::cout << uniRand << std::endl;
+    //std::cout << "sigma = " << sigma[particles[i].type][particles[j].type] << std::endl;
+    //std::cout << thetaij << std::endl;
 
     fRij.X = magRand * capRij.X;
     fRij.Y = magRand * capRij.Y;
@@ -123,6 +136,8 @@ if ( r2 <= rc2 ) {
     // dissipative force -- not calculated here
     rDotv = Vec3D::dot( capRij, wij );
     magDiss = -gamma[particles[i].type][particles[j].type] * wCij2 *rDotv;
+
+    //std::cout << "gamma = " << gamma[particles[i].type][particles[j].type] << std::endl;
 
     fDij.X = magDiss * capRij.X;
     fDij.Y = magDiss * capRij.Y;

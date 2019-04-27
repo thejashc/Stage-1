@@ -5,26 +5,31 @@ std::ifstream readParam (in_fld1.c_str());
 if ( ! readParam  ) { simProg << "*** input file is empty" << std::endl; abort(); }
 
 simProg << "Reading Box Dimensions" << std::endl;
-readParam >> buffer >> boxEdge[x];	readParam.ignore(256,'\n');		// L1
-readParam >> buffer >> boxEdge[y];	readParam.ignore(256,'\n');		// L2
-readParam >> buffer >> boxEdge[z];	readParam.ignore(256,'\n');     // L3
-readParam >> buffer >> initRho;		readParam.ignore(256,'\n');     // L4
+readParam >> buffer >> boxEdge[x];	readParam.ignore(256,'\n');		
+readParam >> buffer >> boxEdge[y];	readParam.ignore(256,'\n');		
+readParam >> buffer >> boxEdge[z];	readParam.ignore(256,'\n');     
+readParam >> buffer >> initRho;		readParam.ignore(256,'\n');     
 
-readParam >> emptyLine ;		readParam.ignore(256,'\n');         // L5
+readParam >> emptyLine ;		readParam.ignore(256,'\n');         
 
 simProg << "Reading Liquid Liquid Interaction Parameters" << std::endl;
-readParam >> buffer >> repParam;	readParam.ignore(256,'\n');     // L6
-readParam >> buffer >> repParam2;	readParam.ignore(256,'\n');     // L6
-readParam >> buffer >> All1;		readParam.ignore(256,'\n');     // L7
-readParam >> buffer >> All2;		readParam.ignore(256,'\n');     // L8
-readParam >> buffer >> All12;		readParam.ignore(256,'\n');     // L9
-readParam >> buffer >> Ass;		    readParam.ignore(256,'\n');     // L10
-readParam >> buffer >> Asl1;		readParam.ignore(256,'\n');     // L11
-readParam >> buffer >> Asl2;		readParam.ignore(256,'\n');     // L12
-readParam >> buffer >> rcutoff;	    readParam.ignore(256,'\n');		// L13
-readParam >> buffer >> rd_cutoff;	readParam.ignore(256,'\n');		// L14
+readParam >> buffer >> repParam;	readParam.ignore(256,'\n');     
+readParam >> buffer >> repParam2;	readParam.ignore(256,'\n');     
+readParam >> buffer >> repParam4;	readParam.ignore(256,'\n');     
+readParam >> buffer >> All1;		readParam.ignore(256,'\n');     
+readParam >> buffer >> All2;		readParam.ignore(256,'\n');     
+readParam >> buffer >> All4;		readParam.ignore(256,'\n');     
+readParam >> buffer >> All12;		readParam.ignore(256,'\n');     
+readParam >> buffer >> All14;		readParam.ignore(256,'\n');     
+readParam >> buffer >> All24;		readParam.ignore(256,'\n');     
+readParam >> buffer >> Ass;		    readParam.ignore(256,'\n');     
+readParam >> buffer >> Asl1;		readParam.ignore(256,'\n');     
+readParam >> buffer >> Asl2;		readParam.ignore(256,'\n');     
+readParam >> buffer >> Asl4;		readParam.ignore(256,'\n');     
+readParam >> buffer >> rcutoff;	    readParam.ignore(256,'\n');		
+readParam >> buffer >> rd_cutoff;	readParam.ignore(256,'\n');		
 	
-readParam >> emptyLine ;		            readParam.ignore(256,'\n');     // L15
+readParam >> emptyLine ;		    readParam.ignore(256,'\n');     // L15
 #if WALL_ON
     simProg << "Reading wall particle Parameters" << std::endl;
     readParam >> buffer >> kWallBckg;       readParam.ignore(256,'\n');     // L16
@@ -47,9 +52,15 @@ readParam >> emptyLine;        readParam.ignore(256,'\n');     // L21
     readParam >> buffer >> kBT;		        readParam.ignore(256,'\n');		// L22
     readParam >> buffer >> noise;		    readParam.ignore(256,'\n');		// L23
     readParam >> buffer >> noise2;	        readParam.ignore(256,'\n');		// L24
+    readParam >> buffer >> noise4;	        readParam.ignore(256,'\n');		// L24
     readParam >> buffer >> noise12;	        readParam.ignore(256,'\n');		// L25
+    readParam >> buffer >> noise14;	        readParam.ignore(256,'\n');		// L25
+    readParam >> buffer >> noise24;	        readParam.ignore(256,'\n');		// L25
 #else
     readParam.ignore(256, '\n');		
+    readParam.ignore(256, '\n');		
+    readParam.ignore(256, '\n');
+    readParam.ignore(256, '\n');
     readParam.ignore(256, '\n');		
     readParam.ignore(256, '\n');
     readParam.ignore(256, '\n');
@@ -218,35 +229,55 @@ boxRecip[y] 	= 1.0 / boxEdge[y];
 boxRecip[z] 	= 1.0 / boxEdge[z];
 
 #if RANDOM_DISSIPATIVE
-    orig_noise = noise;
-    orig_noise2 = noise2;
-    orig_noise12 = noise12;
- 
-    sqrtTwelve  = std::sqrt(12.);
 	inv_sqrt_dt = 1.0 / std::sqrt(dt);				    // inverse of square root of the time step
+	friction	= pow( noise, 2.0 )/( 2.0 * kBT ); 	    // DPD dissipative force parameter
+	noise	 	= noise * inv_sqrt_dt;	    // Rescale sigma - sqrt(12) and inv_sqrt_dt
 
     /*
-	friction	= pow( noise, 2.0 )/( 2.0 * kBT ); 	    // DPD dissipative force parameter
-	noise	 	= sqrtTwelve * noise * inv_sqrt_dt;	    // Rescale sigma - sqrt(12) and inv_sqrt_dt
+    orig_noise = noise;
+    orig_noise2 = noise2;
+    orig_noise4 = noise4;
 
-    friction2	= pow( noise2, 2.0 )/( 2.0 * kBT );     // DPD dissipative force parameter
-    noise2 		= sqrtTwelve * noise2 * inv_sqrt_dt;    // Rescale sigma - sqrt(12) and inv_sqrt_dt
+    orig_noise12 = noise12;
+    orig_noise14 = noise14;
+    orig_noise24 = noise24;
+ 
+    //sqrtTwelve  = std::sqrt(12.);
 
-    friction12	= pow( noise12, 2.0 )/( 2.0 * kBT );     // DPD dissipative force parameter
-    noise12 	= sqrtTwelve * noise12 * inv_sqrt_dt;    // Rescale sigma - sqrt(12) and inv_sqrt_dt
-    */
+    
+	// friction	= pow( noise, 2.0 )/( 2.0 * kBT ); 	    // DPD dissipative force parameter
+	// noise	 	= sqrtTwelve * noise * inv_sqrt_dt;	    // Rescale sigma - sqrt(12) and inv_sqrt_dt
+
+    // friction2	= pow( noise2, 2.0 )/( 2.0 * kBT );     // DPD dissipative force parameter
+    // noise2 		= sqrtTwelve * noise2 * inv_sqrt_dt;    // Rescale sigma - sqrt(12) and inv_sqrt_dt
+
+    // friction12	= pow( noise12, 2.0 )/( 2.0 * kBT );     // DPD dissipative force parameter
+    // noise12 	= sqrtTwelve * noise12 * inv_sqrt_dt;    // Rescale sigma - sqrt(12) and inv_sqrt_dt
 
     double initNoise1  = 6.0;
 	friction	= pow( initNoise1, 2.0 )/( 2.0 * kBT ); 	    // DPD dissipative force parameter
-	noise	    = sqrtTwelve * initNoise1 * inv_sqrt_dt;	    // Rescale sigma - sqrt(12) and inv_sqrt_dt
+	noise	    = initNoise1 * inv_sqrt_dt;	                    // Rescale sigma - sqrt(12) and inv_sqrt_dt
 
     double initNoise2  = 6.0;
 	friction2	= pow( initNoise2, 2.0 )/( 2.0 * kBT ); 	    // DPD dissipative force parameter
-	noise2 	    = sqrtTwelve * initNoise2 * inv_sqrt_dt;	    // Rescale sigma - sqrt(12) and inv_sqrt_dt
+	noise2 	    = initNoise2 * inv_sqrt_dt;	                    // Rescale sigma - sqrt(12) and inv_sqrt_dt
+
+    double initNoise4  = 6.0;
+	friction4	= pow( initNoise4, 2.0 )/( 2.0 * kBT ); 	    // DPD dissipative force parameter
+	noise4 	    = initNoise4 * inv_sqrt_dt;	                    // Rescale sigma - sqrt(12) and inv_sqrt_dt
 
     double initNoise12  = 6.0;
 	friction12	= pow( initNoise12, 2.0 )/( 2.0 * kBT ); 	    // DPD dissipative force parameter
-	noise12 	= sqrtTwelve * initNoise12 * inv_sqrt_dt;	    // Rescale sigma - sqrt(12) and inv_sqrt_dt
+	noise12 	= initNoise12 * inv_sqrt_dt;	                // Rescale sigma - sqrt(12) and inv_sqrt_dt
+
+    double initNoise14  = 6.0;
+	friction14	= pow( initNoise14, 2.0 )/( 2.0 * kBT ); 	    // DPD dissipative force parameter
+	noise14 	= initNoise14 * inv_sqrt_dt;	                // Rescale sigma - sqrt(12) and inv_sqrt_dt
+
+    double initNoise24  = 6.0;
+	friction12	= pow( initNoise24, 2.0 )/( 2.0 * kBT ); 	    // DPD dissipative force parameter
+	noise24 	= initNoise24 * inv_sqrt_dt;	                // Rescale sigma - sqrt(12) and inv_sqrt_dt
+    */
 
 #endif
 

@@ -12,13 +12,18 @@ double initRho;	double aCube;			// (1) initial placement density of atoms, (2) l
 // interaction paramters
 double All1;				// DPD Warren conservative force -- attractive parameter
 double All2;				// DPD Warren conservative force -- attractive parameter
+double All4;				// DPD Warren conservative force -- attractive parameter
 double All12;
+double All14;
+double All24;
 double Asl;
 double Asl1;
 double Asl2;        
-double Ass;         double Aatt[4][4];
-double repParam;    double Brep[4][4];                 // DPD Warren conservative force -- repulsive parameter
+double Asl4;        
+double Ass;         double Aatt[5][5];
+double repParam;    double Brep[5][5];                 // DPD Warren conservative force -- repulsive parameter
 double repParam2;
+double repParam4;
 double rcutoff;		double rc2;		// (1) cut-off distance -- attractive force, (2) square of the cutoff distance -- attractive force
 double rd_cutoff;	double rd2;		// (1) cut-off distance -- repulsive force, (2)  square of the cutoff distance -- repulsive force
 
@@ -43,6 +48,7 @@ double wallHeight;
 double kBT;				// DPD fluid temperature
 double noise, friction; std::vector<std::vector<double>> sigma, gamma; // noise and friction  
 double noise2, friction2, noise12, friction12; // noise and friction for 2nd fluid if MC on
+double noise4, friction4, noise14, noise24, friction14, friction24; // noise and friction for 2nd fluid if MC on
 double orig_noise, orig_friction, orig_noise2, orig_friction2, orig_noise12, orig_friction12;
 double dim;				// dimension of system
 
@@ -709,11 +715,11 @@ std::vector<Cell> ll; //linked list is a 2D vector
 // Gaussian random numbers
 // random device class instance, source of 'true' randomness for initializing random seed
 // std::default_random_engine seed;
-std::random_device rdev{};
-std::default_random_engine seed{rdev()};
-#if RESTART
-std::default_random_engine seedRstrt;
-#endif
+//std::random_device rdev{};
+//std::default_random_engine seed{rdev()};
+//#if RESTART
+//std::default_random_engine seedRstrt;
+//#endif
 
 #if READ_FROM_FILE
 unsigned int movingParticles[200000]; 
@@ -729,8 +735,10 @@ std::ifstream readConfig;
 
 // Mersenne twister PRNG, initialized with seed from previous random device instance
 // usage d{mean, std}
-// std::normal_distribution<double> d{0,1};
-std::uniform_real_distribution<double> randNumGen{0.0,1.0};
+std::random_device rd{};
+std::mt19937 gen{rd()};
+std::normal_distribution<double> normalDistribution{0,1};
+//std::uniform_real_distribution<double> randNumGen{0.0,1.0};
 
 // File streams
 std::string buffer;
