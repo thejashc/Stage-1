@@ -1864,7 +1864,7 @@ class DPD {
 				paraInfo << "Random & Dissipative Force " << std::endl;
 				paraInfo << "---------------------------" << std::endl;
 				paraInfo << "Set temperature (kbT)                      :           " << kBT << std::endl;
-				paraInfo << "Rescaled Noise(sqrt(12)*sigma*inv_sqrt_dt) :           " << noise << std::endl;
+				paraInfo << "Rescaled Noise (sigma*inv_sqrt_dt) :           " << noise << std::endl;
 				paraInfo << "Actual Noise level (sigma)                 :           " << noise/  ( std::sqrt(12.) * inv_sqrt_dt ) << std::endl;
 				paraInfo << "Friction parameter (gamma)                 :           " << friction << std::endl;
                 paraInfo << "Liquid2 rescaled noise level (sigma2)      :           " << sigma[2][2] << std::endl;
