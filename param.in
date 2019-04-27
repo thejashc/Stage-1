@@ -1,6 +1,6 @@
-boxEdgeX            10.0	# box dimensions
-boxEdgeY            10.0
-boxEdgeZ            20.0
+boxEdgeX            20.0	# box dimensions
+boxEdgeY            20.0
+boxEdgeZ            100.0
 initRho             6.00
 #
 Bll1                 25.0   # interaction paramters
@@ -27,7 +27,7 @@ noise12             6.0
 dim                 3			# dimensions
 #
 dt                  0.01        # time parameters	
-stepMax             200000
+stepMax             500000
 rstrtFWrtFreq       500
 saveCount           1000
 psaveCount          1000
@@ -64,11 +64,11 @@ pCorr               64
 mCorr               2
 #
 bufferLength        10.0		# CAPILLARIES
-capLen              140.0
+capLen              25.0
 capRad              5.0
 capWallWdth         2.5
-resWdth             25.0
-resComZ             214.5
+resWdth             15.0
+resComZ             67.5
 resComVel          -0.05
 #
 pistonZStart        57.5 

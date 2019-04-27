@@ -18,19 +18,19 @@
 #define SPHERICAL_DROPLET		0
 #define SPHERICAL_CAP			0
 #define CYLINDER_DROPLET		0
-#define PLANAR_SLAB			    1
+#define PLANAR_SLAB			    0
 #define CRYSTAL				    0
 #define RESTART				    0
 
 // WALL flags
-#define WALL_ON				    0
+#define WALL_ON				    1
 #define LOWER_WALL_ON			0
 #define UPPER_WALL_ON			0
 #define ROUGH_WALL			    0
 #define SPRING_CONNECTED_SLD    0
-#define BCKGRND_CONNECTED_SLD   0
+#define BCKGRND_CONNECTED_SLD   1
 
-#define CAPILLARY_CYLINDER		0
+#define CAPILLARY_CYLINDER		1
 #define CAPILLARY_SQUARE		0
 #define PISTON				    0
 #define CYLINDER_ARRAY          0
