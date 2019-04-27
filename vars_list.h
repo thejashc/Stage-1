@@ -709,8 +709,8 @@ std::vector<Cell> ll; //linked list is a 2D vector
 // Gaussian random numbers
 // random device class instance, source of 'true' randomness for initializing random seed
 // std::default_random_engine seed;
-std::random_device rdev{};
-std::default_random_engine seed{rdev()};
+//std::random_device rdev{};
+//std::default_random_engine seed{rdev()};
 #if RESTART
 std::default_random_engine seedRstrt;
 #endif
@@ -729,8 +729,11 @@ std::ifstream readConfig;
 
 // Mersenne twister PRNG, initialized with seed from previous random device instance
 // usage d{mean, std}
-// std::normal_distribution<double> d{0,1};
-std::uniform_real_distribution<double> randNumGen{0.0,1.0};
+//std::default_random_engine seed{rdev()};
+std::random_device rDev{};
+std::mt19937 gen{rDev()};
+std::normal_distribution<double> normalDistribution{0,1};
+//std::uniform_real_distribution<double> randNumGen{0.0,1.0};
 
 // File streams
 std::string buffer;

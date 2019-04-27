@@ -218,24 +218,25 @@ boxRecip[y] 	= 1.0 / boxEdge[y];
 boxRecip[z] 	= 1.0 / boxEdge[z];
 
 #if RANDOM_DISSIPATIVE
+    /*
     orig_noise = noise;
     orig_noise2 = noise2;
     orig_noise12 = noise12;
  
     sqrtTwelve  = std::sqrt(12.);
+    */
 	inv_sqrt_dt = 1.0 / std::sqrt(dt);				    // inverse of square root of the time step
 
-    /*
 	friction	= pow( noise, 2.0 )/( 2.0 * kBT ); 	    // DPD dissipative force parameter
-	noise	 	= sqrtTwelve * noise * inv_sqrt_dt;	    // Rescale sigma - sqrt(12) and inv_sqrt_dt
+	noise	 	= noise * inv_sqrt_dt;	    // Rescale sigma - sqrt(12) and inv_sqrt_dt
 
     friction2	= pow( noise2, 2.0 )/( 2.0 * kBT );     // DPD dissipative force parameter
-    noise2 		= sqrtTwelve * noise2 * inv_sqrt_dt;    // Rescale sigma - sqrt(12) and inv_sqrt_dt
+    noise2 		= noise2 * inv_sqrt_dt;    // Rescale sigma - sqrt(12) and inv_sqrt_dt
 
     friction12	= pow( noise12, 2.0 )/( 2.0 * kBT );     // DPD dissipative force parameter
-    noise12 	= sqrtTwelve * noise12 * inv_sqrt_dt;    // Rescale sigma - sqrt(12) and inv_sqrt_dt
-    */
+    noise12 	= noise12 * inv_sqrt_dt;    // Rescale sigma - sqrt(12) and inv_sqrt_dt
 
+    /*
     double initNoise1  = 6.0;
 	friction	= pow( initNoise1, 2.0 )/( 2.0 * kBT ); 	    // DPD dissipative force parameter
 	noise	    = sqrtTwelve * initNoise1 * inv_sqrt_dt;	    // Rescale sigma - sqrt(12) and inv_sqrt_dt
@@ -247,6 +248,7 @@ boxRecip[z] 	= 1.0 / boxEdge[z];
     double initNoise12  = 6.0;
 	friction12	= pow( initNoise12, 2.0 )/( 2.0 * kBT ); 	    // DPD dissipative force parameter
 	noise12 	= sqrtTwelve * initNoise12 * inv_sqrt_dt;	    // Rescale sigma - sqrt(12) and inv_sqrt_dt
+    */
 
 #endif
 

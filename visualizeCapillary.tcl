@@ -29,8 +29,8 @@ for {set x $startFile} {$x < $endFile} {incr x} {
 
 #mol new /storage/thejas/stage1/code/data/XYZ1.xyz
 
-#pbc set {20 15 145} -all
-#draw pbcbox -width 5
+pbc set {10 10 20} -all
+draw pbcbox -width 5
 
 puts "the molecule for this problem is 0"
 

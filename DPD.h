@@ -18,12 +18,12 @@
 #define SPHERICAL_DROPLET		0
 #define SPHERICAL_CAP			0
 #define CYLINDER_DROPLET		0
-#define PLANAR_SLAB			    0
+#define PLANAR_SLAB			    1
 #define CRYSTAL				    0
-#define RESTART				    1
+#define RESTART				    0
 
 // WALL flags
-#define WALL_ON				    1
+#define WALL_ON				    0
 #define LOWER_WALL_ON			0
 #define UPPER_WALL_ON			0
 #define ROUGH_WALL			    0
@@ -1198,8 +1198,8 @@ class DPD {
                 particles[i].r += particles[i].w*dt;				
 
                 // implement periodic boundary condition 
-                //#include "pbcNew.h"
-                #include "pbcNewReflecting.h"
+                #include "pbcNew.h"
+                //#include "pbcNewReflecting.h"
 
                 // calculate velocity (integral time step)
                 particles[i].v = 0.5*( particles[i].w_old + particles[i].w );
@@ -1455,6 +1455,7 @@ class DPD {
                 pBondInteractions_temp[2][2] = 0.;
             #endif
 
+            /*
             if ( step == 20000 ){
 
                 noise = orig_noise;
@@ -1516,6 +1517,7 @@ class DPD {
                 gamma[3][2] 	= friction;                     // S2-L2
                 gamma[3][3] 	= friction;                     // S2-S2
             }
+            */
 		}
 
 		//--------------------------------------- g(r) sampling --------------------------------------//
@@ -2234,7 +2236,7 @@ class DPD {
                 writeConfig.write( reinterpret_cast< const char * >( &bckgIdxEnd ),   sizeof( bckgIdxEnd ) );
             #endif
 			writeConfig.write( reinterpret_cast< const char * >( &step ),  sizeof( step ) );
-			writeConfig.write( reinterpret_cast< const char * >( &seed ),  sizeof( std::default_random_engine ) );
+			//writeConfig.write( reinterpret_cast< const char * >( &seed ),  sizeof( std::default_random_engine ) );
 
 			for (Particle& p : particles){
                 // particle types

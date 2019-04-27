@@ -106,8 +106,11 @@ if ( r2 <= rc2 ) {
 
 #if RANDOM_DISSIPATIVE
     // random force	
+    /*
     uniRand = randNumGen(seed);
     thetaij = uniRand - 0.5; 
+    */
+    thetaij = normalDistribution(gen); 
     magRand = sigma[particles[i].type][particles[j].type] * wCij * thetaij;
 
     // std::cout << uniRand << std::endl;

@@ -1,6 +1,6 @@
-boxEdgeX            40.0	# box dimensions
-boxEdgeY            20.0
-boxEdgeZ            10.0
+boxEdgeX            10.0	# box dimensions
+boxEdgeY            10.0
+boxEdgeZ            20.0
 initRho             6.00
 #
 Bll1                 25.0   # interaction paramters
@@ -27,9 +27,9 @@ noise12             6.0
 dim                 3			# dimensions
 #
 dt                  0.01        # time parameters	
-stepMax             2000
+stepMax             200000
 rstrtFWrtFreq       500
-saveCount           100
+saveCount           1000
 psaveCount          1000
 pCorrTime           500
 #
@@ -44,7 +44,7 @@ velHist_velMax       25.0
 velHist_tStart       50000
 velHist_tDelta       100
 #
-slabWidth           20.0	     #PLANAR_SLAB
+slabWidth           8.0	     #PLANAR_SLAB
 rhoZ_Zmin           0.00		
 rhoZ_Zdelta         0.05	
 segPlane_zDelta     0.05
