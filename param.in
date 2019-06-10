@@ -27,9 +27,9 @@ noise12             6.0
 dim                 3			# dimensions
 #
 dt                  0.01        # time parameters	
-stepMax             500000
+stepMax             20000
 rstrtFWrtFreq       500
-saveCount           1000
+saveCount           100
 psaveCount          1000
 pCorrTime           500
 #
