@@ -30,6 +30,7 @@ public:
 		
 	Vec3D r0;  // initial position for wall particles
 	Vec3D w_old;  // mid-step velocity
+	Vec3D r_old;  // old position
 
     unsigned int bondIndex[1000];
     double eqBondLength[1000];
