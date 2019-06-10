@@ -209,7 +209,7 @@ class DPD {
 			}//end time loop
 
 			// post-processing
-			grCalc();	 
+			// grCalc();	 
 			// velHistCalc();
 
 
@@ -1171,7 +1171,8 @@ class DPD {
                 totCOM += particles[i].w; 
 
                 // store velocity (mid-step)
-                particles[i].w_old = particles[i].w;
+                particles[i].r_old = particles[i].r;        // position at t: r(t)
+                particles[i].w_old = particles[i].w;        // velocity at t-dt/2 : v(t - dt/2)
                    
                 #if PISTON
                 if ( i >= pistonStartIndex && i <= pistonEndIndex )
@@ -1192,17 +1193,17 @@ class DPD {
                                     particles[i].fD       + 
                                     particles[i].fR       + 
                                     particles[i].fHarmonic  + 
-                                    particles[i].fext )*( dt/particles[i].m );
+                                    particles[i].fext )*( dt/particles[i].m );      // evaluating velocity at t+dt/2 : v(t+dt/2)
 
                 // update position (integral time step) using the velocities (mid-step)
-                particles[i].r += particles[i].w*dt;				
+                particles[i].r += particles[i].w*dt;                                // evaluating position at t+dt: r(t+dt)	
 
                 // implement periodic boundary condition 
-                #include "pbcNew.h"
-                //#include "pbcNewReflecting.h"
+                // #include "pbcNew.h"
+                #include "pbcNewReflecting.h"
 
                 // calculate velocity (integral time step)
-                particles[i].v = 0.5*( particles[i].w_old + particles[i].w );
+                particles[i].v = 0.5*( particles[i].w_old + particles[i].w );       // calculate v(t) = v(t-dt/2) + v(t+dt/2)
 
                 momX += particles[i].w.X;
                 momY += particles[i].w.Y;
@@ -2191,37 +2192,48 @@ class DPD {
 
                 char filename[40];
                 char filename1[40];
+                char filename2[40];
 
                 // sprintf( filename, "./data/data1_%d.vtu", step);  
-                sprintf( filename, "./data/XYZ%d.xyz", step);  
+                sprintf( filename, "./data/pos%d.xyz", step);  
                 sprintf( filename1, "./data/velocity%d.dat", step);  
+                sprintf( filename2, "./data/XYZ%d.xyz", step);  
                 
                 std::ofstream file(filename);
                 std::ofstream file1(filename1);
+                std::ofstream file2(filename2);
 
                 file << particles.size() << std::endl;
                 file << "#X Y Z co-ordinates" << std::endl;
+
                 file1 << particles.size() << std::endl;
                 file1 << "#vx vy vz" << std::endl;
+
+                file2 << particles.size() << std::endl;
+                file2 << "#X Y Z co-ordinates" << std::endl;
 
                 i = 0;
                 while ( i < npart ){
 
                          if ( particles[i].type == 0 ){
-                             file  << "O" << "\t" << std::setprecision(10) << particles[i].r << std::endl;
+                             file  << "O" << "\t" << std::setprecision(10) << particles[i].r_old << std::endl;
                              file1 << "O" << "\t" << std::setprecision(10) << particles[i].v << std::endl;
+                             file2 << "O" << "\t" << std::setprecision(10) << particles[i].r << std::endl;
                          }
                         else if ( particles[i].type == 1 ){
-                            file  << "H" << "\t" << std::setprecision(10) << particles[i].r  << "\t " << std::endl;
+                            file  << "H" << "\t" << std::setprecision(10) << particles[i].r_old  << "\t " << std::endl;
                             file1 << "H" << "\t" << std::setprecision(10) << particles[i].v << std::endl;
+                            file2 << "H" << "\t" << std::setprecision(10) << particles[i].r << std::endl;
                         }
                         else if ( particles[i].type == 2 ){
-                            file  << "C" << "\t" << std::setprecision(10) << particles[i].r << "\t " <<  std::endl;
+                            file  << "C" << "\t" << std::setprecision(10) << particles[i].r_old << "\t " <<  std::endl;
                             file1 << "C" << "\t" << std::setprecision(10) << particles[i].v << std::endl;
+                            file2 << "C" << "\t" << std::setprecision(10) << particles[i].r << std::endl;
                         }
                         else if ( particles[i].type == 3 ){
-                            file  << "B" << "\t" << std::setprecision(10) << particles[i].r << std::endl;
-                            file1 << "B" << "\t" << std::setprecision(10) <<particles[i].v << std::endl;
+                            file  << "B" << "\t" << std::setprecision(10) << particles[i].r_old << std::endl;
+                            file1 << "B" << "\t" << std::setprecision(10) << particles[i].v << std::endl;
+                            file2 << "B" << "\t" << std::setprecision(10) << particles[i].r << std::endl;
                          }
 
                         i++;
