@@ -113,7 +113,7 @@ if ( r2 <= rc2 ) {
     thetaij = normalDistribution(gen); 
     magRand = sigma[particles[i].type][particles[j].type] * wCij * thetaij;
 
-    // std::cout << uniRand << std::endl;
+    //std::cout << thetaij << std::endl;
 
     fRij.X = magRand * capRij.X;
     fRij.Y = magRand * capRij.Y;
