@@ -475,20 +475,20 @@ double zOld;
 double tApp;
 double tSep;
 
-double shortestDist;
-Vec3D p0, p1, p2;
-Vec3D x012Cross;
+//double shortestDist;
+//Vec3D p0, p1, p2;
+//Vec3D x012Cross;
 
-double Num;
-double Den;
-unsigned int resizeBoxSizeTo;
+//double Num;
+//double Den;
+//unsigned int resizeBoxSizeTo;
 
-Vec3D x01; Vec3D x02; Vec3D x21;
+//Vec3D x01; Vec3D x02; Vec3D x21;
 
-double droplet_Zcom;
-double droplet_ZcomNew;
+//double droplet_Zcom;
+//double droplet_ZcomNew;
 
-double residual;
+//double residual;
 #endif
 
 #if LOWER_WALL_ON
