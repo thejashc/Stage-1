@@ -1,6 +1,6 @@
-boxEdgeX            20.0	# box dimensions
-boxEdgeY            20.0
-boxEdgeZ            100.0
+boxEdgeX            48.0	# box dimensions
+boxEdgeY            100.0
+boxEdgeZ            48.0
 initRho             6.00
 #
 Bll1                 25.0   # interaction paramters
@@ -9,7 +9,7 @@ All1                -40.0
 All2                -40.0
 All12               -40.0
 Ass                 -40.0
-Asl1                -40.0
+Asl1                -32.0
 Asl2                -25.0
 rcutoff             1.0		
 rd_cutoff           0.75
