@@ -30,10 +30,10 @@
 #define SPRING_CONNECTED_SLD    0
 #define BCKGRND_CONNECTED_SLD   1
 
-#define CAPILLARY_CYLINDER		1
+#define CAPILLARY_CYLINDER		0
 #define CAPILLARY_SQUARE		0
 #define PISTON				    0
-#define CYLINDER_ARRAY          0
+#define CYLINDER_ARRAY          1
 #define HARD_SPHERES            0
 #define SLIM                    0
 #define RANDOM_FIBRE_BUNDLE     0
@@ -302,7 +302,9 @@ class DPD {
 
                 #if CYLINDER_ARRAY
                     //#include "cylinderArray.h"
-                    #include "ellipseArray.h"
+                    //#include "ellipseArray.h"
+                    #include "createSquareArray.h"
+                    #include "planarSlab.h"
                 #endif
                 #if HARD_SPHERES
                     #include "sphericalColloids.h"
@@ -1201,6 +1203,7 @@ class DPD {
                 // implement periodic boundary condition 
                 // #include "pbcNew.h"
                 #include "pbcNewReflecting.h"
+                //#include "pbcXOnly.h"
 
                 // calculate velocity (integral time step)
                 particles[i].v = 0.5*( particles[i].w_old + particles[i].w );       // calculate v(t) = v(t-dt/2) + v(t+dt/2)
@@ -2277,6 +2280,7 @@ class DPD {
 		}
         //---------------------- Create cylinder array -----------------------------//
         #if CYLINDER_ARRAY 
+        /*
         void createCylinderArray ( Vec3D p1, Vec3D p2, double cylRad ){
 
             pCount = 0;
@@ -2326,7 +2330,7 @@ class DPD {
             
                             // initializing particle radius, mass, position and velocity
                             // if ( xind*xind + yind*yind + zind*zind <= radSqr )
-                            particles.push_back({0.5,1.0,{xind, yind, zind},{rand_gen_velx, rand_gen_vely, rand_gen_velz},0});
+                            particles.push_back({1.0,1.0,{xind, yind, zind},{rand_gen_velx, rand_gen_vely, rand_gen_velz},0});
                             pCount += 1;
             
                         }// inside cylinder
@@ -2340,6 +2344,7 @@ class DPD {
             simProg << "finished initialization of  " << pCount << " particles inside crystal lattice" << std::endl;
             simProg << "***************************************************" << std::endl;
         }
+        */
         #endif
 
         /******************************* ELLIPSE **********************************************/
