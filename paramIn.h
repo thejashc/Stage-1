@@ -146,7 +146,7 @@ readParam >> emptyLine;			readParam.ignore(256,'\n');		        // L57
 #endif
 readParam >> emptyLine;			readParam.ignore(256,'\n');			    // L62
 
-#if CAPILLARY_CYLINDER || CAPILLARY_SQUARE
+#if CAPILLARY_CYLINDER || CAPILLARY_SQUARE || FCC_WALL
 	simProg << "Reading parameters for the capillary tube" << std::endl;	
 	readParam >> buffer >> bufferLen;	readParam.ignore(256,'\n');		// L63 
 	readParam >> buffer >> capLen;		readParam.ignore(256,'\n');		// L64 
