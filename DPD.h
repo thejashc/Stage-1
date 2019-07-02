@@ -30,10 +30,10 @@
 #define SPRING_CONNECTED_SLD    0
 #define BCKGRND_CONNECTED_SLD   1
 
-#define CAPILLARY_CYLINDER		0
+#define CAPILLARY_CYLINDER		1
 #define CAPILLARY_SQUARE		0
 #define PISTON				    0
-#define CYLINDER_ARRAY          1
+#define CYLINDER_ARRAY          0
 #define HARD_SPHERES            0
 #define SLIM                    0
 #define RANDOM_FIBRE_BUNDLE     0
@@ -244,8 +244,12 @@ class DPD {
                     bckgIdxStart = pCount;
                     //#include "wettingLiquidInCapillaryTube.h" 
                     //#include "definePiston.h"
+                    
+
+                    /*
 					#include "capillaryTube.h"
                     bckgIdxEnd = pCount - 1;
+                    */
 
                     //#include "readPiston.h"
                     //#include "readCapillaryTube.h"
@@ -262,7 +266,7 @@ class DPD {
                     #endif
 
                     //#include "cylindricalFluids.h"
-					#include "reservoir.h"
+					//#include "reservoir.h"
                     //#include "nonWettingReservoir.h" 
                     //#include "separateReservoir.h"
                     //
@@ -276,6 +280,10 @@ class DPD {
                     // COLLOIDS
                     // #include "multipleColloids.h"
 					// #include "capillaryTube.h"
+                    
+                    // FCC_WALL
+                    #include "fccCylinder.h"
+					#include "reservoir.h"
                 #endif
 
 				#if PLANAR_SLAB
@@ -299,7 +307,6 @@ class DPD {
 					//#include "reservoir.h"
 					#include "reservoirNew.h"
                 #endif
-
                 #if CYLINDER_ARRAY
                     //#include "cylinderArray.h"
                     //#include "ellipseArray.h"
@@ -1190,18 +1197,20 @@ class DPD {
                 #endif
                 */
 
-                // update velocities (mid-step)
-                particles[i].w += ( particles[i].fC       + 
-                                    particles[i].fD       + 
-                                    particles[i].fR       + 
-                                    particles[i].fHarmonic  + 
-                                    particles[i].fext )*( dt/particles[i].m );      // evaluating velocity at t+dt/2 : v(t+dt/2)
+                //if ( i >= solidCount ){
+                    // update velocities (mid-step)
+                    particles[i].w += ( particles[i].fC       + 
+                                        particles[i].fD       + 
+                                        particles[i].fR       + 
+                                        particles[i].fHarmonic  + 
+                                        particles[i].fext )*( dt/particles[i].m );      // evaluating velocity at t+dt/2 : v(t+dt/2)
 
-                // update position (integral time step) using the velocities (mid-step)
-                particles[i].r += particles[i].w*dt;                                // evaluating position at t+dt: r(t+dt)	
+                    // update position (integral time step) using the velocities (mid-step)
+                    particles[i].r += particles[i].w*dt;                                // evaluating position at t+dt: r(t+dt)	
+                //}
 
                 // implement periodic boundary condition 
-                // #include "pbcNew.h"
+                //#include "pbcNew.h"
                 #include "pbcNewReflecting.h"
                 //#include "pbcXOnly.h"
 
@@ -2048,9 +2057,8 @@ class DPD {
                                 <<  pBondInteractions[2][0]                << " "
                                 <<  pBondInteractions[2][1]                << " "
                                 <<  pBondInteractions[2][2]                << std::endl;
-
-                            #else
-                                <<  pRandom[2][2]                << std::endl;
+                            #else 
+                                <<  pRandom[2][2]                << " ";
                             #endif
 						
 				#include "pTensReset.h"
