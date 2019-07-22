@@ -184,8 +184,10 @@ int dmCell4;
 
 double zeroTol = 1e-7;
 double strainRate;
-double dissipativeWork;
-double randomWork;
+
+double conservativePower;
+double dissipativePower;
+double randomPower;
 
 int i2;
 int i3;
