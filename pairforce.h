@@ -1,4 +1,4 @@
-Rij = particles[i].r - ( particles[j].r + particles[j].dR );
+Rij = particles[i].r - ( particles[j].r + dR );
 
 // nearest image distance
 Rij.X = Rij.X - boxEdge[x] * round( Rij.X / boxEdge[x] );		// rij shear-flow correction : dR
