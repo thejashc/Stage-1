@@ -1,7 +1,7 @@
 // properties of reservoir
 unsigned int resWdth = 20;
 unsigned int resLen = 20;
-unsigned int resHeight = 30;
+unsigned int resHeight = 50;
 
 double colloidRad = 1.5;
 double colloidRadSqr = pow(colloidRad, 2.);
@@ -24,9 +24,10 @@ double zUpperCutOff = boxEdge[z];
 //double xOffset = 0.5*( boxEdge[x] - resWdth );
 double xOffset = 0.0;
 //double zOffset = 3.5;
-double zOffset = 0.0;
+double zOffset = bufferLen + capLen + capWallWdth + 40.;
 
 char dummyString[100];
+unsigned int dummyNum;
 char type;
 char fname[100];
 
@@ -50,24 +51,24 @@ double yColloidMax = boxEdge[y];
 //double zColloidMax = zUpperCutOff;
 double zColloidMax = boxEdge[z];
 
-
+/*
 // determining the total number of colloids
 NColloids = 0;
 xPos = xColloidMin;
 while ( xPos <= xColloidMax ){
-    yPos = yColloidMin;
-    while( yPos <= yColloidMax ){
-        zPos = zColloidMin;
-        while( zPos <= zColloidMax ){
+yPos = yColloidMin;
+while( yPos <= yColloidMax ){
+zPos = zColloidMin;
+while( zPos <= zColloidMax ){
 
-            NColloids += 1;
+NColloids += 1;
 
-            //std::cout << zPos << ", " << yPos << ", " << xPos << std::endl;
-            zPos += Zspacing;
-        }
-        yPos += spacing;
-    }
-    xPos += spacing;
+//std::cout << zPos << ", " << yPos << ", " << xPos << std::endl;
+zPos += Zspacing;
+}
+yPos += spacing;
+}
+xPos += spacing;
 }
 
 // initializing colloid centres
@@ -82,27 +83,62 @@ double colloidPos[NColloids][3];
 colloidIdx = 0;
 xPos = xColloidMin;
 while ( xPos <= xColloidMax ){
-    yPos = yColloidMin;
-    while( yPos <= yColloidMax ){
-        zPos = zColloidMin;
-        while( zPos <= zColloidMax ){
+yPos = yColloidMin;
+while( yPos <= yColloidMax ){
+zPos = zColloidMin;
+while( zPos <= zColloidMax ){
 
-            colloidPos[colloidIdx][0] = xPos;
-            colloidPos[colloidIdx][1] = yPos;
-            colloidPos[colloidIdx][2] = zPos;
+colloidPos[colloidIdx][0] = xPos;
+colloidPos[colloidIdx][1] = yPos;
+colloidPos[colloidIdx][2] = zPos;
 
-            zPos += Zspacing;
-            colloidIdx++;
-        }
-        yPos += spacing;
-    }
-    xPos += spacing;
+zPos += Zspacing;
+colloidIdx++;
+}
+yPos += spacing;
+}
+xPos += spacing;
+}
+*/
+
+// read centers of the colloid from file
+simProg << "***************************************************" << std::endl;
+simProg << "Started initialization of the spherical colloids" << std::endl;
+simProg << "Initializing " << NColloids << " colloids" << std::endl;
+
+ngbrIdxStart = particles.size();
+unsigned int colloidIdx=0;
+double colloidPos[NColloids][3];
+
+sprintf(fname, "./readConfig/solids/HARD_SPHERES/Lx_%d_Ly_%d_Lz_%d/colloid_N_%d.dat", int(resLen), int(resWdth), int(resHeight), NColloids);
+std::ifstream readColloidPos( fname, std::ifstream::in );
+
+if ( ! readColloidPos ) { simProg << "*** The colloids position file does not exist *** \n Aborting !! " << std::endl; abort(); }
+
+readColloidPos >> dummyNum;
+if( dummyNum != NColloids ){
+    simProg << " file containing colloid position is not available *** \n Aborting" << std::endl; 
+    abort();
+}
+
+for (i=0; i<NColloids; ++i){
+
+    readColloidPos >> xPos;
+    readColloidPos >> yPos;
+    readColloidPos >> zPos;
+
+    colloidPos[colloidIdx][0] = xPos;
+    colloidPos[colloidIdx][1] = yPos;
+    colloidPos[colloidIdx][2] = zPos;
+
+    colloidIdx++;
 }
 
 // Reading reservoir information 
 //sprintf(fname, "./readConfig/multipleColloids/Lx_20_Ly_20_Lz_%d/reservoir_Lx_20_Ly_20_Lz_%d_2.dat", int(resWdth), int( resWdth ) );
 sprintf(fname, "./readConfig/solids/HARD_SPHERES/Lx_%d_Ly_%d_Lz_%d/reservoir_Lx_%d_Ly_%d_Lz_%d.dat", int(resLen), int(resWdth), int(resHeight), int(resLen), int(resWdth), int(resHeight));
 std::ifstream readReservoirPos( fname, std::ifstream::in);
+
 if ( ! readReservoirPos ) { simProg << "*** The reservoir file for the colloidal suspension does not exist *** \n Aborting !! " << std::endl; abort(); }
 
 readReservoirPos >> npart;
@@ -128,8 +164,8 @@ for ( j=1 ; j <= npart ; ++j ){
     flag = 1;
     i = 0;
     while ( flag == 1 && i < NColloids && xind >= xLowerCutOff && xind <= xUpperCutOff 
-                                       && yind >= yLowerCutOff && yind <= yUpperCutOff 
-                                       && zind >= zLowerCutOff && zind <= zUpperCutOff ){
+            && yind >= yLowerCutOff && yind <= yUpperCutOff 
+            && zind >= zLowerCutOff && zind <= zUpperCutOff ){
 
         Rij.X = xind - colloidPos[i][0];
         Rij.Y = yind - colloidPos[i][1];
@@ -153,8 +189,8 @@ for ( j=1 ; j <= npart ; ++j ){
 
     // if particle is attached to colloid then it is a solid
     if ( flag == 1 && xind >= xLowerCutOff && xind <= xUpperCutOff
-                   && yind >= yLowerCutOff && yind <= yUpperCutOff
-                   && zind >= zLowerCutOff && zind <= zUpperCutOff ){
+            && yind >= yLowerCutOff && yind <= yUpperCutOff
+            && zind >= zLowerCutOff && zind <= zUpperCutOff ){
         particles.push_back({1.0,1.0,{xind + xOffset, yind, zind + zOffset},{rand_gen_velx, rand_gen_vely, rand_gen_velz}, 1});
         pCount++;
     }
