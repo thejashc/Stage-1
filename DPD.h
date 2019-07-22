@@ -12,6 +12,7 @@
 #include <unistd.h>
 #include <ctime>
 #include <random> 
+#include <chrono>
 
 // configuration of particles
 #define RANDOM_DISSIPATIVE		1
@@ -63,8 +64,10 @@ class DPD {
 		/**************************************** SOLVE ROUTINE ***********************************************/
 		/******************************************************************************************************/
 		//solve contains the time stepping algorithm and the output routines 
-		void solve () {
-	
+		int solve () {
+
+            auto start = std::chrono::high_resolution_clock::now();
+
 			simProg.open ( "./simProg.txt", std::ios::out );
 			simProg << " Proccess ID : " << getpid() << std::endl;
 			// initialize position, velocity, hoc, ll
@@ -125,6 +128,12 @@ class DPD {
                     i++;
                 }
 				createGridList();       // density calculation is taken care of
+
+                #if WALL_ON
+                    #if SPRING_CONNECTED_SLD
+                        springNetworkBox();
+                    #endif
+                #endif 
 			#endif
 
 			#if RESTART	
@@ -143,7 +152,8 @@ class DPD {
 			#endif // RESTART
 
 			// write parameters and initial configuration
-			vtkFileWritePosVel();
+			//asciiFileWritePosVel();
+			binFileWritePosVel();
 			std::ofstream paraInfo( "param.out" );
 			paraWrite(paraInfo);
 			paraInfo.close();
@@ -181,19 +191,23 @@ class DPD {
 
 				counter += 1;						// filewriting
 				fileWrite(enStats, eosStats, momStats, pTensStats);
-                
+               
+                /*
                 #if HARD_SPHERES
 					if ( step % saveCount == 0 )
                         // colloidStats << step << "\t\t" << colloid_com_pos << "\t\t" <<  colloid_boxCrossing << std::endl;
                         colloidStats << step << "\t\t" << colloid_com_pos << std::endl; 
                 #endif
+                */
 
 				resetVar();						// reset variables to zero
 				
 				if ( step % rstrtFwrtFreq == 0 ){
 					// write position velocity stats 
 					std::ofstream writeConfig;
-					writeConfig.open ( "./restart/posvelrestartfile.dat", std::ios::binary | std::ios::out );	// example binary file
+                    char fName[100];
+                    sprintf(fName, "./restart/posvelrestartfile.dat");
+					writeConfig.open ( fName, std::ios::binary | std::ios::out );	// example binary file
 					finalposvelWrite( writeConfig );	
 					writeConfig.close();
 				}
@@ -206,6 +220,24 @@ class DPD {
 				// from lyophobic to lyophilic
 				step += 1;						// increment time step
 
+                if( step % 1000 == 0 ){
+
+                    double tMax = 504.;
+                    auto stop = std::chrono::high_resolution_clock::now();
+                    auto duration = std::chrono::duration_cast<std::chrono::hours>(stop-start);
+                    //auto duration = stop-start; // even this command works
+        
+                    simProg << "The run time is = " << duration.count() << " hours \n";
+
+                    if ( duration.count() > tMax ){
+                        simProg << "The simulation has exceeded the max. time of 504 hours and will now be stopped. \n";
+                        simProg << " ********************* ENDING SIMULATION ************************* ";	
+                        simProg.close();
+
+                        return(0);
+                    }
+                }
+
 			}//end time loop
 
 			// post-processing
@@ -217,7 +249,7 @@ class DPD {
 			// eosStats.close();
 			// momStats.close();
 			
-			simProg << " ********************* ENDING SIMULATION ************************* " << std::endl;	
+			simProg << " ********************* ENDING SIMULATION *************************";	
 			simProg.close();
 
 		} //void solve()
@@ -245,10 +277,9 @@ class DPD {
                     //#include "wettingLiquidInCapillaryTube.h" 
                     //#include "definePiston.h"
                     
-
-                    /*
 					#include "capillaryTube.h"
                     bckgIdxEnd = pCount - 1;
+                    /*
                     */
 
                     //#include "readPiston.h"
@@ -266,7 +297,7 @@ class DPD {
                     #endif
 
                     //#include "cylindricalFluids.h"
-					//#include "reservoir.h"
+					#include "reservoir.h"
                     //#include "nonWettingReservoir.h" 
                     //#include "separateReservoir.h"
                     //
@@ -282,8 +313,8 @@ class DPD {
 					// #include "capillaryTube.h"
                     
                     // FCC_WALL
-                    #include "fccCylinder.h"
-					#include "reservoir.h"
+                    //#include "fccCylinder.h"
+					//#include "reservoir.h"
                 #endif
 
 				#if PLANAR_SLAB
@@ -442,8 +473,8 @@ class DPD {
 
             //fluidEndIndex = 0;
            // solidEndIndex = 0;
-            simProg << "***************************************************" << std::endl;
-            simProg << "Counting total particles" << std::endl;
+            simProg << "*************************************************** \n" ;
+            simProg << "Counting total particles \n";
 
 			for ( i = 0; i < particles.size(); ++i ){
                 if ( particles[i].type == 1 || particles[i].type == 2 ){
@@ -501,9 +532,9 @@ class DPD {
                 //simProg << pistonEndIndex << " : end index of piston particles \n" << std::endl; 
             #endif
 
-            simProg << fluidCount << " fluid particles indexed" << std::endl;
-            simProg << solidCount << " solid particles indexed" << std::endl;
-            simProg << fluidCount + solidCount << " total particles indexed" << std::endl;
+            simProg << fluidCount << " fluid particles indexed \n";
+            simProg << solidCount << " solid particles indexed \n";
+            simProg << fluidCount + solidCount << " total particles indexed \n";
 
 			#if WALL_ON
                 /*
@@ -530,8 +561,8 @@ class DPD {
                 */
 
                 #if SPRING_CONNECTED_SLD
-                simProg << "***************************************************" << std::endl;
-                simProg << "Spring Connected Solid Structures" << std::endl;
+                simProg << "*************************************************** \n";
+                simProg << "Spring Connected Solid Structures \n";
 				idx = 0;
                 ngbrIdxParticles=0;
                 i = solid_index[idx];
@@ -548,7 +579,7 @@ class DPD {
                         idx++;
                         i = solid_index[idx];
                     }
-                    simProg << "\n" << ngbrIdxParticles << " solid particles from " << ngbrIdxStart << " and " << ngbrIdxEnd  << " have their bond indices set to 0" << std::endl;
+                    simProg << "\n" << ngbrIdxParticles << " solid particles from " << ngbrIdxStart << " and " << ngbrIdxEnd  << " have their bond indices set to 0 \n";
 
                     #if RANDOM_FIBRE_BUNDLE
                         //#include "springConnectionsFibre.h"
@@ -561,8 +592,8 @@ class DPD {
                         */
                 #endif
                 #if BCKGRND_CONNECTED_SLD
-                simProg << "***************************************************" << std::endl;
-                simProg << "Background Connected Solid Structures" << std::endl;
+                simProg << "*************************************************** \n";
+                simProg << "Background Connected Solid Structures \n";
 				idx = 0;
                 bckgIdxParticles=0;
                 i = solid_index[idx];
@@ -591,7 +622,7 @@ class DPD {
                             i = solid_index[idx];
                         }
                     #endif
-                    simProg << "\n" << bckgIdxParticles << " solid particles from " << bckgIdxStart << " and " << bckgIdxEnd  << " have their positions attached to their initial position" << std::endl;
+                    simProg << "\n" << bckgIdxParticles << " solid particles from " << bckgIdxStart << " and " << bckgIdxEnd  << " have their positions attached to their initial position \n";
                 #endif
 			#endif // WALL_ON
 			
@@ -677,8 +708,9 @@ class DPD {
 			#endif
 
 			#if LEES_EDWARDS_BC
-				dissipativeWork = 0.0;
-				randomWork      = 0.0;
+				conservativePower = 0.0;
+				dissipativePower = 0.0;
+				randomPower      = 0.0;
 			#endif
 
 			#if SACF
@@ -760,8 +792,8 @@ class DPD {
 			#endif
             
             // defining the matrix for Brep and Aatt
-            simProg << " ********************************************************************* " << std::endl;
-            simProg << " Defining the matrix of repulsion parameters and attraction parameters " << std::endl;
+            simProg << " ********************************************************************* \n";
+            simProg << " Defining the matrix of repulsion parameters and attraction parameters \n";
 
             Brep[0][0] = repParam;  Aatt[0][0] = Ass;
             Brep[0][1] = repParam;  Aatt[0][1] = Asl1;
@@ -783,13 +815,13 @@ class DPD {
             Brep[3][2] = repParam;  Aatt[3][2] = Asl2;
             Brep[3][3] = repParam;  Aatt[3][3] = Ass;
 
-            simProg << " Finished defining the matrix of repulsion parameters and attraction parameters " << std::endl;
-            simProg << " ********************************************************************* " << std::endl;
+            simProg << " Finished defining the matrix of repulsion parameters and attraction parameters \n";
+            simProg << " ********************************************************************* \n";
 
 			// determine the number of types of particles present
 			#if RANDOM_DISSIPATIVE
-                simProg << " ********************************************************************* " << std::endl;
-                simProg << " Defining the matrix of noise and friction parameters " << std::endl;
+                simProg << " ********************************************************************* \n";
+                simProg << " Defining the matrix of noise and friction parameters \n";
 
                 sigma.resize( 4 );
                 gamma.resize( 4 );
@@ -805,15 +837,15 @@ class DPD {
                sigma[0][2] 	= noise;                        // S1-L2
                sigma[0][3] 	= noise;                        // S1-S2
 
-               sigma[1][0] 	= sigma[0][1];                  // L1-S1 
+               sigma[1][0] 	= noise;                        // L1-S1 
                sigma[1][1] 	= noise;       					// L1-L1    
-               sigma[1][2] 	= noise12;                      // L1-L2
-   	 		   sigma[1][3] 	= sigma[0][3];                  // L1-S2
+               sigma[1][2] 	= noise12;                      // L1-L2 
+   	 		   sigma[1][3] 	= noise;                        // L1-S2 = L1-S1
 
-               sigma[2][0] 	= sigma[0][2];                  // L2-S1
+               sigma[2][0] 	= noise;                        // L2-S1
                sigma[2][1] 	= sigma[1][2];                  // L2-L1 
                sigma[2][2] 	= noise2;        			    // L2-L2		
-               sigma[2][3] 	= sigma[2][0];        			// L2-S2		
+               sigma[2][3] 	= noise;        			    // L2-S2 
 
                sigma[3][0] 	= noise;						// S2-S1 
                sigma[3][1] 	= noise;                        // S2-L1
@@ -825,23 +857,23 @@ class DPD {
                gamma[0][2] 	= friction;                     // S1-L2
                gamma[0][3] 	= friction;                     // S1-S2
 
-               gamma[1][0] 	= gamma[0][1];                  // L1-S1
+               gamma[1][0] 	= friction;                     // L1-S1
                gamma[1][1] 	= friction;       		        // L1-L1     
                gamma[1][2] 	= friction12;                   // L1-L2     
-               gamma[1][3] 	= gamma[1][0];                  // L1-S2     
+               gamma[1][3] 	= friction;                     // L1-S2     
 
-               gamma[2][0] 	= gamma[0][2];                  // L2-S1
+               gamma[2][0] 	= friction;                     // L2-S1
                gamma[2][1] 	= gamma[1][2];                  // L2-L1
                gamma[2][2] 	= friction2;        	        // L2-L2	
-               gamma[2][3] 	= gamma[2][0];        	        // L2-S2	
+               gamma[2][3] 	= friction;        	            // L2-S2	
 
                gamma[3][0] 	= friction;						// S2-S1 
                gamma[3][1] 	= friction;                     // S2-L1
                gamma[3][2] 	= friction;                     // S2-L2
                gamma[3][3] 	= friction;                     // S2-S2
 
-               simProg << " ********************************************************************* " << std::endl;
-               simProg << " Finished defining the matrix of noise and friction parameters " << std::endl;
+               simProg << " ********************************************************************* \n";
+               simProg << " Finished defining the matrix of noise and friction parameters \n";
 			#endif // RANDOM_DISSIPATIVE
 
 		}//init
@@ -980,17 +1012,17 @@ class DPD {
 			         mi[y] < mini[y] || mi[y] > maxi[y] ||
 				     mi[z] < mini[z] || mi[z] > maxi[z] )
 				{ 
-					simProg << "*** particle " << i << " of type " << particles[i].type  << " is outside box in step: " << step << std::endl;
-					simProg << "*** position: " << particles[i].r << std::endl;
-					simProg << mini[x] << " < " << mi[x] << " < " << maxi[x] << std::endl;
-					simProg << mini[y] << " < " << mi[y] << " < " << maxi[y] << std::endl;
-					simProg << mini[z] << " < " << mi[z] << " < " << maxi[z] << std::endl;
+					simProg << "*** particle " << i << " of type " << particles[i].type  << " is outside box in step: " << step << "\n";
+					simProg << "*** position: " << particles[i].r << "\n";
+					simProg << mini[x] << " < " << mi[x] << " < " << maxi[x] <<"\n";
+					simProg << mini[y] << " < " << mi[y] << " < " << maxi[y] <<"\n";
+					simProg << mini[z] << " < " << mi[z] << " < " << maxi[z] <<"\n";
 					abort();
 				}
 				if ( grid[mi[x]][mi[y]][mi[z]][0] == MaxPerCell )
 				{ 
-					simProg << "*** cell overfull at time step = " << step << " with " << grid[mi[x]][mi[y]][mi[z]][0] << " particles in cell" << std::endl;
-					simProg << mi[x] << "  " << mi[y] << "  " << mi[z] << std::endl;
+					simProg << "*** cell overfull at time step = " << step << " with " << grid[mi[x]][mi[y]][mi[z]][0] << " particles in cell" << "\n";
+					simProg << mi[x] << "  " << mi[y] << "  " << mi[z] << "\n";
 					abort();
 				}
 				grid[mi[x]][mi[y]][mi[z]][0] ++ ;
@@ -1028,8 +1060,6 @@ class DPD {
 							{
 								j = grid[mi[x]][mi[y]][mi[z]][jj];
 								// simProg << "j1 "<<  mi[x] << " " << mi[y] << " " << mi[z] << " " << jj << " " << j << std::endl;
-                                particles[j].dR = dR;
-                                
                                 #include "pairforce.h"
 
 							} // jj
@@ -1072,7 +1102,6 @@ class DPD {
 									{
 										j = grid[mj[x]][mj[y]][mj[z]][jj];
 										// simProg << "j2 " << m << " " << mj[x] << " " << mj[y] << " " << mj[z] << " " << jj << " " << j << std::endl;
-                                        particles[j].dR = dR;
                                         
 										#include "pairforce.h"
 
@@ -1101,7 +1130,6 @@ class DPD {
 									{
 										j = grid[mj[x]][mj[y]][mj[z]][jj];
 										// simProg << "j2 " << m << " " << mj[x] << " " << mj[y] << " " << mj[z] << " " << jj << " " << j << std::endl;
-                                        particles[j].dR = dR;
 
 											#include "pairforce.h"
 									} // jj
@@ -1126,7 +1154,6 @@ class DPD {
 								{
 									j = grid[mj[x]][mj[y]][mj[z]][jj];
 									// simProg << "j2 " << m << " " << mj[x] << " " << mj[y] << " " << mj[z] << " " << jj << " " << j << std::endl;
-                                    particles[j].dR = dR;
 
                                     #include "pairforce.h"
 
@@ -1210,12 +1237,20 @@ class DPD {
                 //}
 
                 // implement periodic boundary condition 
-                //#include "pbcNew.h"
-                #include "pbcNewReflecting.h"
+                #include "pbcNew.h"
+                //#include "pbcNewReflecting.h"
                 //#include "pbcXOnly.h"
 
                 // calculate velocity (integral time step)
                 particles[i].v = 0.5*( particles[i].w_old + particles[i].w );       // calculate v(t) = v(t-dt/2) + v(t+dt/2)
+
+                #if LEES_EDWARDS_BC
+                    conservativePower += Vec3D::dot( particles[i].fC, particles[i].v );
+                    randomPower       += Vec3D::dot( particles[i].fR, particles[i].v );
+                    dissipativePower  += Vec3D::dot( particles[i].fD, particles[i].v );
+
+                    //std::cout << "particles[i].fC = " << particles[i].fC << "particles[i].v = " << particles[i].v << ", dot product = " << Vec3D::dot( particles[i].fC, particles[i].v ); 
+                #endif
 
                 momX += particles[i].w.X;
                 momY += particles[i].w.Y;
@@ -1356,8 +1391,9 @@ class DPD {
             totCOM.Z      = 0.;
 
 			#if LEES_EDWARDS_BC
-                dissipativeWork = 0.0;
-                randomWork	= 0.0;
+                conservativePower	= 0.0;
+                dissipativePower = 0.0;
+                randomPower	= 0.0;
 			#endif
 
             #if HARD_SPHERES
@@ -1765,215 +1801,215 @@ class DPD {
 		//--------------------------------------- Parameter file writing--------------------------------------//
 		void paraWrite(std::ofstream& paraInfo){
 
-			paraInfo << "---------------------------" << std::endl;
-			paraInfo << "Simulation Box Parameters" << std::endl;
-			paraInfo << "---------------------------" << std::endl;
-			paraInfo << "Box length x (boxEdge[x])                  :           " << boxEdge[x] << std::endl;
-			paraInfo << "Box length y (boxEdge[y])                  :           " << boxEdge[y] << std::endl;
-			paraInfo << "Box length z (boxEdge[z])                  :           " << boxEdge[z] << std::endl;
-			paraInfo << "Initial fluid density (initRho)            :           " << initRho << std::endl;
-			paraInfo << "Cutoff attr (rcutoff)                      :           " << rcutoff << std::endl;
-			paraInfo << "Cutoff rep (rd_cutoff)                     :           " << rd_cutoff << std::endl;
-			paraInfo << "Dimensions (dim)                           :           " << dim << std::endl;
-			paraInfo << "Density (rho)                              :           " << rho << std::endl;
-			paraInfo << "Timestep (dt)                              :           " << dt << std::endl;
-			paraInfo << "Number of fluid particles (fluidCount)     :           " << fluidCount << std::endl;
+			paraInfo << "---------------------------" << "\n";
+			paraInfo << "Simulation Box Parameters" << "\n";
+			paraInfo << "---------------------------" << "\n";
+			paraInfo << "Box length x (boxEdge[x])                  :           " << boxEdge[x] << "\n";
+			paraInfo << "Box length y (boxEdge[y])                  :           " << boxEdge[y] << "\n";
+			paraInfo << "Box length z (boxEdge[z])                  :           " << boxEdge[z] << "\n";
+			paraInfo << "Initial fluid density (initRho)            :           " << initRho << "\n";
+			paraInfo << "Cutoff attr (rcutoff)                      :           " << rcutoff << "\n";
+			paraInfo << "Cutoff rep (rd_cutoff)                     :           " << rd_cutoff << "\n";
+			paraInfo << "Dimensions (dim)                           :           " << dim << "\n";
+			paraInfo << "Density (rho)                              :           " << rho << "\n";
+			paraInfo << "Timestep (dt)                              :           " << dt << "\n";
+			paraInfo << "Number of fluid particles (fluidCount)     :           " << fluidCount << "\n";
 		
-			paraInfo << "---------------------------" << std::endl;
-			paraInfo << "Run & Data saving" << std::endl;
-			paraInfo << "---------------------------" << std::endl;
-			paraInfo << "Total run time (stepMax)                   :           " << stepMax << std::endl;
-			paraInfo << "Data frequency (saveCount)                 :           " << saveCount << std::endl;
-			paraInfo << "Pressure Data frequency (psaveCount)       :           " << psaveCount << std::endl;
+			paraInfo << "---------------------------" << "\n";
+			paraInfo << "Run & Data saving" << "\n";
+			paraInfo << "---------------------------" << "\n";
+			paraInfo << "Total run time (stepMax)                   :           " << stepMax << "\n";
+			paraInfo << "Data frequency (saveCount)                 :           " << saveCount << "\n";
+			paraInfo << "Pressure Data frequency (psaveCount)       :           " << psaveCount << "\n";
 			
 			#if SPHERICAL_DROPLET 
-				paraInfo << "---------------------------" << std::endl;
-				paraInfo << "Spherical Drop Parameters" << std::endl;
-				paraInfo << "---------------------------" << std::endl;
-				paraInfo << "Radius of the spherical droplet (sphDropRad)            :           " << sphDropRad << std::endl;
+				paraInfo << "---------------------------" << "\n";
+				paraInfo << "Spherical Drop Parameters" << "\n";
+				paraInfo << "---------------------------" << "\n";
+				paraInfo << "Radius of the spherical droplet (sphDropRad)            :           " << sphDropRad << "\n";
 			#elif CYLINDER_DROPLET 
-				paraInfo << "---------------------------" << std::endl;
-				paraInfo << "Cylinder Parameters" << std::endl;
-				paraInfo << "---------------------------" << std::endl;
-				paraInfo << "Cylinder radius (cylRad)                   :           " << cylRad << std::endl;
-				paraInfo << "Cylinder Height (cylHeight)                :           " << cylHeight << std::endl;
-				paraInfo << "Cylinder center x-coord (cylCenterX)       :           " << cylCenterX << std::endl;
-				paraInfo << "Cylinder center y-coord (cylCenterY)       :           " << cylCenterY << std::endl;
+				paraInfo << "---------------------------" << "\n";
+				paraInfo << "Cylinder Parameters" << "\n";
+				paraInfo << "---------------------------" << "\n";
+				paraInfo << "Cylinder radius (cylRad)                   :           " << cylRad << "\n";
+				paraInfo << "Cylinder Height (cylHeight)                :           " << cylHeight << "\n";
+				paraInfo << "Cylinder center x-coord (cylCenterX)       :           " << cylCenterX << "\n";
+				paraInfo << "Cylinder center y-coord (cylCenterY)       :           " << cylCenterY << "\n";
 			#elif PLANAR_SLAB
-				paraInfo << "---------------------------" << std::endl;
-				paraInfo << "Planar Slab Parameters" << std::endl;
-				paraInfo << "---------------------------" << std::endl;
+				paraInfo << "---------------------------" << "\n";
+				paraInfo << "Planar Slab Parameters" << "\n";
+				paraInfo << "---------------------------" << "\n";
 			#if !(WALL_ON)
-				paraInfo << "Width of planar slab (slabWidth)           :           " << slabWidth << std::endl;
+				paraInfo << "Width of planar slab (slabWidth)           :           " << slabWidth << "\n";
 			#endif
 			#endif
 			
 			#if RANDOM_DISSIPATIVE
-				paraInfo << "---------------------------" << std::endl;
-				paraInfo << "Random & Dissipative Force " << std::endl;
-				paraInfo << "---------------------------" << std::endl;
-				paraInfo << "Set temperature (kbT)                      :           " << kBT << std::endl;
-				paraInfo << "Rescaled Noise(sqrt(12)*sigma*inv_sqrt_dt) :           " << noise << std::endl;
-				paraInfo << "Actual Noise level (sigma)                 :           " << noise/  ( std::sqrt(12.) * inv_sqrt_dt ) << std::endl;
-				paraInfo << "Friction parameter (gamma)                 :           " << friction << std::endl;
-                paraInfo << "Liquid2 rescaled noise level (sigma2)      :           " << sigma[2][2] << std::endl;
-                paraInfo << "Liquid2 friction parameter (gamma2)        :           " << gamma[2][2] << std::endl;
-                paraInfo << "L1-L2 rescaled noise level (sigma2)        :           " << sigma[1][2] << std::endl;
-                paraInfo << "L1-L2 friction parameter (gamma2)          :           " << gamma[1][2] << std::endl;
+				paraInfo << "---------------------------" << "\n";
+				paraInfo << "Random & Dissipative Force " << "\n";
+				paraInfo << "---------------------------" << "\n";
+				paraInfo << "Set temperature (kbT)                      :           " << kBT << "\n";
+				paraInfo << "Rescaled Noise(sqrt(12)*sigma*inv_sqrt_dt) :           " << noise << "\n";
+				paraInfo << "Actual Noise level (sigma)                 :           " << noise/  ( std::sqrt(12.) * inv_sqrt_dt ) << "\n";
+				paraInfo << "Friction parameter (gamma)                 :           " << friction << "\n";
+                paraInfo << "Liquid2 rescaled noise level (sigma2)      :           " << sigma[2][2] << "\n";
+                paraInfo << "Liquid2 friction parameter (gamma2)        :           " << gamma[2][2] << "\n";
+                paraInfo << "L1-L2 rescaled noise level (sigma2)        :           " << sigma[1][2] << "\n";
+                paraInfo << "L1-L2 friction parameter (gamma2)          :           " << gamma[1][2] << "\n";
 			#endif 
 			
 			#if WALL_ON
-                paraInfo << "---------------------------" << std::endl;
-                paraInfo << "Wall parameters      " << std::endl;
-                paraInfo << "---------------------------" << std::endl;
-                paraInfo << "Number of solid particles (solidCount)     :           " << solidCount << std::endl;
-                paraInfo << "Wall density (initWallRho)                 :           " << initWallRho << std::endl;
-                paraInfo << "Solid-Solid Attraction Strength   (Ass)    :           " << Aatt[0][0] << std::endl;
-                paraInfo << "Solid-Solid Repulsion  Strength   (Bss)    :           " << Brep[0][0] << std::endl;
-                paraInfo << "Solid-Liquid Attraction Strength   (asl)   :           " << Aatt[0][1] << std::endl;
-                paraInfo << "Solid-Liquid2 Attraction Strength   (asl)  :           " << Aatt[0][2] << std::endl;
-                paraInfo << "Liquid2-Liquid2 Attraction Strength (asl)  :           " << Aatt[2][2] << std::endl;
-                paraInfo << "Solid-Liquid Repulsion  Strength   (Bsl)   :           " << Brep[0][1] << std::endl;
-                paraInfo << "Soft Repulsive force Strength   (Brep)     :           " << Brep[0][0] << std::endl;
-                paraInfo << "Penetration tolerance (wallPenetration)    :           " << wallPenetration << std::endl;
-                paraInfo << "Background Spring constant for wall ( kWall )         :           " << kWallBckg << std::endl;
-                paraInfo << "Neighbour Spring constant for wall ( kWall )         :           " << kWallNgbr << std::endl;
+                paraInfo << "---------------------------" << "\n";
+                paraInfo << "Wall parameters      " << "\n";
+                paraInfo << "---------------------------" << "\n";
+                paraInfo << "Number of solid particles (solidCount)     :           " << solidCount << "\n";
+                paraInfo << "Wall density (initWallRho)                 :           " << initWallRho << "\n";
+                paraInfo << "Solid-Solid Attraction Strength   (Ass)    :           " << Aatt[0][0] << "\n";
+                paraInfo << "Solid-Solid Repulsion  Strength   (Bss)    :           " << Brep[0][0] << "\n";
+                paraInfo << "Solid-Liquid Attraction Strength   (asl)   :           " << Aatt[0][1] << "\n";
+                paraInfo << "Solid-Liquid2 Attraction Strength   (asl)  :           " << Aatt[0][2] << "\n";
+                paraInfo << "Liquid2-Liquid2 Attraction Strength (asl)  :           " << Aatt[2][2] << "\n";
+                paraInfo << "Solid-Liquid Repulsion  Strength   (Bsl)   :           " << Brep[0][1] << "\n";
+                paraInfo << "Soft Repulsive force Strength   (Brep)     :           " << Brep[0][0] << "\n";
+                paraInfo << "Penetration tolerance (wallPenetration)    :           " << wallPenetration << "\n";
+                paraInfo << "Background Spring constant for wall ( kWall )         :           " << kWallBckg << "\n";
+                paraInfo << "Neighbour Spring constant for wall ( kWall )         :           " << kWallNgbr << "\n";
 			#endif // WALL_ON
 			
-			paraInfo << "---------------------------" << std::endl;
-			paraInfo << "Conservative Force         " << std::endl;
-			paraInfo << "---------------------------" << std::endl;
-			paraInfo << "Liquid-Liquid Attraction Strength (All)    :           " << Aatt[1][1] << std::endl;
-			paraInfo << "Liquid-Liquid Repulsion Strength (Bll)     :           " << Brep[1][1] << std::endl;
+			paraInfo << "---------------------------" << "\n";
+			paraInfo << "Conservative Force         " << "\n";
+			paraInfo << "---------------------------" << "\n";
+			paraInfo << "Liquid-Liquid Attraction Strength (All)    :           " << Aatt[1][1] << "\n";
+			paraInfo << "Liquid-Liquid Repulsion Strength (Bll)     :           " << Brep[1][1] << "\n";
 
 			#if LEES_EDWARDS_BC
-				paraInfo << "---------------------------" << std::endl;
-				paraInfo << "Lees-Edwards BC            " << std::endl;
-				paraInfo << "---------------------------" << std::endl;
-				paraInfo << "Homogeneous shear-rate (gammaDot)          :            " << gammaDot << std::endl;
-				paraInfo << "Strain-rate (strainRate)                   :            " << strainRate << std::endl;
+				paraInfo << "---------------------------" << "\n";
+				paraInfo << "Lees-Edwards BC            " << "\n";
+				paraInfo << "---------------------------" << "\n";
+				paraInfo << "Homogeneous shear-rate (gammaDot)          :            " << gammaDot << "\n";
+				paraInfo << "Strain-rate (strainRate)                   :            " << strainRate << "\n";
 			#endif
 
 			#if SACF
-				paraInfo << "-------------------------------" << std::endl;
-				paraInfo << "Stress-Autocorrelation function" << std::endl;
-				paraInfo << "-------------------------------" << std::endl;
-				paraInfo << "Number of variables (nvars )               :            " << n_vars << std::endl;
-				paraInfo << "Levels of correlation (corLevels)          :            " << corLevels << std::endl;
-				paraInfo << "Blocks in a level (pCorr)                  :            " << pCorr << std::endl;
-				paraInfo << "Average length in a level (mCorr)          :            " << mCorr << std::endl;
+				paraInfo << "-------------------------------" << "\n";
+				paraInfo << "Stress-Autocorrelation function" << "\n";
+				paraInfo << "-------------------------------" << "\n";
+				paraInfo << "Number of variables (nvars )               :            " << n_vars << "\n";
+				paraInfo << "Levels of correlation (corLevels)          :            " << corLevels << "\n";
+				paraInfo << "Blocks in a level (pCorr)                  :            " << pCorr << "\n";
+				paraInfo << "Average length in a level (mCorr)          :            " << mCorr << "\n";
 			#endif
 			#if CAPILLARY_CYLINDER
-				paraInfo << "-------------------------------" << std::endl;
-				paraInfo << "Capillary cylinder             " << std::endl;
-				paraInfo << "-------------------------------" << std::endl;
-				paraInfo << "Buffer length left of capillary (bufferLen):            " << bufferLen << std::endl;	
-				paraInfo << "Capillary tube length ( capLen )           :            " << capLen << std::endl;
-				paraInfo << "Capillary radius ( capRad )                :            " << capRad << std::endl;
-				paraInfo << "Wall width adj. to capillary (capWallWdth) :            " << capWallWdth << std::endl;
-				paraInfo << "Initial width of reservoir (resWdth)       :            " << resWdth << std::endl;
+				paraInfo << "-------------------------------" << "\n";
+				paraInfo << "Capillary cylinder             " << "\n";
+				paraInfo << "-------------------------------" << "\n";
+				paraInfo << "Buffer length left of capillary (bufferLen):            " << bufferLen << "\n";	
+				paraInfo << "Capillary tube length ( capLen )           :            " << capLen << "\n";
+				paraInfo << "Capillary radius ( capRad )                :            " << capRad << "\n";
+				paraInfo << "Wall width adj. to capillary (capWallWdth) :            " << capWallWdth << "\n";
+				paraInfo << "Initial width of reservoir (resWdth)       :            " << resWdth << "\n";
 			#elif CAPILLARY_SQUARE
-				paraInfo << "-------------------------------" << std::endl;
-				paraInfo << "Capillary Square               " << std::endl;
-				paraInfo << "-------------------------------" << std::endl;
-				paraInfo << "Buffer length left of capillary (bufferLen):            " << bufferLen << std::endl;	
-				paraInfo << "Capillary tube length ( capLen )           :            " << capLen << std::endl;
-				paraInfo << "Inner-edge-length of capillary ( sqEdge )  :            " << sqEdge << std::endl;
-				paraInfo << "Wall width adj. to capillary (capWallWdth) :            " << capWallWdth << std::endl;
-				paraInfo << "Initial width of reservoir (resWdth)       :            " << resWdth << std::endl;
+				paraInfo << "-------------------------------" << "\n";
+				paraInfo << "Capillary Square               " << "\n";
+				paraInfo << "-------------------------------" << "\n";
+				paraInfo << "Buffer length left of capillary (bufferLen):            " << bufferLen << "\n";	
+				paraInfo << "Capillary tube length ( capLen )           :            " << capLen << "\n";
+				paraInfo << "Inner-edge-length of capillary ( sqEdge )  :            " << sqEdge << "\n";
+				paraInfo << "Wall width adj. to capillary (capWallWdth) :            " << capWallWdth << "\n";
+				paraInfo << "Initial width of reservoir (resWdth)       :            " << resWdth << "\n";
 
 				#if PISTON
-					paraInfo << "-------------------------------" << std::endl;
-					paraInfo << "PISTON                         " << std::endl;
-					paraInfo << "-------------------------------" << std::endl;
-					paraInfo << "Applied pressure (appPressure)             :            " << appPressure << std::endl;	
-					paraInfo << "Piston force applied from time (pistonT0)  :            " << pistonT0 << std::endl;
-					paraInfo << "Time constant of piston force ( pistonW )  :            " << pistonW << std::endl;
+					paraInfo << "-------------------------------" << "\n";
+					paraInfo << "PISTON                         " << "\n";
+					paraInfo << "-------------------------------" << "\n";
+					paraInfo << "Applied pressure (appPressure)             :            " << appPressure << "\n";	
+					paraInfo << "Piston force applied from time (pistonT0)  :            " << pistonT0 << "\n";
+					paraInfo << "Time constant of piston force ( pistonW )  :            " << pistonW << "\n";
 				#endif
 			#endif
-			paraInfo << "---------------------------" << std::endl;
-			paraInfo << "---------------------------" << std::endl;
-			paraInfo << "---------------------------" << std::endl;
+			paraInfo << "---------------------------" << "\n";
+			paraInfo << "---------------------------" << "\n";
+			paraInfo << "---------------------------" << "\n";
 
 
 			/******************************* FLAGS ***************************************/
 			flagList.open ( "./flagList.txt", std::ios::out );
 			#if RANDOM_DISSIPATIVE           
-			flagList << "RANDOM_DISSIPATIVE FLAG                :            " << "ON" << std::endl;  
+			flagList << "RANDOM_DISSIPATIVE FLAG                :            " << "ON" << "\n";  
 			#endif
 			#if SPHERICAL_DROPLET                
-			flagList << "SPHERICAL_DROPLET FLAG                 :            " << "ON" << std::endl;  
+			flagList << "SPHERICAL_DROPLET FLAG                 :            " << "ON" << "\n";  
 			#endif
 			#if SPHERICAL_CAP                    
-			flagList << "SPHERICAL_CAP FLAG                     :            " << "ON" << std::endl;  
+			flagList << "SPHERICAL_CAP FLAG                     :            " << "ON" << "\n";  
 			#endif
 			#if CYLINDER_DROPLET                 
-			flagList << "CYLINDER_DROPLET FLAG                  :            " << "ON" << std::endl;  
+			flagList << "CYLINDER_DROPLET FLAG                  :            " << "ON" << "\n";  
 			#endif
 			#if PLANAR_SLAB                      
-			flagList << "PLANAR_SLAB FLAG                       :            " << "ON" << std::endl;  
+			flagList << "PLANAR_SLAB FLAG                       :            " << "ON" << "\n";  
 			#endif
 			#if CRYSTAL	                         
-			flagList << "CRYSTAL FLAG                           :            " << "ON" << std::endl;  
+			flagList << "CRYSTAL FLAG                           :            " << "ON" << "\n";  
 			#endif
 			#if RESTART	                          
-			flagList << "RESTART FLAG                           :            " << "ON" << std::endl;  
+			flagList << "RESTART FLAG                           :            " << "ON" << "\n";  
 			#endif
 
 			// WALL flags
 			#if WALL_ON                          
-			flagList << "WALL_ON FLAG                           :            " << "ON" << std::endl;  
+			flagList << "WALL_ON FLAG                           :            " << "ON" << "\n";  
 			#if LOWER_WALL_ON                    
-			flagList << "LOWER_WALL_ON FLAG                     :            " << "ON" << std::endl;  
+			flagList << "LOWER_WALL_ON FLAG                     :            " << "ON" << "\n";  
 			#endif
 			#if UPPER_WALL_ON                    
-			flagList << "UPPER_WALL_ON FLAG                     :            " << "ON" << std::endl;  
+			flagList << "UPPER_WALL_ON FLAG                     :            " << "ON" << "\n";  
 			#endif
 			#if FCC_WALL                         
-                flagList << "FCC_WALL FLAG                          :            " << "ON" << std::endl;  
+                flagList << "FCC_WALL FLAG                          :            " << "ON" << "\n";  
 			#endif
 			#if ROUGH_WALL                       
-                flagList << "ROUGH_WALL FLAG                        :            " << "ON" << std::endl;  
+                flagList << "ROUGH_WALL FLAG                        :            " << "ON" << "\n";  
 			#endif
 			#endif
 
 			// POISEUILLE flow
 			#if BODY_FORCE                       
-                flagList << "BODY_FORCE FLAG                        :            " << "ON" << std::endl;  
+                flagList << "BODY_FORCE FLAG                        :            " << "ON" << "\n";  
 			#endif
 
 			// FILE_WRITE
-            flagList << "STYLE_VMD FLAG                         :            " << "ON" << std::endl;  
+            flagList << "STYLE_VMD FLAG                         :            " << "ON" << "\n";  
 
 			// CORRELATION FUNCTIONS
 			#if SACF                              
-                flagList << "SACF FLAG                              :            " << "ON" << std::endl;  
+                flagList << "SACF FLAG                              :            " << "ON" << "\n";  
 			#endif
 			#if SACF_TEST                        
-                flagList << "SACF_TEST FLAG                         :            " << "ON" << std::endl;  
+                flagList << "SACF_TEST FLAG                         :            " << "ON" << "\n";  
 			#endif
 
 			// LEES-EDWARDS BOUNDARY CONDITION
 			#if LEES_EDWARDS_BC                  
-                flagList << "LEES_EDWARDS_BC FLAG                   :            " << "ON" << std::endl;  
+                flagList << "LEES_EDWARDS_BC FLAG                   :            " << "ON" << "\n";  
 			#endif
 
 			// DENSITY CALCULATION
 			#if DENS_EXACT			 
-                flagList << "DENS_EXACT FLAG                        :            " << "ON" << std::endl;  
+                flagList << "DENS_EXACT FLAG                        :            " << "ON" << "\n";  
 			#endif
 			
 			// CAPILLARY IMBIBITION
 			#if CAPILLARY_CYLINDER		 
-                flagList << "CAPILLARY CYLINDER FLAG                :            " << "ON" << std::endl;  
+                flagList << "CAPILLARY CYLINDER FLAG                :            " << "ON" << "\n";  
                 #if PISTON
-                    flagList << "PISTON FLAG                            :            " << "ON" << std::endl;  
+                    flagList << "PISTON FLAG                            :            " << "ON" << "\n";  
                 #endif
 			#endif
 			#if CAPILLARY_SQUARE		 
-                flagList << "CAPILLARY SQUARE FLAG                  :            " << "ON" << std::endl;  
+                flagList << "CAPILLARY SQUARE FLAG                  :            " << "ON" << "\n";  
                 #if PISTON
-                    flagList << "PISTON FLAG                            :            " << "ON" << std::endl;  
+                    flagList << "PISTON FLAG                            :            " << "ON" << "\n";  
                 #endif
 			#endif
 
@@ -1983,13 +2019,13 @@ class DPD {
 		void fileWrite( std::ofstream& enStats, std::ofstream& eosStats, std::ofstream& momStats, std::ofstream& pTensStats ){
 
 			if ( step % saveCount == 0){
-				simProg << step << " steps out of " << stepMax << " completed " << std::endl;
+				simProg << step << " steps out of " << stepMax << " completed " << "\n";
 			}
 
 			// separate module for pressure -- requires better averaging
 			if ( pcounter >= psaveCount ) {
 
-                // std::cout << "pCounter = " << pcounter << ", at step = " << step << std::endl;
+                // std::cout << "pCounter = " << pcounter << ", at step = " << step << "\n";
 				
 				// average and reset the pTensor
 				#include "pTensAverage.h"
@@ -2056,9 +2092,9 @@ class DPD {
 
                                 <<  pBondInteractions[2][0]                << " "
                                 <<  pBondInteractions[2][1]                << " "
-                                <<  pBondInteractions[2][2]                << std::endl;
+                                <<  pBondInteractions[2][2]                << "\n";
                             #else 
-                                <<  pRandom[2][2]                << " ";
+                                <<  pRandom[2][2]                << " " << "\n";
                             #endif
 						
 				#include "pTensReset.h"
@@ -2069,34 +2105,36 @@ class DPD {
 			//write output file in the .data format
 			if (counter>=saveCount) {				
 
-				// particle positions in vtk file format
-				vtkFileWritePosVel();
+				// particle positions in ascii file format
+				//asciiFileWritePosVel();
+				binFileWritePosVel();
 
 				// Energy
 						#if LEES_EDWARDS_BC
 				enStats 	<< std::setw(20) << std::setprecision(15) << pot_en << "\t" 
 					        << std::setw(20) << std::setprecision(15) << kin_en << "\t" 
 				        	<< std::setw(20) << std::setprecision(15) << tot_en << "\t"
-				        	<< std::setw(20) << std::setprecision(15) << dissipativeWork << "\t"
-				        	<< std::setw(20) << std::setprecision(15) << randomWork << std::endl;
+				        	<< std::setw(20) << std::setprecision(15) << conservativePower << "\t"
+				        	<< std::setw(20) << std::setprecision(15) << dissipativePower << "\t"
+				        	<< std::setw(20) << std::setprecision(15) << randomPower << "\n";
 						#else
 							#if WALL_ON
 								#if CAPILLARY_CYLINDER || CAPILLARY_SQUARE || HARD_SPHERES
 									#if PISTON
                                     enStats     << std::setw(20) << std::setprecision(15) << pot_en << "\t" 
                                                 << std::setw(20) << std::setprecision(15) << kin_en << "\t" 
-                                                << std::setw(20) << std::setprecision(15) << tot_en << "\t" << std::endl;
-                                                // << std::setw(20) << std::setprecision(15) << forceOnPiston << std::endl;
+                                                << std::setw(20) << std::setprecision(15) << tot_en << "\t" << "\n";
+                                                // << std::setw(20) << std::setprecision(15) << forceOnPiston << "\n";
                                     #else 
                                        enStats     << std::setw(20) << std::setprecision(15) << pot_en << "\t" 
                                                     << std::setw(20) << std::setprecision(15) << kin_en << "\t" 
-                                                    << std::setw(20) << std::setprecision(15) << tot_en << "\t" << std::endl;
+                                                    << std::setw(20) << std::setprecision(15) << tot_en << "\t" << "\n";
 									#endif
 								#endif
 							#else
 								enStats 	<< std::setw(20) << std::setprecision(15) << pot_en << "\t" 
 										<< std::setw(20) << std::setprecision(15) << kin_en << "\t" 
-										<< std::setw(20) << std::setprecision(15) << tot_en << std::endl;
+										<< std::setw(20) << std::setprecision(15) << tot_en << "\n";
 							#endif
 
 						#endif
@@ -2107,12 +2145,12 @@ class DPD {
 					        #if WALL_ON
 					        << std::setw(20) << std::setprecision(15) << wallTemp	<< "\t" 
 					        #endif
-				        	<< std::setw(20) << std::setprecision(15) << pressure 	<< std::endl;
+				        	<< std::setw(20) << std::setprecision(15) << pressure 	<< "\n";
 
 				// Momentum
 				momStats 	<< std::setw(20) << std::setprecision(15) << momX << "\t" 
 				        	<< std::setw(20) << std::setprecision(15) << momY << "\t" 
-				        	<< std::setw(20) << std::setprecision(15) << momZ << std::endl;
+				        	<< std::setw(20) << std::setprecision(15) << momZ << "\n";
 
 
 				// density profile rhoZ
@@ -2128,7 +2166,7 @@ class DPD {
 					Zpos = ( bin_lower + bin_upper )*0.5;
 					vol = rhoZ_Zdelta * boxEdge[x] * boxEdge[y];
 
-					rhoZStats << Zpos << "\t" << vol << "\t" << rhoZ[iRhoZ] << "\t" << counter << std::endl;
+					rhoZStats << Zpos << "\t" << vol << "\t" << rhoZ[iRhoZ] << "\t" << counter << "\n";
 
 					// reset value of rhoZ vector
 					rhoZ[iRhoZ] = 0.0;
@@ -2146,7 +2184,7 @@ class DPD {
 							segPlane_xCOM[segPlane_ind] /= segPlane_count[segPlane_ind];
 							segPlane_zCOM[segPlane_ind] /= segPlane_count[segPlane_ind];
 
-							segPlaneStats << segPlane_xCOM[segPlane_ind] << "\t" << segPlane_zCOM[segPlane_ind] << std::endl;
+							segPlaneStats << segPlane_xCOM[segPlane_ind] << "\t" << segPlane_zCOM[segPlane_ind] << "\n";
 
 							// reset values
 							segPlane_count[segPlane_ind] = 0;
@@ -2167,7 +2205,7 @@ class DPD {
 
 								nZStats << ( nZ[nZ_indz][nZ_indx] / counter ) << "\t";
 							}
-							nZStats << "\n" << std::endl;
+							nZStats << "\n" << "\n";
 						}
 					}
 					*/
@@ -2185,7 +2223,7 @@ class DPD {
 						radPos = ( bin_lower + bin_upper )*0.5;
 						vol = M_PI * ( pow( bin_upper, 2.0 ) - pow( bin_lower, 2.0 ) ) * cylHeight;
 
-						rhorStats << radPos << "\t" << vol << "\t" << rhor[iRhor] << "\t" << counter << std::endl;
+						rhorStats << radPos << "\t" << vol << "\t" << rhor[iRhor] << "\t" << counter << "\n";
 
 						// reset value of rhor vector
 						rhor[iRhor] = 0.0;
@@ -2198,57 +2236,84 @@ class DPD {
 			}
 		}
 
-		//--------------------------------------- VTK file writing routine--------------------------------------//
-		void vtkFileWritePosVel(){
+		//--------------------------------------- ascii file writing routine--------------------------------------//
+		void asciiFileWritePosVel(){
 
                 char filename[40];
                 char filename1[40];
-                char filename2[40];
+                //char filename2[40];
 
                 // sprintf( filename, "./data/data1_%d.vtu", step);  
                 sprintf( filename, "./data/pos%d.xyz", step);  
                 sprintf( filename1, "./data/velocity%d.dat", step);  
-                sprintf( filename2, "./data/XYZ%d.xyz", step);  
+                //sprintf( filename2, "./data/XYZ%d.xyz", step);  
                 
                 std::ofstream file(filename);
                 std::ofstream file1(filename1);
-                std::ofstream file2(filename2);
+                //std::ofstream file2(filename2);
 
-                file << particles.size() << std::endl;
-                file << "#X Y Z co-ordinates" << std::endl;
+                file << particles.size() << "\n";
+                file << "#X Y Z co-ordinates" << "\n";
 
-                file1 << particles.size() << std::endl;
-                file1 << "#vx vy vz" << std::endl;
+                file1 << particles.size() << "\n";
+                file1 << "#vx vy vz" << "\n";
 
-                file2 << particles.size() << std::endl;
-                file2 << "#X Y Z co-ordinates" << std::endl;
+                //file2 << particles.size() << "\n";
+                //file2 << "#X Y Z co-ordinates" << "\n";
 
                 i = 0;
                 while ( i < npart ){
 
                          if ( particles[i].type == 0 ){
-                             file  << "O" << "\t" << std::setprecision(10) << particles[i].r_old << std::endl;
-                             file1 << "O" << "\t" << std::setprecision(10) << particles[i].v << std::endl;
-                             file2 << "O" << "\t" << std::setprecision(10) << particles[i].r << std::endl;
+                             file  << "O" << "\t" << std::setprecision(10) << particles[i].r_old << "\n";
+                             file1 << "O" << "\t" << std::setprecision(10) << particles[i].v << "\n";
+                             //file2 << "O" << "\t" << std::setprecision(10) << particles[i].r << "\n";
                          }
                         else if ( particles[i].type == 1 ){
-                            file  << "H" << "\t" << std::setprecision(10) << particles[i].r_old  << "\t " << std::endl;
-                            file1 << "H" << "\t" << std::setprecision(10) << particles[i].v << std::endl;
-                            file2 << "H" << "\t" << std::setprecision(10) << particles[i].r << std::endl;
+                            file  << "H" << "\t" << std::setprecision(10) << particles[i].r_old  << "\t " << "\n";
+                            file1 << "H" << "\t" << std::setprecision(10) << particles[i].v << "\n";
+                            //file2 << "H" << "\t" << std::setprecision(10) << particles[i].r << "\n";
                         }
                         else if ( particles[i].type == 2 ){
-                            file  << "C" << "\t" << std::setprecision(10) << particles[i].r_old << "\t " <<  std::endl;
-                            file1 << "C" << "\t" << std::setprecision(10) << particles[i].v << std::endl;
-                            file2 << "C" << "\t" << std::setprecision(10) << particles[i].r << std::endl;
+                            file  << "C" << "\t" << std::setprecision(10) << particles[i].r_old << "\t " <<  "\n";
+                            file1 << "C" << "\t" << std::setprecision(10) << particles[i].v << "\n";
+                            //file2 << "C" << "\t" << std::setprecision(10) << particles[i].r << "\n";
                         }
                         else if ( particles[i].type == 3 ){
-                            file  << "B" << "\t" << std::setprecision(10) << particles[i].r_old << std::endl;
-                            file1 << "B" << "\t" << std::setprecision(10) << particles[i].v << std::endl;
-                            file2 << "B" << "\t" << std::setprecision(10) << particles[i].r << std::endl;
+                            file  << "B" << "\t" << std::setprecision(10) << particles[i].r_old << "\n";
+                            file1 << "B" << "\t" << std::setprecision(10) << particles[i].v << "\n";
+                            //file2 << "B" << "\t" << std::setprecision(10) << particles[i].r << "\n";
                          }
 
                         i++;
                 }
+
+                file.close();
+                file1.close();
+		}
+		//--------------------------------------- binary file writing routine--------------------------------------//
+		void binFileWritePosVel(){
+
+                char filename[40];
+                sprintf( filename, "./data/posVel%d.bin", step);  
+                std::ofstream writeBinary(filename);
+                
+                writeBinary.write( reinterpret_cast< const char * >( &npart ), sizeof( npart ) );
+                for (Particle& p : particles){
+                    // particle types
+                    writeBinary.write( reinterpret_cast< const char * >( &p.type ), sizeof( p.type ) );
+
+                    // particle positions - r(t + dt)
+                    writeBinary.write( reinterpret_cast< const char * >( &p.r_old.X ), sizeof( p.r_old.X ) );
+                    writeBinary.write( reinterpret_cast< const char * >( &p.r_old.Y ), sizeof( p.r_old.Y ) );
+                    writeBinary.write( reinterpret_cast< const char * >( &p.r_old.Z ), sizeof( p.r_old.Z ) );
+
+                    // mid-step velocities ( from Verlet ) - v( t - 0.5 * dt )
+                    writeBinary.write( reinterpret_cast< const char * >( &p.v.X ), sizeof( p.v.X ) );
+                    writeBinary.write( reinterpret_cast< const char * >( &p.v.Y ), sizeof( p.v.Y ) );
+                    writeBinary.write( reinterpret_cast< const char * >( &p.v.Z ), sizeof( p.v.Z ) );
+                }
+                writeBinary.close();
 		}
 		//-------------------- Final velocity and positions ----------------------//
 		void finalposvelWrite( std::ofstream& writeConfig ){
@@ -2257,20 +2322,26 @@ class DPD {
             #if WALL_ON
                 writeConfig.write( reinterpret_cast< const char * >( &bckgIdxStart ), sizeof( bckgIdxStart ) );
                 writeConfig.write( reinterpret_cast< const char * >( &bckgIdxEnd ),   sizeof( bckgIdxEnd ) );
+                
+                #if SPRING_CONNECTED_SLD
+                    writeConfig.write( reinterpret_cast< const char * >( &ngbrIdxStart ), sizeof( ngbrIdxStart ) );
+                    writeConfig.write( reinterpret_cast< const char * >( &ngbrIdxEnd ),   sizeof( ngbrIdxEnd ) );
+                #endif
             #endif
 			writeConfig.write( reinterpret_cast< const char * >( &step ),  sizeof( step ) );
-			//writeConfig.write( reinterpret_cast< const char * >( &seed ),  sizeof( std::default_random_engine ) );
+			writeConfig.write( reinterpret_cast< const char * >( &gen ),  sizeof( std::mt19937 ) );
+			writeConfig.write( reinterpret_cast< const char * >( &normalDistribution ),  sizeof( std::normal_distribution<double> ) );
 
 			for (Particle& p : particles){
                 // particle types
 				writeConfig.write( reinterpret_cast< const char * >( &p.type ), sizeof( p.type ) );
 
-                // particle positions
+                // particle positions - r(t + dt)
 				writeConfig.write( reinterpret_cast< const char * >( &p.r.X ), sizeof( p.r.X ) );
 				writeConfig.write( reinterpret_cast< const char * >( &p.r.Y ), sizeof( p.r.Y ) );
 				writeConfig.write( reinterpret_cast< const char * >( &p.r.Z ), sizeof( p.r.Z ) );
 
-                // mid-step velocities ( from Verlet ) 
+                // mid-step velocities ( from Verlet ) - v( t - 0.5 * dt )
 				writeConfig.write( reinterpret_cast< const char * >( &p.w.X ), sizeof( p.w.X ) );
 				writeConfig.write( reinterpret_cast< const char * >( &p.w.Y ), sizeof( p.w.Y ) );
 				writeConfig.write( reinterpret_cast< const char * >( &p.w.Z ), sizeof( p.w.Z ) );
@@ -2559,63 +2630,115 @@ class DPD {
         // creates springs between particles based on nearest neighbour considerations for the entire box //
         void springNetworkBox(){
 
-           totalBonds = 0;
+           #if !(RESTART)
+               totalBonds = 0;
 
-            for ( mi[x] = 0 ; mi[x] < NrCells[x] ; ++mi[x] )
-                for ( mi[y] = 0 ; mi[y] < NrCells[y] ; ++mi[y] )
-                    for ( mi[z] = 0 ; mi[z] < NrCells[z] ; ++mi[z] )
-                        for ( ii = 1 ; ii <= grid[mi[x]][mi[y]][mi[z]][0] ; ++ii ){
-                            i = grid[mi[x]][mi[y]][mi[z]][ii];
-                            // printf("i  %i %i %i %i %i \n",mix,miy,miz,ii,i);
+                for ( mi[x] = 0 ; mi[x] < NrCells[x] ; ++mi[x] )
+                    for ( mi[y] = 0 ; mi[y] < NrCells[y] ; ++mi[y] )
+                        for ( mi[z] = 0 ; mi[z] < NrCells[z] ; ++mi[z] )
+                            for ( ii = 1 ; ii <= grid[mi[x]][mi[y]][mi[z]][0] ; ++ii ){
+                                i = grid[mi[x]][mi[y]][mi[z]][ii];
+                                // printf("i  %i %i %i %i %i \n",mix,miy,miz,ii,i);
 
-                            // particle j in same cell as i
-                            dR.setZero();
+                                // particle j in same cell as i
+                                dR.setZero();
 
-                            for ( jj = ii + 1 ; jj <= grid[mi[x]][mi[y]][mi[z]][0] ; ++jj )
-                            {
-                                j = grid[mi[x]][mi[y]][mi[z]][jj];
-                                // simProg << "j1 "<<  mi[x] << " " << mi[y] << " " << mi[z] << " " << jj << " " << j << std::endl;
+                                for ( jj = ii + 1 ; jj <= grid[mi[x]][mi[y]][mi[z]][0] ; ++jj )
+                                {
+                                    j = grid[mi[x]][mi[y]][mi[z]][jj];
+                                    // simProg << "j1 "<<  mi[x] << " " << mi[y] << " " << mi[z] << " " << jj << " " << j << "\n";
 
-                                #include "createBondIndex.h"
-
-                            } // jj
-
-                            // particle j in neighbour cell to i
-                            for ( m = 0 ; m < 13 ; m++ ){
-                                mj[x]	     = periodN[ mi[x] + dm[m][x] + 1 ][x];
-                                mj[y]	     = periodN[ mi[y] + dm[m][y] + 1 ][y];
-                                mj[z]	     = periodN[ mi[z] + dm[m][z] + 1 ][z];
-
-                                dR.X	     = periodR[ mi[x] + dm[m][x] + 1 ][x];
-                                dR.Y	     = periodR[ mi[y] + dm[m][y] + 1 ][y];
-                                dR.Z	     = periodR[ mi[z] + dm[m][z] + 1 ][z];
-
-                                for ( jj = 1 ; jj <= grid[mj[x]][mj[y]][mj[z]][0] ; ++jj ){
-                                    j = grid[mj[x]][mj[y]][mj[z]][jj];
-                                    // simProg << "j2 " << m << " " << mj[x] << " " << mj[y] << " " << mj[z] << " " << jj << " " << j << std::endl;
-
-                                        #include "createBondIndex.h"
+                                    #include "createBondIndex.h"
 
                                 } // jj
 
-                            } // m
+                                // particle j in neighbour cell to i
+                                for ( m = 0 ; m < 13 ; m++ ){
+                                    mj[x]	     = periodN[ mi[x] + dm[m][x] + 1 ][x];
+                                    mj[y]	     = periodN[ mi[y] + dm[m][y] + 1 ][y];
+                                    mj[z]	     = periodN[ mi[z] + dm[m][z] + 1 ][z];
 
-                        } // ii
+                                    dR.X	     = periodR[ mi[x] + dm[m][x] + 1 ][x];
+                                    dR.Y	     = periodR[ mi[y] + dm[m][y] + 1 ][y];
+                                    dR.Z	     = periodR[ mi[z] + dm[m][z] + 1 ][z];
 
-            #include "psfWrite.h"
+                                    for ( jj = 1 ; jj <= grid[mj[x]][mj[y]][mj[z]][0] ; ++jj ){
+                                        j = grid[mj[x]][mj[y]][mj[z]][jj];
+                                        // simProg << "j2 " << m << " " << mj[x] << " " << mj[y] << " " << mj[z] << " " << jj << " " << j << "\n";
 
-            j = 0;
-            i = solid_index[j];
-            while ( j < solidCount )
-            {
-                simProg << "************ Particle " << i << "************" << std::endl;
+                                            #include "createBondIndex.h"
 
-                for ( k=1; k<= particles[i].bondIndex[0]; ++k )
-                    simProg << " Particle " << particles[i].bondIndex[k] << " , eq bond length = " << particles[i].eqBondLength[k] << std::endl; 
+                                    } // jj
 
-                j++;
+                                } // m
+
+                            } // ii
+
+                #include "psfWrite.h"
+
+                char fName[100];
+                char fNameBin[100];
+
+                sprintf(fName , "./restart/Neighbours.dat");
+                sprintf(fNameBin , "./restart/Neighbours.bin");
+
+                std::ofstream writeConfig ( fName, std::ios_base::out );
+                std::ofstream writeConfigBin ( fNameBin, std::ios::binary |std::ios_base::out );
+
+                //FORMAT : Col1: "Reference particle" Col2:"Bonded particle" Col3:"Eq bond Length" 
+                writeConfig << totalBonds << "\n";
+                writeConfigBin.write(reinterpret_cast< const char * >( &totalBonds ), sizeof(totalBonds));
+
+                j = 0;
                 i = solid_index[j];
-            }
+                while (j < solidCount)
+                {
+
+                    for ( k=1; k<= particles[i].bondIndex[0]; ++k ){
+                        // writing to ascii file
+                        writeConfig << i << "\t" <<  particles[i].bondIndex[k] << "\t" << particles[i].eqBondLength[k] << "\n"; 
+
+                        // writing to a binary file
+                        writeConfigBin.write( reinterpret_cast< const char * >(&i), sizeof(i) );
+                        writeConfigBin.write( reinterpret_cast< const char * >(&particles[i].bondIndex[k]), sizeof(particles[i].bondIndex[k]));
+                        writeConfigBin.write( reinterpret_cast< const char * >(&particles[i].eqBondLength[k]), sizeof(particles[i].eqBondLength[k]));
+                    }
+
+                    j++;
+                    i = solid_index[j];
+                }
+
+                writeConfig.close();
+                writeConfigBin.close();
+
+            #else 
+                #include "readBondIndex.h"
+
+                // write data of the bonds between particles and neighbours -- this is basically for
+                // debugging
+                char fName[100];
+                sprintf(fName , "./data/Neighbours.dat");
+
+                std::ofstream writeConfig ( fName, std::ios_base::out );
+                writeConfig << totalBonds << "\n";
+                writeConfig << "Reference particle" << "\t" << "Bonded particle" << "\t" << "Eq bond Length" << "\n";
+
+                j = 0;
+                i = solid_index[j];
+                while ( j < solidCount )
+                {
+
+                    for ( k=1; k<= particles[i].bondIndex[0]; ++k ){
+                        //writeConfig << " Particle " << particles[i].bondIndex[k] << " , eq bond length = " << particles[i].eqBondLength[k] << "\n"; 
+                        writeConfig << i << "\t" <<  particles[i].bondIndex[k] << "\t" << particles[i].eqBondLength[k] << "\n"; 
+                    }
+
+                    j++;
+                    i = solid_index[j];
+                }
+
+                writeConfig.close();
+            #endif
         }
         //------------------------------ Mod function ------------------------------//
         int moduloAB( int A, int B){ 
