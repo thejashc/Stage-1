@@ -23,13 +23,13 @@ draw color white
 puts "the simulation box is drawn"
 
 for {set x $startFile} {$x < $endFile} {incr x} {	 
-	mol addfile ./data/XYZ${x}.xyz step [expr {$x-0}]
+	mol addfile ./data/pos${x}.xyz step [expr {$x-0}]
 	set x [expr {$x+ $incrFile}]
 }
 
 #mol new /storage/thejas/stage1/code/data/XYZ1.xyz
 
-pbc set {10 10 20} -all
+pbc set {20 20 250} -all
 draw pbcbox -width 5
 
 puts "the molecule for this problem is 0"
