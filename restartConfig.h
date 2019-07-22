@@ -17,26 +17,44 @@ std::ifstream readConfig( "./restart/posvelrestartfile.dat", std::ios::binary | 
 if ( ! readConfig ) { simProg << "*** The restart file could not be opened/ does not exist *** \n Aborting !! " << std::endl; abort(); }
 
 readConfig.read ( ( char * ) &npart,		            sizeof( unsigned int ) );
+simProg << " Positions and velocities of a total of " << npart << " will be read " << std::endl;
 #if WALL_ON
     readConfig.read ( ( char * ) &bckgIdxStart,		sizeof( unsigned int ) );
     readConfig.read ( ( char * ) &bckgIdxEnd,		sizeof( unsigned int ) );
+
+    readConfig.read ( ( char * ) &ngbrIdxStart,		sizeof( unsigned int ) );
+    readConfig.read ( ( char * ) &ngbrIdxEnd,		sizeof( unsigned int ) );
+
+    simProg << " bckgIdxStart = " << bckgIdxStart << std::endl;
+    simProg << " bckgIdxEnd = " << bckgIdxEnd << std::endl;
+
+    simProg << " ngbrIdxStart = " << ngbrIdxStart << std::endl;
+    simProg << " ngbrIdxEnd = " << ngbrIdxEnd << std::endl;
 #endif
 readConfig.read ( ( char * ) &step,		                sizeof( int ) );
-readConfig.read ( ( char * ) &seedRstrt,	            sizeof( std::default_random_engine ) );
+
+simProg << " The simulation will start from step = " << step+1 << std::endl;
+//readConfig.read ( ( char * ) &seedRstrt,	            sizeof( std::default_random_engine ) );
+readConfig.read ( ( char * ) &gen,                      sizeof( std::mt19937 ) );
+readConfig.read ( ( char * ) &normalDistribution,       sizeof( std::normal_distribution<double> ) );
 
 //double dummyRand = randNumGen(seedRstrt);   // random number generator is for the previous time-step .. The sequence continues after this seed
-seed = seedRstrt;	
+//seed = seedRstrt;	
 
 for ( j = 0 ; j < npart ; ++ j ){	
 
 	readConfig.read ( ( char * ) &particleType,		sizeof ( particleType ) );
+
 	readConfig.read ( ( char * ) &xind,		        sizeof ( double ) );
 	readConfig.read ( ( char * ) &yind,		        sizeof ( double )  );
 	readConfig.read ( ( char * ) &zind,		        sizeof ( double )  );
+
 	readConfig.read ( ( char * ) &rand_gen_velx,	sizeof ( double ) );
 	readConfig.read ( ( char * ) &rand_gen_vely,	sizeof ( double ) );
 	readConfig.read ( ( char * ) &rand_gen_velz,	sizeof ( double ) );
+
 	readConfig.read ( ( char * ) &tempRho,	        sizeof ( tempRho ) );
+
 	readConfig.read ( ( char * ) &r0X,		        sizeof ( double ) );
 	readConfig.read ( ( char * ) &r0Y,		        sizeof ( double )  );
 	readConfig.read ( ( char * ) &r0Z,		        sizeof ( double )  );
@@ -60,10 +78,10 @@ for ( j = 0 ; j < npart ; ++ j ){
     // simProg << type << " " << rand_gen_velx << " " << rand_gen_vely << " " << rand_gen_velz << std::endl;
 }
 
-simProg << "\n  " << npart << " particles positions and velocities are initialized" << std::endl;
+//simProg << "\n  " << npart << " particles positions and velocities are initialized" << std::endl;
 
 readConfig.close();
 
 step++;
 
-simProg << "\n Restarting simulation from " << step << ". The seed of the random number generator is  " << seed << std::endl;
+simProg << "\n Restarting simulation from " << step << std::endl;
