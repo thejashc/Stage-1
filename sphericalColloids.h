@@ -152,7 +152,7 @@ for ( j=1 ; j <= npart ; ++j ){
     // generate random velocities
     rand_gen_velx = 0.;
     rand_gen_vely = 0.;
-    rand_gen_velz = 0.;
+    rand_gen_velz = resCOMVel;
 
     readReservoirPos >> type;
     readReservoirPos >> xind;
@@ -179,7 +179,7 @@ for ( j=1 ; j <= npart ; ++j ){
         r2 = Rij.getLengthSquared();
 
         if ( r2 < colloidRadSqr  ){
-            particles.push_back({1.0,1.0,{xind + xOffset, yind, zind + zOffset},{rand_gen_velx, rand_gen_vely, rand_gen_velz}, 0});
+            particles.push_back({1.0,1.0,{xind + xOffset, yind, zind + zOffset},{rand_gen_velx, rand_gen_vely, rand_gen_velz}, 4});
             pCount++;
             flag = 0;
         }
