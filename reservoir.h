@@ -4,7 +4,9 @@ zind_min = resCOMZ - resWdth * 0.5;
 
 xind_max = boxEdge[x];
 yind_max = boxEdge[y];
-zind_max = resCOMZ + resWdth * 0.5; 
+//zind_max = resCOMZ + resWdth * 0.5; 
+double zind_max1 = resCOMZ; 
+double zind_max2 = resCOMZ + resWdth * 0.5; 
 
 pCount = 0;
 
@@ -29,13 +31,14 @@ while ( xind < xind_max){
     yind = yind_min;
     while( yind < yind_max){
         zind = zind_min;
-        while( zind < zind_max){
+        while( zind < zind_max1){
 
             particles.push_back({1.0,1.0,{xind, yind, zind},{0., 0., resCOMVel},1});
             pCount++;
 
             // update zind
-            zind += 2.0 * aCube * rcutoff;
+            //zind += 2.0 * aCube * rcutoff;
+            zind += 1.0 * aCube * rcutoff;
 
         } // end of zind
         yind += aCube * rcutoff;
@@ -48,14 +51,15 @@ xind = xind_min;
 while ( xind < xind_max){
     yind = yind_min;
     while( yind < yind_max){
-        zind = zind_min + aCube * rcutoff;
-        while( zind < zind_max){
+        zind = resCOMZ;
+        while( zind < zind_max2){
 
             particles.push_back({1.0,1.0,{xind, yind, zind},{0., 0., resCOMVel},2});
             pCount++;
 
             // update zind
-            zind += 2.0 * aCube * rcutoff;
+            //zind += 2.0 * aCube * rcutoff;
+            zind += 1.0 * aCube * rcutoff;
 
         } // end of zind
         yind += aCube * rcutoff;
