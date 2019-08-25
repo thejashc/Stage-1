@@ -12,19 +12,43 @@ readParam >> buffer >> initRho;		readParam.ignore(256,'\n');     // L4
 
 readParam >> emptyLine ;		readParam.ignore(256,'\n');         // L5
 
-simProg << "Reading Liquid Liquid Interaction Parameters" << std::endl;
-readParam >> buffer >> repParam;	readParam.ignore(256,'\n');     // L6
-readParam >> buffer >> repParam2;	readParam.ignore(256,'\n');     // L6
-readParam >> buffer >> All1;		readParam.ignore(256,'\n');     // L7
-readParam >> buffer >> All2;		readParam.ignore(256,'\n');     // L8
-readParam >> buffer >> All12;		readParam.ignore(256,'\n');     // L9
-readParam >> buffer >> Ass;		    readParam.ignore(256,'\n');     // L10
-readParam >> buffer >> Asl1;		readParam.ignore(256,'\n');     // L11
-readParam >> buffer >> Asl2;		readParam.ignore(256,'\n');     // L12
-readParam >> buffer >> rcutoff;	    readParam.ignore(256,'\n');		// L13
-readParam >> buffer >> rd_cutoff;	readParam.ignore(256,'\n');		// L14
-	
+simProg << "************************** Reading Bij ***************************" << std::endl;
+readParam >> buffer >> Bs1_s1;	    readParam.ignore(256,'\n');     // L6
+readParam >> buffer >> Bs1_l1;      readParam.ignore(256,'\n');
+readParam >> buffer >> Bs1_l2;      readParam.ignore(256,'\n');
+readParam >> buffer >> Bs1_s2;      readParam.ignore(256,'\n');
+readParam >> buffer >> Bs1_s3;      readParam.ignore(256,'\n');
+readParam >> buffer >> Bl1_l1;      readParam.ignore(256,'\n');
+readParam >> buffer >> Bl1_l2;      readParam.ignore(256,'\n');
+readParam >> buffer >> Bl1_s2;      readParam.ignore(256,'\n');
+readParam >> buffer >> Bl1_s3;      readParam.ignore(256,'\n');
+readParam >> buffer >> Bl2_l2;      readParam.ignore(256,'\n');
+readParam >> buffer >> Bl2_s2;      readParam.ignore(256,'\n');
+readParam >> buffer >> Bl2_s3;      readParam.ignore(256,'\n');
+readParam >> buffer >> Bs2_s2;      readParam.ignore(256,'\n');
+readParam >> buffer >> Bs2_s3;      readParam.ignore(256,'\n');
+readParam >> buffer >> Bs3_s3;      readParam.ignore(256,'\n');
+
 readParam >> emptyLine ;		            readParam.ignore(256,'\n');     // L15
+
+simProg << "************************** Reading Aij ***************************" << std::endl;
+readParam >> buffer >> As1_s1;	    readParam.ignore(256,'\n');     // L6
+readParam >> buffer >> As1_l1;      readParam.ignore(256,'\n');
+readParam >> buffer >> As1_l2;      readParam.ignore(256,'\n');
+readParam >> buffer >> As1_s2;      readParam.ignore(256,'\n');
+readParam >> buffer >> As1_s3;      readParam.ignore(256,'\n');
+readParam >> buffer >> Al1_l1;      readParam.ignore(256,'\n');
+readParam >> buffer >> Al1_l2;      readParam.ignore(256,'\n');
+readParam >> buffer >> Al1_s2;      readParam.ignore(256,'\n');
+readParam >> buffer >> Al1_s3;      readParam.ignore(256,'\n');
+readParam >> buffer >> Al2_l2;      readParam.ignore(256,'\n');
+readParam >> buffer >> Al2_s2;      readParam.ignore(256,'\n');
+readParam >> buffer >> Al2_s3;      readParam.ignore(256,'\n');
+readParam >> buffer >> As2_s2;      readParam.ignore(256,'\n');
+readParam >> buffer >> As2_s3;      readParam.ignore(256,'\n');
+readParam >> buffer >> As3_s3;      readParam.ignore(256,'\n');
+
+readParam >> emptyLine ;		            readParam.ignore(256,'\n'); 
 #if WALL_ON
     simProg << "Reading wall particle Parameters" << std::endl;
     readParam >> buffer >> kWallBckg;       readParam.ignore(256,'\n');     // L16
@@ -39,22 +63,26 @@ readParam >> emptyLine ;		            readParam.ignore(256,'\n');     // L15
    	readParam.ignore(256,'\n');		
    	readParam.ignore(256,'\n');		
 #endif
+readParam >> emptyLine;        readParam.ignore(256,'\n');     // L21
+
+simProg << "interaction cutoffs" << std::endl;
+readParam >> buffer >> rcutoff;         readParam.ignore(256,'\n');     // L16
+readParam >> buffer >> rd_cutoff;       readParam.ignore(256,'\n');     // L16
 
 readParam >> emptyLine;        readParam.ignore(256,'\n');     // L21
 
 #if RANDOM_DISSIPATIVE
     simProg << "Reading Random and Dissipative Parameters" << std::endl;
-    readParam >> buffer >> kBT;		        readParam.ignore(256,'\n');		// L22
-    readParam >> buffer >> noise;		    readParam.ignore(256,'\n');		// L23
-    readParam >> buffer >> noise2;	        readParam.ignore(256,'\n');		// L24
-    readParam >> buffer >> noise12;	        readParam.ignore(256,'\n');		// L25
+    readParam >> buffer >> kBT;		        readParam.ignore(256,'\n');	
+    readParam >> buffer >> noise;		    readParam.ignore(256,'\n');		
+    readParam >> buffer >> noise2;	        readParam.ignore(256,'\n');		
+    readParam >> buffer >> noise12;	        readParam.ignore(256,'\n');		
 #else
     readParam.ignore(256, '\n');		
     readParam.ignore(256, '\n');		
     readParam.ignore(256, '\n');
     readParam.ignore(256, '\n');
 #endif
-readParam >> buffer >> dim;		        readParam.ignore(256,'\n');		// L26
 
 readParam >> emptyLine;			        readParam.ignore(256,'\n');		// L27
 
@@ -218,13 +246,6 @@ boxRecip[y] 	= 1.0 / boxEdge[y];
 boxRecip[z] 	= 1.0 / boxEdge[z];
 
 #if RANDOM_DISSIPATIVE
-    /*
-    orig_noise = noise;
-    orig_noise2 = noise2;
-    orig_noise12 = noise12;
- 
-    sqrtTwelve  = std::sqrt(12.);
-    */
 	inv_sqrt_dt = 1.0 / std::sqrt(dt);				    // inverse of square root of the time step
 
 	friction	= pow( noise, 2.0 )/( 2.0 * kBT ); 	    // DPD dissipative force parameter
@@ -235,21 +256,6 @@ boxRecip[z] 	= 1.0 / boxEdge[z];
 
     friction12	= pow( noise12, 2.0 )/( 2.0 * kBT );     // DPD dissipative force parameter
     noise12 	= noise12 * inv_sqrt_dt;    // Rescale sigma - sqrt(12) and inv_sqrt_dt
-
-    /*
-    double initNoise1  = 6.0;
-	friction	= pow( initNoise1, 2.0 )/( 2.0 * kBT ); 	    // DPD dissipative force parameter
-	noise	    = sqrtTwelve * initNoise1 * inv_sqrt_dt;	    // Rescale sigma - sqrt(12) and inv_sqrt_dt
-
-    double initNoise2  = 6.0;
-	friction2	= pow( initNoise2, 2.0 )/( 2.0 * kBT ); 	    // DPD dissipative force parameter
-	noise2 	    = sqrtTwelve * initNoise2 * inv_sqrt_dt;	    // Rescale sigma - sqrt(12) and inv_sqrt_dt
-
-    double initNoise12  = 6.0;
-	friction12	= pow( initNoise12, 2.0 )/( 2.0 * kBT ); 	    // DPD dissipative force parameter
-	noise12 	= sqrtTwelve * initNoise12 * inv_sqrt_dt;	    // Rescale sigma - sqrt(12) and inv_sqrt_dt
-    */
-
 #endif
 
 // Cutoff distances for liquid-liquid and solid-liquid interactions
