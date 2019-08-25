@@ -11,7 +11,15 @@ dist = std::sqrt(r2);
 wcaInteraction = ( particles[i].type == 0 && particles[j].type == 3 ) || 
                  ( particles[i].type == 3 && particles[j].type == 0 ) ||
                  ( particles[i].type == 3 && particles[j].type == 3 ) ||
-                 ( particles[i].type == 0 && particles[j].type == 0 );
+                 ( particles[i].type == 0 && particles[j].type == 0 ) ||
+
+                 ( particles[i].type == 0 && particles[j].type == 4 ) || 
+                 ( particles[i].type == 4 && particles[j].type == 0 ) ||
+
+                 ( particles[i].type == 3 && particles[j].type == 4 ) || 
+                 ( particles[i].type == 4 && particles[j].type == 3 ) ||
+
+                 ( particles[i].type == 4 && particles[j].type == 4 );
 
 if ( ( dist < 0.80 ) && wcaInteraction ) {
 
