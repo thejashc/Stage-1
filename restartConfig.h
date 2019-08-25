@@ -55,23 +55,23 @@ for ( j = 0 ; j < npart ; ++ j ){
 
 	readConfig.read ( ( char * ) &tempRho,	        sizeof ( tempRho ) );
 
-	readConfig.read ( ( char * ) &r0X,		        sizeof ( double ) );
-	readConfig.read ( ( char * ) &r0Y,		        sizeof ( double )  );
-	readConfig.read ( ( char * ) &r0Z,		        sizeof ( double )  );
+    #if WALL_ON
+        readConfig.read ( ( char * ) &r0X,		        sizeof ( double ) );
+        readConfig.read ( ( char * ) &r0Y,		        sizeof ( double )  );
+        readConfig.read ( ( char * ) &r0Z,		        sizeof ( double )  );
+    #endif
 
 	particles.push_back( {1.0 ,1.0 , {xind, yind, zind} ,{rand_gen_velx, rand_gen_vely, rand_gen_velz}, particleType} );
 
     particles[j].dens = tempRho;
 
-#if WALL_ON
-    if ( particles[j].type == 0 || particles[j].type == 3 ){
+    #if WALL_ON
+        if ( particles[j].type == 0 || particles[j].type == 3 ){
 
-        particles[j].r0.X = r0X;
-        particles[j].r0.Y = r0Y;
-        particles[j].r0.Z = r0Z;
-
-    }
-#endif
+            particles[j].r0.X = r0X;
+            particles[j].r0.Y = r0Y;
+            particles[j].r0.Z = r0Z; }
+    #endif
 
 	// simProg << particleType << " " << std::setprecision(15) << xind << std::setprecision(15) << " " << yind << std::setprecision(15) << " " <<  zind << std::endl;
 	// simProg << particleType << " " << std::setprecision(15) << rand_gen_velx << std::setprecision(15) << " " << rand_gen_vely << std::setprecision(15) << " " <<  rand_gen_velz << std::endl;
