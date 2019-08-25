@@ -1,7 +1,7 @@
 cylCenterX		= boxEdge[x] / 2.;
 cylCenterY		= boxEdge[y] / 2.;
 
-bool wallBelowTube = 0;
+bool wallBelowTube = 1;
 bool wallAboveTube = 1;
 
 capThick		= 2.;
