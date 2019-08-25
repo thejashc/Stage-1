@@ -29,8 +29,12 @@ r2 = Rij.getLengthSquared();
 fWCA.setZero();
 wcaInteraction = ( particles[i].type == 1 && particles[j].type == 3 ) || 
                  ( particles[i].type == 3 && particles[j].type == 1 ) ||
+
                  ( particles[i].type == 2 && particles[j].type == 3 ) ||
-                 ( particles[i].type == 3 && particles[j].type == 2 );
+                 ( particles[i].type == 3 && particles[j].type == 2 ) || 
+
+                 ( particles[i].type == 4 && particles[j].type == 3 ) ||
+                 ( particles[i].type == 3 && particles[j].type == 4 );
 
 if ( r2 <= rc2 ) {
 
