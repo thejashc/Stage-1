@@ -1,18 +1,39 @@
-boxEdgeX            20.0	# box dimensions
-boxEdgeY            20.0
-boxEdgeZ            245.0
+boxEdgeX            9.0	# box dimensions
+boxEdgeY            9.0
+boxEdgeZ            9.0
 initRho             6.00
 #
-Bll1                 25.0   # interaction paramters
-Bll2                 25.0        
-All1                -40.0
-All2                -40.0
-All12               -40.0
-Ass                 -40.0
-Asl1                -32.0
-Asl2                -25.0
-rcutoff             1.0		
-rd_cutoff           0.75
+Bs1_s1              25.0   # interaction paramters
+Bs1_l1              25.0        
+Bs1_l2              25.0        
+Bs1_s2              25.0        
+Bs1_s3              25.0        
+Bl1_l1              25.0
+Bl1_l2              25.0
+Bl1_s2              25.0
+Bl1_s3              25.0
+Bl2_l2              25.0
+Bl2_s2              25.0
+Bl2_s3              25.0
+Bs2_s2              25.0
+Bs2_s3              25.0
+Bs3_s3              25.0
+#
+As1_s1              -40.0   # interaction paramters
+As1_l1              -20.0        
+As1_l2              -40.0        
+As1_s2              -40.0        
+As1_s3              -40.0        
+Al1_l1              -60.0
+Al1_l2              -40.0
+Al1_s2              -20.0
+Al1_s3              -40.0
+Al2_l2              -40.0
+Al2_s2              -40.0
+Al2_s3              -40.0
+As2_s2              -40.0
+As2_s3              -40.0
+As3_s3              -40.0
 #
 kWallBckg           12.5        # WALL_PARAMETERS 
 kWallNgbr           3000.0
@@ -20,18 +41,20 @@ wallPenetration     0.25
 initWallRho         6.00
 wallHeight          2.0			# WALL_ON
 #
+rcutoff             1.0		
+rd_cutoff           0.75
+#
 kBT                 1.0 		# temperature	
 noise               6.0			# dissipation coeffecient
 noise2              6.0
 noise12             6.0
-dim                 3			# dimensions
 #
 dt                  0.01        # time parameters	
-stepMax             20000
-rstrtFWrtFreq       500
-saveCount           500
-psaveCount          1000
-pCorrTime           500
+stepMax             2
+rstrtFWrtFreq       1000
+saveCount           1
+psaveCount          50000
+pCorrTime           1
 #
 gR_radMin           0.0			# g(r) calculation
 gR_radDelta         0.01	
@@ -44,7 +67,7 @@ velHist_velMax       25.0
 velHist_tStart       50000
 velHist_tDelta       100
 #
-slabWidth           12.0	     #PLANAR_SLAB
+slabWidth           39.0	     #PLANAR_SLAB
 rhoZ_Zmin           0.00		
 rhoZ_Zdelta         0.05	
 segPlane_zDelta     0.05
@@ -56,7 +79,7 @@ cylHeight           10.0
 rhor_rmin           0.00
 rhor_rdelta         0.05
 #
-gammaDot            0.05		# LEES_EDWARDS_BC
+gammaDot            0.01		# LEES_EDWARDS_BC
 #
 n_vars              4			# SACF 
 corLevels           20
@@ -64,22 +87,22 @@ pCorr               64
 mCorr               2
 #
 bufferLength        10.0		# CAPILLARIES
-capLen              25.0
+capLen              15.0
 capRad              5.0
-capWallWdth         2.5
-resWdth             25.0
-resComZ             182.5
-resComVel          -0.05
+capWallWdth         1.5
+resWdth             6.0
+resComZ             32.5
+resComVel           0.00
 #
-pistonZStart        57.5 
-pistonThickness     0.5
+pistonZStart        37.5 
+pistonThickness     0.25
 appPressure         3.2
-pistonT0	        2500.0
+pistonT0	        7500.0
 pistonW             100.0
 #
 sigmaWCA            0.8
 epsilonWCA          10.0
 #
-NColloids           0
+NColloids           10
 #
 finalHeight         20.0
