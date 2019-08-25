@@ -10,17 +10,34 @@ double boxEdge[3];	double boxHalve[3];     double boxRecip[3];			// (1) box leng
 double initRho;	double aCube;			// (1) initial placement density of atoms, (2) length of a side of cube corresponding to prescribed density			
 
 // interaction paramters
-double All1;				// DPD Warren conservative force -- attractive parameter
-double All2;				// DPD Warren conservative force -- attractive parameter
-double All12;
-double Asl;
-double Asl1;
-double Asl2;        
-double Ass;         double Aatt[4][4];
-double repParam;    double Brep[4][4];                 // DPD Warren conservative force -- repulsive parameter
-double repParam2;
-double rcutoff;		double rc2;		// (1) cut-off distance -- attractive force, (2) square of the cutoff distance -- attractive force
-double rd_cutoff;	double rd2;		// (1) cut-off distance -- repulsive force, (2)  square of the cutoff distance -- repulsive force
+double As1_s1;  double Bs1_s1;
+double As1_l1;  double Bs1_l1;
+double As1_l2;  double Bs1_l2;
+double As1_s2;  double Bs1_s2;
+double As1_s3;  double Bs1_s3;
+                
+double Al1_l1;  double Bl1_l1;
+double Al1_l2;  double Bl1_l2;
+double Al1_s2;  double Bl1_s2;
+double Al1_s3;  double Bl1_s3;
+                
+double Al2_l2;  double Bl2_l2;
+double Al2_s2;  double Bl2_s2;
+double Al2_s3;  double Bl2_s3;
+                
+double As2_s2;  double Bs2_s2;
+double As2_s3;  double Bs2_s3;
+                
+double As3_s3;  double Bs3_s3;
+
+double Aatt[5][5];                 // DPD Warren conservative force -- attractive parameter
+double Brep[5][5];                 // DPD Warren conservative force -- repulsive parameter
+
+double rcutoff = 1.0;	// cut-off distance -- attractive force, 	
+double rc2 = pow(rcutoff, 2.0);		                    // square of the cutoff distance -- attractive force
+
+double rd_cutoff = 0.75;	
+double rd2 = pow(rd_cutoff,2.0);		// (1) cut-off distance -- repulsive force, (2)  square of the cutoff distance -- repulsive force
 
 // wall parameters
 double kWallBckg;
@@ -44,7 +61,6 @@ double kBT;				// DPD fluid temperature
 double noise, friction; std::vector<std::vector<double>> sigma, gamma; // noise and friction  
 double noise2, friction2, noise12, friction12; // noise and friction for 2nd fluid if MC on
 double orig_noise, orig_friction, orig_noise2, orig_friction2, orig_noise12, orig_friction12;
-double dim;				// dimension of system
 
 double dt, inv_sqrt_dt, half_dt, half_dt_sqr, sqrtTwelve;				// time step, sqrt of inverse of time step, half of dt, square of half of dt
 int step, stepMax;				// counter for step, total number of steps
@@ -54,7 +70,6 @@ unsigned int psaveCount;	// number of timestep between saves for pressure calcul
 Vec3D totCOM;
 
 // Till Line 30 of paramIn.h
-
 
 double dof;				// degrees of freedom
 unsigned int pCount;
