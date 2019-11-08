@@ -909,108 +909,107 @@ class DPD {
             simProg << " ********************************************************************* \n";
 
 			// determine the number of types of particles present
-			#if RANDOM_DISSIPATIVE
+            #if RANDOM_DISSIPATIVE
                 simProg << " ********************************************************************* \n";
                 simProg << " Defining the matrix of noise and friction parameters \n";
 
                 sigma.resize( 6 );      // 3 solid types + 3 liquid types
-                gamma.resize( 6 );
+                gamma.resize( 6 ); 
 
                 for ( i=0; i < 6; ++i ){
-                    sigma[i].resize( 6 );
-                    gamma[i].resize( 6 );
-                }
+                    sigma[i].resize( 6 ); 
+                    gamma[i].resize( 6 ); 
+                }    
 
                 // defining the elements of the sigma and gamma array
-               sigma[0][0] 	= noise;						// S1-S1 
-               sigma[0][1] 	= noise;                        // S1-L1
-               sigma[0][2] 	= noise;                        // S1-L2
-               sigma[0][3] 	= noise;                        // S1-S2
-               sigma[0][4]  = noise;                        // S1-S3
-               sigma[0][5]  = noise;                        // S1-L3
+               sigma[0][0]  = noise_s1_s1;                  // S1-S1 
+               sigma[0][1]  = noise_s1_l1;                  // S1-L1
+               sigma[0][2]  = noise_s1_l2;                  // S1-L2
+               sigma[0][3]  = noise_s1_s2;                  // S1-S2
+               sigma[0][4]  = noise_s1_s3;                  // S1-S3
+               sigma[0][5]  = noise_s1_l3;                  // S1-L3
 
-               sigma[1][0] 	= sigma[0][1];                  // L1-S1 
-               sigma[1][1] 	= noise;       					// L1-L1    
-               sigma[1][2] 	= noise12;                      // L1-L2 
-   	 		   sigma[1][3] 	= noise;                        // L1-S2 = L1-S1
-               sigma[1][4]  = noise;                        // L1-S3
-               sigma[1][5]  = noise13;                      // L1-L3
+               sigma[1][0]  = sigma[0][1];                  // L1-S1 
+               sigma[1][1]  = noise_l1_l1;                  // L1-L1    
+               sigma[1][2]  = noise_l1_l2;                  // L1-L2 
+               sigma[1][3]  = noise_l1_s2;                  // L1-S2 = L1-S1
+               sigma[1][4]  = noise_l1_s3;                  // L1-S3
+               sigma[1][5]  = noise_l1_l3;                  // L1-L3
 
-               sigma[2][0] 	= sigma[0][2];                  // L2-S1
-               sigma[2][1] 	= sigma[1][2];                  // L2-L1 
-               sigma[2][2] 	= noise2;        			    // L2-L2		
-               sigma[2][3] 	= noise;        			    // L2-S2 
-               sigma[2][4]  = noise;                        // L2-S3
-               sigma[2][5]  = noise;                        // L2-L3
-               sigma[2][5]  = noise23;                      // L2-L3
+               sigma[2][0]  = sigma[0][2];                  // L2-S1
+               sigma[2][1]  = sigma[1][2];                  // L2-L1 
+               sigma[2][2]  = noise_l2_l2;                  // L2-L2        
+               sigma[2][3]  = noise_l2_s2;                  // L2-S2 
+               sigma[2][4]  = noise_l2_s3;                  // L2-S3
+               sigma[2][5]  = noise_l2_l3;                  // L2-L3
 
-               sigma[3][0] 	= sigma[0][3];					// S2-S1 
-               sigma[3][1] 	= sigma[1][3];                  // S2-L1
-               sigma[3][2] 	= sigma[2][3];                  // S2-L2
-               sigma[3][3] 	= noise;                        // S2-S2
-               sigma[3][4]  = noise;                        // S2-S3
-               sigma[3][5]  = noise;                        // S2-L3
+               sigma[3][0]  = sigma[0][3];                  // S2-S1 
+               sigma[3][1]  = sigma[1][3];                  // S2-L1
+               sigma[3][2]  = sigma[2][3];                  // S2-L2
+               sigma[3][3]  = noise_s2_s2;                  // S2-S2
+               sigma[3][4]  = noise_s2_s3;                  // S2-S3
+               sigma[3][5]  = noise_s2_l3;                  // S2-L3
 
-               sigma[4][0] 	= sigma[0][4];					// S3-S1 
-               sigma[4][1] 	= sigma[1][4];                  // S3-L1
-               sigma[4][2] 	= sigma[2][4];                  // S3-L2
-               sigma[4][3] 	= sigma[3][4];                  // S3-S2
-               sigma[4][4]  = noise;                        // S3-S3
-               sigma[4][5]  = noise;                        // S3-L3
+               sigma[4][0]  = sigma[0][4];                  // S3-S1 
+               sigma[4][1]  = sigma[1][4];                  // S3-L1
+               sigma[4][2]  = sigma[2][4];                  // S3-L2
+               sigma[4][3]  = sigma[3][4];                  // S3-S2
+               sigma[4][4]  = noise_s3_s3;                  // S3-S3
+               sigma[4][5]  = noise_s3_l3;                  // S3-L3
 
-               sigma[5][0] 	= sigma[0][5];					// L3-S1 
-               sigma[5][1] 	= sigma[1][5];                  // L3-L1
-               sigma[5][2] 	= sigma[2][5];                  // L3-L2
-               sigma[5][3] 	= sigma[3][5];                  // L3-S2
+               sigma[5][0]  = sigma[0][5];                  // L3-S1 
+               sigma[5][1]  = sigma[1][5];                  // L3-L1
+               sigma[5][2]  = sigma[2][5];                  // L3-L2
+               sigma[5][3]  = sigma[3][5];                  // L3-S2
                sigma[5][4]  = sigma[4][5];                  // L3-S3
-               sigma[5][5]  = noise3;                       // L3-L3
+               sigma[5][5]  = noise_l3_l3;                  // L3-L3
 
-   			   gamma[0][0] 	= friction;						// S1-S1 
-               gamma[0][1] 	= friction;                     // S1-L1
-               gamma[0][2] 	= friction;                     // S1-L2
-               gamma[0][3] 	= friction;                     // S1-S2
-               gamma[0][4] 	= friction;                     // S1-S3
-               gamma[0][5] 	= friction;                     // S1-L3
+               gamma[0][0]  = friction_s1_s1;               // S1-S1 
+               gamma[0][1]  = friction_s1_l1;               // S1-L1
+               gamma[0][2]  = friction_s1_l2;               // S1-L2
+               gamma[0][3]  = friction_s1_s2;               // S1-S2
+               gamma[0][4]  = friction_s1_s3;               // S1-S3
+               gamma[0][5]  = friction_s1_l3;               // S1-L3
 
-               gamma[1][0] 	= gamma[0][1];                  // L1-S1
-               gamma[1][1] 	= friction;       		        // L1-L1     
-               gamma[1][2] 	= friction12;                   // L1-L2     
-               gamma[1][3] 	= friction;                     // L1-S2     
-               gamma[1][4]  = friction;                     // L1-S3
-               gamma[1][5]  = friction13;                   // L1-L3
+               gamma[1][0]  = gamma[0][1];                  // L1-S1
+               gamma[1][1]  = friction_l1_l1;               // L1-L1     
+               gamma[1][2]  = friction_l1_l2;               // L1-L2     
+               gamma[1][3]  = friction_l1_s2;               // L1-S2     
+               gamma[1][4]  = friction_l1_s3;               // L1-S3
+               gamma[1][5]  = friction_l1_l3;               // L1-L3
 
-               gamma[2][0] 	= gamma[0][2];                  // L2-S1
-               gamma[2][1] 	= gamma[1][2];                  // L2-L1
-               gamma[2][2] 	= friction2;        	        // L2-L2	
-               gamma[2][3] 	= friction;        	            // L2-S2	
-               gamma[2][4]  = friction;                     // L2-S3
-               gamma[2][5]  = friction23;                   // L2-L3
+               gamma[2][0]  = gamma[0][2];                  // L2-S1
+               gamma[2][1]  = gamma[1][2];                  // L2-L1
+               gamma[2][2]  = friction_l2_l2;               // L2-L2    
+               gamma[2][3]  = friction_l2_s2;               // L2-S2    
+               gamma[2][4]  = friction_l2_s3;               // L2-S3
+               gamma[2][5]  = friction_l2_l3;               // L2-L3
 
-               gamma[3][0] 	= gamma[0][3];				    // S2-S1 
-               gamma[3][1] 	= gamma[1][3];                  // S2-L1
-               gamma[3][2] 	= gamma[2][3];                  // S2-L2
-               gamma[3][3] 	= friction;                     // S2-S2
-               gamma[3][4]  = friction;                     // S2-S3
-               gamma[3][5]  = friction;                     // S2-L3
+               gamma[3][0]  = gamma[0][3];                  // S2-S1 
+               gamma[3][1]  = gamma[1][3];                  // S2-L1
+               gamma[3][2]  = gamma[2][3];                  // S2-L2
+               gamma[3][3]  = friction_s2_s2;               // S2-S2
+               gamma[3][4]  = friction_s2_s3;               // S2-S3
+               gamma[3][5]  = friction_s2_l3;               // S2-L3
 
-               gamma[4][0] 	= gamma[0][4];				    // S3-S1 
-               gamma[4][1] 	= gamma[1][4];                  // S3-L1
-               gamma[4][2] 	= gamma[2][4];                  // S3-L2
-               gamma[4][3] 	= gamma[3][4];                  // S3-S2
-               gamma[4][4]  = friction;                     // S3-S3
-               gamma[4][5]  = friction;                     // S3-L3
+               gamma[4][0]  = gamma[0][4];                  // S3-S1 
+               gamma[4][1]  = gamma[1][4];                  // S3-L1
+               gamma[4][2]  = gamma[2][4];                  // S3-L2
+               gamma[4][3]  = gamma[3][4];                  // S3-S2
+               gamma[4][4]  = friction_s3_s3;               // S3-S3
+               gamma[4][5]  = friction_s3_l3;               // S3-L3
 
-               gamma[5][0] 	= gamma[0][5];					// L3-S1 
-               gamma[5][1] 	= gamma[1][5];                  // L3-L1
-               gamma[5][2] 	= gamma[2][5];                  // L3-L2
-               gamma[5][3] 	= gamma[3][5];                  // L3-S2
+               gamma[5][0]  = gamma[0][5];                  // L3-S1 
+               gamma[5][1]  = gamma[1][5];                  // L3-L1
+               gamma[5][2]  = gamma[2][5];                  // L3-L2
+               gamma[5][3]  = gamma[3][5];                  // L3-S2
                gamma[5][4]  = gamma[4][5];                  // L3-S3
-               gamma[5][5]  = friction3;                     // L3-L3
+               gamma[5][5]  = friction_l3_l3;               // L3-L3
 
                simProg << " ********************************************************************* \n";
                simProg << " Finished defining the matrix of noise and friction parameters \n";
-			#endif // RANDOM_DISSIPATIVE
-
+            #endif // RANDOM_DISSIPATIVE
+            
 		}//init
 
 
