@@ -128,14 +128,15 @@
 
 #else
 	// Set max and min dimensions of planar slab
+    /*
 	xind_min = 0.01;
 	yind_min = 0.01;
 	zind_min = ( boxEdge[z] / 2. ) - ( slabWidth / 2. );
 	xind_max = boxEdge[x];
 	yind_max = boxEdge[y];
     zind_max = ( boxEdge[z] / 2. ) + ( slabWidth / 2. );
+    */
 
-    /*
     // DROPLET ASSEMBLY
 	xind_min = 0.5 * boxEdge[x] - ( slabWidth / 2. );
 	yind_min = 0.01;
@@ -143,7 +144,6 @@
 	xind_max = 0.5 * boxEdge[x] + ( slabWidth / 2. );
 	yind_max = boxEdge[y];
     zind_max = boxEdge[z];
-    */
 
     pCount = 0;
 
