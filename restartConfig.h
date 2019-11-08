@@ -22,14 +22,16 @@ simProg << " Positions and velocities of a total of " << npart << " will be read
     readConfig.read ( ( char * ) &bckgIdxStart,		sizeof( unsigned int ) );
     readConfig.read ( ( char * ) &bckgIdxEnd,		sizeof( unsigned int ) );
 
-    readConfig.read ( ( char * ) &ngbrIdxStart,		sizeof( unsigned int ) );
-    readConfig.read ( ( char * ) &ngbrIdxEnd,		sizeof( unsigned int ) );
-
     simProg << " bckgIdxStart = " << bckgIdxStart << std::endl;
     simProg << " bckgIdxEnd = " << bckgIdxEnd << std::endl;
 
-    simProg << " ngbrIdxStart = " << ngbrIdxStart << std::endl;
-    simProg << " ngbrIdxEnd = " << ngbrIdxEnd << std::endl;
+    #if SPRING_CONNECTED_SLD
+        readConfig.read ( ( char * ) &ngbrIdxStart,		sizeof( unsigned int ) );
+        readConfig.read ( ( char * ) &ngbrIdxEnd,		sizeof( unsigned int ) );
+
+        simProg << " ngbrIdxStart = " << ngbrIdxStart << std::endl;
+        simProg << " ngbrIdxEnd = " << ngbrIdxEnd << std::endl;
+    #endif
 #endif
 readConfig.read ( ( char * ) &step,		                sizeof( int ) );
 
