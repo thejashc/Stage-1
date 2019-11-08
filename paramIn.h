@@ -116,29 +116,96 @@ readParam >> buffer >> Al3_l3;      readParam.ignore(256,'\n');     // Liquid 3
     simProg << "Reading noise parameter : gamma_ij" << std::endl;
     simProg << "----------------------------------" << std::endl;
 
-    readParam >> buffer;                readParam.ignore(256,'\n');		
-    readParam >> buffer;                readParam.ignore(256,'\n');		
-    readParam >> buffer;                readParam.ignore(256,'\n');		
+    readParam >> buffer;                readParam.ignore(256,'\n');    
+    readParam >> buffer;                readParam.ignore(256,'\n');    
+    readParam >> buffer;                readParam.ignore(256,'\n');    
 
-    readParam >> buffer >> kBT;		        readParam.ignore(256,'\n');	
-    readParam >> buffer >> noise;		    readParam.ignore(256,'\n');		
-    readParam >> buffer >> noise12;	        readParam.ignore(256,'\n');		
-    readParam >> buffer >> noise13;	        readParam.ignore(256,'\n');		
-    readParam >> buffer >> noise2;	        readParam.ignore(256,'\n');		
-    readParam >> buffer >> noise23;	        readParam.ignore(256,'\n');		
-    readParam >> buffer >> noise3;	        readParam.ignore(256,'\n');		
+    readParam >> buffer >> kBT;             readParam.ignore(256,'\n'); 
+
+    readParam >> buffer >> noise_s1_s1;     readParam.ignore(256,'\n');     // Solid 1
+    readParam >> buffer >> noise_s1_l1;      readParam.ignore(256,'\n');
+    readParam >> buffer >> noise_s1_l2;      readParam.ignore(256,'\n');
+    readParam >> buffer >> noise_s1_s2;      readParam.ignore(256,'\n');
+    readParam >> buffer >> noise_s1_s3;      readParam.ignore(256,'\n');
+    readParam >> buffer >> noise_s1_l3;      readParam.ignore(256,'\n');
+
+    readParam >> emptyLine ;        readParam.ignore(256,'\n');    
+
+    readParam >> buffer >> noise_l1_l1;      readParam.ignore(256,'\n');     // Liquid 1
+    readParam >> buffer >> noise_l1_l2;      readParam.ignore(256,'\n');
+    readParam >> buffer >> noise_l1_s2;      readParam.ignore(256,'\n');
+    readParam >> buffer >> noise_l1_s3;      readParam.ignore(256,'\n');
+    readParam >> buffer >> noise_l1_l3;      readParam.ignore(256,'\n');
+
+    readParam >> emptyLine ;        readParam.ignore(256,'\n');    
+
+    readParam >> buffer >> noise_l2_l2;      readParam.ignore(256,'\n');     // Liquid 2
+    readParam >> buffer >> noise_l2_s2;      readParam.ignore(256,'\n');
+    readParam >> buffer >> noise_l2_s3;      readParam.ignore(256,'\n');
+    readParam >> buffer >> noise_l2_l3;      readParam.ignore(256,'\n');
+
+    readParam >> emptyLine ;        readParam.ignore(256,'\n');    
+
+    readParam >> buffer >> noise_s2_s2;      readParam.ignore(256,'\n');     // Solid 2
+    readParam >> buffer >> noise_s2_s3;      readParam.ignore(256,'\n');
+    readParam >> buffer >> noise_s2_l3;      readParam.ignore(256,'\n');
+
+    readParam >> emptyLine ;        readParam.ignore(256,'\n');    
+
+    readParam >> buffer >> noise_s3_s3;      readParam.ignore(256,'\n');     // Solid 3
+    readParam >> buffer >> noise_s3_l3;      readParam.ignore(256,'\n');
+
+    readParam >> emptyLine ;        readParam.ignore(256,'\n');  
+
+    readParam >> buffer >> noise_l3_l3;      readParam.ignore(256,'\n');     // Liquid 3
 #else
-    readParam.ignore(256, '\n');		
-    readParam.ignore(256, '\n');		
+    readParam.ignore(256, '\n');
+    readParam.ignore(256, '\n');    
+    readParam.ignore(256, '\n');
+
+    readParam.ignore(256, '\n');    // kbT
+
     readParam.ignore(256, '\n');
     readParam.ignore(256, '\n');
     readParam.ignore(256, '\n');
     readParam.ignore(256, '\n');
     readParam.ignore(256, '\n');
     readParam.ignore(256, '\n');
+
+    readParam.ignore(256, '\n');    // empty line
+
     readParam.ignore(256, '\n');
+    readParam.ignore(256, '\n');
+    readParam.ignore(256, '\n');
+    readParam.ignore(256, '\n');
+    readParam.ignore(256, '\n');
+
+    readParam.ignore(256, '\n');    /// empty line
+
+    readParam.ignore(256, '\n');
+    readParam.ignore(256, '\n');
+    readParam.ignore(256, '\n');
+    readParam.ignore(256, '\n');
+
+    readParam.ignore(256, '\n');    // empty line
+
+    readParam.ignore(256, '\n');
+    readParam.ignore(256, '\n');
+    readParam.ignore(256, '\n');
+
+    readParam.ignore(256, '\n');    // empty line
+
+    readParam.ignore(256, '\n');
+    readParam.ignore(256, '\n');
+
+    readParam.ignore(256, '\n');    // empty line
+
     readParam.ignore(256, '\n');
 #endif  // RANDOM_DISSIPATIVE
+
+
+
+
 
 #if WALL_ON
     simProg << "----------------------------------" << std::endl;
@@ -386,27 +453,64 @@ boxRecip[x] 	= 1.0 / boxEdge[x];
 boxRecip[y] 	= 1.0 / boxEdge[y];
 boxRecip[z] 	= 1.0 / boxEdge[z];
 
+
 #if RANDOM_DISSIPATIVE
-	inv_sqrt_dt = 1.0 / std::sqrt(dt);				    // inverse of square root of the time step
+    inv_sqrt_dt = 1.0 / std::sqrt(dt);                  // inverse of square root of the time step
 
-	friction	= pow( noise, 2.0 )/( 2.0 * kBT ); 	    // DPD dissipative force parameter
-	noise	 	= noise * inv_sqrt_dt;	                // Rescaled sigma
+    friction_s1_s1  = pow( noise_s1_s1, 2.0 )/( 2.0 * kBT );        // DPD dissipative force parameter
+    friction_s1_l1  = pow( noise_s1_l1, 2.0 )/( 2.0 * kBT );    
+    friction_s1_l2  = pow( noise_s1_l2, 2.0 )/( 2.0 * kBT );    
+    friction_s1_s2  = pow( noise_s1_s2, 2.0 )/( 2.0 * kBT );    
+    friction_s1_s3  = pow( noise_s1_s3, 2.0 )/( 2.0 * kBT );    
+    friction_s1_l3  = pow( noise_s1_l3, 2.0 )/( 2.0 * kBT );    
 
-    friction12	= pow( noise12, 2.0 )/( 2.0 * kBT );        // DPD dissipative force parameter
-    noise12 	= noise12 * inv_sqrt_dt;                    // Rescaled sigma
+    friction_l1_l1  = pow( noise_l1_l1, 2.0 )/( 2.0 * kBT );    
+    friction_l1_l2  = pow( noise_l1_l2, 2.0 )/( 2.0 * kBT );    
+    friction_l1_s2  = pow( noise_l1_s2, 2.0 )/( 2.0 * kBT );    
+    friction_l1_s3  = pow( noise_l1_s3, 2.0 )/( 2.0 * kBT );    
+    friction_l1_l3  = pow( noise_l1_l3, 2.0 )/( 2.0 * kBT );    
 
-    friction13	= pow( noise13, 2.0 )/( 2.0 * kBT );     // DPD dissipative force parameter
-    noise13 	= noise13 * inv_sqrt_dt;                 // Rescaled sigma
+    friction_l2_l2  = pow( noise_l2_l2, 2.0 )/( 2.0 * kBT );    
+    friction_l2_s2  = pow( noise_l2_s2, 2.0 )/( 2.0 * kBT );    
+    friction_l2_s3  = pow( noise_l2_s3, 2.0 )/( 2.0 * kBT );    
+    friction_l2_l3  = pow( noise_l2_l3, 2.0 )/( 2.0 * kBT );    
 
-    friction2	= pow( noise2, 2.0 )/( 2.0 * kBT );     // DPD dissipative force parameter
-    noise2 		= noise2 * inv_sqrt_dt;                 // Rescaled sigma
+    friction_s2_s2  = pow( noise_s2_s2, 2.0 )/( 2.0 * kBT );    
+    friction_s2_s3  = pow( noise_s2_s3, 2.0 )/( 2.0 * kBT );    
+    friction_s2_l3  = pow( noise_s2_l3, 2.0 )/( 2.0 * kBT );    
 
-    friction23	= pow( noise23, 2.0 )/( 2.0 * kBT );     // DPD dissipative force parameter
-    noise23 	= noise23 * inv_sqrt_dt;                // Rescaled sigma
+    friction_s3_s3  = pow( noise_s3_s3, 2.0 )/( 2.0 * kBT );    
+    friction_s3_l3  = pow( noise_s3_l3, 2.0 )/( 2.0 * kBT );    
 
-    friction3	= pow( noise3, 2.0 )/( 2.0 * kBT );     // DPD dissipative force parameter
-    noise3 	    = noise3 * inv_sqrt_dt;                 // Rescaled sigma
-#endif
+    friction_l3_l3  = pow( noise_l3_l3, 2.0 )/( 2.0 * kBT );    
+
+    noise_s1_s1     = noise_s1_s1 * inv_sqrt_dt;                    // Rescaled sigma
+    noise_s1_l1     = noise_s1_l1 * inv_sqrt_dt;    
+    noise_s1_l2     = noise_s1_l2 * inv_sqrt_dt;    
+    noise_s1_s2     = noise_s1_s2 * inv_sqrt_dt;    
+    noise_s1_s3     = noise_s1_s3 * inv_sqrt_dt;    
+    noise_s1_l3     = noise_s1_l3 * inv_sqrt_dt;    
+
+    noise_l1_l1     = noise_l1_l1 * inv_sqrt_dt;    
+    noise_l1_l2     = noise_l1_l2 * inv_sqrt_dt;    
+    noise_l1_s2     = noise_l1_s2 * inv_sqrt_dt;    
+    noise_l1_s3     = noise_l1_s3 * inv_sqrt_dt;    
+    noise_l1_l3     = noise_l1_l3 * inv_sqrt_dt;    
+
+    noise_l2_l2     = noise_l2_l2 * inv_sqrt_dt;    
+    noise_l2_s2     = noise_l2_s2 * inv_sqrt_dt;    
+    noise_l2_s3     = noise_l2_s3 * inv_sqrt_dt;    
+    noise_l2_l3     = noise_l2_l3 * inv_sqrt_dt;    
+
+    noise_s2_s2     = noise_s2_s2 * inv_sqrt_dt;    
+    noise_s2_s3     = noise_s2_s3 * inv_sqrt_dt;    
+    noise_s2_l3     = noise_s2_l3 * inv_sqrt_dt;    
+
+    noise_s3_s3     = noise_s3_s3 * inv_sqrt_dt;    
+    noise_s3_l3     = noise_s3_l3 * inv_sqrt_dt;    
+
+    noise_l3_l3     = noise_l3_l3 * inv_sqrt_dt;    
+#endif // RANDOM_DISSIPATIVE
 
 // Cutoff distances for liquid-liquid and solid-liquid interactions
 fifteen_by_twopi_by_rd = 15.0/( 2.0 * M_PI * pow( rd_cutoff,3.0) );	// 15/(2*PI*rd^3) used in Lucy weight function
