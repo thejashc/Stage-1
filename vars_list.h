@@ -15,23 +15,30 @@ double As1_l1;  double Bs1_l1;
 double As1_l2;  double Bs1_l2;
 double As1_s2;  double Bs1_s2;
 double As1_s3;  double Bs1_s3;
+double As1_l3;  double Bs1_l3;
                 
 double Al1_l1;  double Bl1_l1;
 double Al1_l2;  double Bl1_l2;
 double Al1_s2;  double Bl1_s2;
 double Al1_s3;  double Bl1_s3;
+double Al1_l3;  double Bl1_l3;
                 
 double Al2_l2;  double Bl2_l2;
 double Al2_s2;  double Bl2_s2;
 double Al2_s3;  double Bl2_s3;
+double Al2_l3;  double Bl2_l3;
                 
 double As2_s2;  double Bs2_s2;
 double As2_s3;  double Bs2_s3;
+double As2_l3;  double Bs2_l3;
                 
 double As3_s3;  double Bs3_s3;
+double As3_l3;  double Bs3_l3;
 
-double Aatt[5][5];                 // DPD Warren conservative force -- attractive parameter
-double Brep[5][5];                 // DPD Warren conservative force -- repulsive parameter
+double Al3_l3;  double Bl3_l3;
+
+double Aatt[6][6];                 // DPD Warren conservative force -- attractive parameter
+double Brep[6][6];                 // DPD Warren conservative force -- repulsive parameter
 
 double rcutoff = 1.0;	// cut-off distance -- attractive force, 	
 double rc2 = pow(rcutoff, 2.0);		                    // square of the cutoff distance -- attractive force
@@ -41,7 +48,8 @@ double rd2 = pow(rd_cutoff,2.0);		// (1) cut-off distance -- repulsive force, (2
 
 // wall parameters
 double kWallBckg;
-double kWallNgbr;
+double kWallNgbr1;
+double kWallNgbr2;
 
 unsigned int ngbrIdxStart;
 unsigned int bckgIdxStart;
@@ -59,8 +67,8 @@ double wallHeight;
 // random-dissipative terms
 double kBT;				// DPD fluid temperature
 double noise, friction; std::vector<std::vector<double>> sigma, gamma; // noise and friction  
-double noise2, friction2, noise12, friction12; // noise and friction for 2nd fluid if MC on
-double orig_noise, orig_friction, orig_noise2, orig_friction2, orig_noise12, orig_friction12;
+double noise2, noise3, friction2, friction3, noise12, noise13, noise23, friction12, friction13, friction23; // noise and friction for 2nd fluid if MC on
+//double orig_noise, orig_friction, orig_noise2, orig_friction2, orig_noise12, orig_friction12;
 
 double dt, inv_sqrt_dt, half_dt, half_dt_sqr, sqrtTwelve;				// time step, sqrt of inverse of time step, half of dt, square of half of dt
 int step, stepMax;				// counter for step, total number of steps
@@ -402,6 +410,11 @@ bool wcaInteraction;
 Vec3D p0, p1, p2;
 double sigmaWCA;
 double epsilonWCA;
+
+#if RANDOM_FIBRE_BUNDLE
+double imagWallPos1;
+double imagWallPos2;
+#endif
 
 #if HARD_SPHERES 
 unsigned int NColloids;
