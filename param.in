@@ -1,108 +1,146 @@
-boxEdgeX            9.0	# box dimensions
-boxEdgeY            9.0
-boxEdgeZ            9.0
+#-------------------------------------#
+#        Simulation Box Size        
+#-------------------------------------#
+boxEdgeX            15.0	
+boxEdgeY            15.0
+boxEdgeZ            600.0
 initRho             6.00
-#
-Bs1_s1              25.0   # interaction paramters
+#-------------------------------------#
+#        Repulsion parameter Bij     
+#-------------------------------------#
+Bs1_s1              25.0    # solid 1
 Bs1_l1              25.0        
 Bs1_l2              25.0        
 Bs1_s2              25.0        
 Bs1_s3              25.0        
-Bl1_l1              25.0
+Bs1_l3              25.0        
+#
+Bl1_l1              25.0    # liquid 1
 Bl1_l2              25.0
 Bl1_s2              25.0
 Bl1_s3              25.0
-Bl2_l2              25.0
+Bl1_l3              25.0
+#
+Bl2_l2              25.0    # liquid 2
 Bl2_s2              25.0
 Bl2_s3              25.0
-Bs2_s2              25.0
-Bs2_s3              25.0
-Bs3_s3              25.0
+Bl2_l3              25.0
 #
-As1_s1              -40.0   # interaction paramters
-As1_l1              -20.0        
+Bs2_s2              25.0    # solid 2
+Bs2_s3              25.0
+Bs2_l3              25.0
+#
+Bs3_s3              0.0    # solid 3
+Bs3_l3              25.0
+#
+Bl3_l3              25.0    # liquid 3
+#-------------------------------------#
+#        Attraction parameter Aij   
+#-------------------------------------#
+As1_s1              -40.0   # solid 1
+As1_l1              -10.0        
 As1_l2              -40.0        
 As1_s2              -40.0        
 As1_s3              -40.0        
-Al1_l1              -60.0
+As1_l3              -40.0        
+#
+Al1_l1              -40.0   # liquid 1
 Al1_l2              -40.0
-Al1_s2              -20.0
+Al1_s2              -40.0
 Al1_s3              -40.0
-Al2_l2              -40.0
+Al1_l3              -40.0
+#
+Al2_l2              -40.0   # liquid 2
 Al2_s2              -40.0
 Al2_s3              -40.0
-As2_s2              -40.0
+Al2_l3              -40.0
+#
+As2_s2              -40.0   # solid 2
 As2_s3              -40.0
-As3_s3              -40.0
+As2_l3              -40.0
 #
-kWallBckg           12.5        # WALL_PARAMETERS 
-kWallNgbr           3000.0
-wallPenetration     0.25
-initWallRho         6.00
-wallHeight          2.0			# WALL_ON
+As3_s3              0.0   # solid 3
+As3_l3              -40.0
 #
-rcutoff             1.0		
-rd_cutoff           0.75
-#
+Al3_l3              -40.0   # liquid 3
+#-------------------------------------#
+#        noise parameter : gamma_ij 
+#-------------------------------------#
 kBT                 1.0 		# temperature	
 noise               6.0			# dissipation coeffecient
-noise2              6.0
 noise12             6.0
-#
+noise13             6.0
+noise2              6.0
+noise23             6.0
+noise3              6.0
+#-------------------------------------#
+#        Wall properties    
+#-------------------------------------#
+kWallBckg           12.5        # spring stiffness -- background
+kWallNgbr1          25.0      # inter-particle spring stifness 1-- neighbour
+kWallNgbr2          2500.0      # inter-particle spring stifness 2-- neighbour
+wallHeight          2.0			
+#-------------------------------------#
+#        WCA Interaction parameters
+#-------------------------------------#
+sigmaWCA            0.8
+epsilonWCA          10.0
+#-------------------------------------#
+#        Interaction cutoffs      
+#-------------------------------------#
+rcutoff             1.0		    
+rd_cutoff           0.75
+#-------------------------------------#
+#        Simulation time parameters 
+#-------------------------------------#
 dt                  0.01        # time parameters	
-stepMax             2
+stepMax             500000
 rstrtFWrtFreq       1000
-saveCount           1
+saveCount           500
 psaveCount          50000
 pCorrTime           1
-#
-gR_radMin           0.0			# g(r) calculation
-gR_radDelta         0.01	
-gR_tStart           50000		
-gR_tDelta           100	
-#
-velHist_velMin       -25.0		# velocity distribution function
-velHist_velDelta     0.005
-velHist_velMax       25.0	
-velHist_tStart       50000
-velHist_tDelta       100
-#
-slabWidth           39.0	     #PLANAR_SLAB
-rhoZ_Zmin           0.00		
-rhoZ_Zdelta         0.05	
-segPlane_zDelta     0.05
-#
-sphDropRad          7.5		# SPHERICAL DROPLET
-#
-cylRad              4.0			# CYLINDRICAL_SLAB 
-cylHeight           10.0
-rhor_rmin           0.00
-rhor_rdelta         0.05
-#
-gammaDot            0.01		# LEES_EDWARDS_BC
-#
+#-------------------------------------#
+#        LEES-EDWARDS SHEAR BC     
+#-------------------------------------#
+gammaDot            0.01		# Shear-rate
+#-------------------------------------#
+#        Stress Autocorrelation (SACF)
+#-------------------------------------#
 n_vars              4			# SACF 
 corLevels           20
 pCorr               64
 mCorr               2
-#
-bufferLength        10.0		# CAPILLARIES
-capLen              15.0
+#-------------------------------------#
+#        Geometry : PLANAR SLAB  
+#-------------------------------------#
+slabWidth           25.0	     
+#-------------------------------------#
+#        Geometry : SPHERICAL DROPLET 
+#-------------------------------------#
+sphDropRad          7.5		
+#-------------------------------------#
+#        Geometry : CYLINDRICAL DROPLET
+#-------------------------------------#
+cylRad              4.0			
+#-------------------------------------#
+#        Geometry: CAPILLARY CYLINDER
+#-------------------------------------#
+bufferLength        10.0		
+capLen              35.0
 capRad              5.0
 capWallWdth         1.5
-resWdth             6.0
-resComZ             32.5
-resComVel           0.00
-#
-pistonZStart        37.5 
+resWdth             12.0
+resComZ             37.0
+resComVel           -0.00
+#-------------------------------------#
+#        Geometry: PISTON
+#-------------------------------------#
+pistonZStart        350.0 
 pistonThickness     0.25
-appPressure         3.2
-pistonT0	        7500.0
+appPressure         0.5
+pistonT0	        2000.0
 pistonW             100.0
-#
-sigmaWCA            0.8
-epsilonWCA          10.0
-#
-NColloids           10
-#
-finalHeight         20.0
+#-------------------------------------#
+#        GEOMETRY : SPHERICAL COLLOIDS
+#-------------------------------------#
+NColloids           10          # No. of Colloids
