@@ -27,14 +27,17 @@ r2 = Rij.getLengthSquared();
 // check for WCA interaction between fluid and inner-core 
 // colloidal particle
 fWCA.setZero();
-wcaInteraction = ( particles[i].type == 1 && particles[j].type == 3 ) || 
-                 ( particles[i].type == 3 && particles[j].type == 1 ) ||
+wcaInteraction = ( particles[i].type == 1 && particles[j].type == 3 ) ||        // fluid type 1 with WCA wall
+                 ( particles[i].type == 3 && particles[j].type == 1 ) ||        
 
-                 ( particles[i].type == 2 && particles[j].type == 3 ) ||
+                 ( particles[i].type == 2 && particles[j].type == 3 ) ||        // fluid type 2 with WCA wall
                  ( particles[i].type == 3 && particles[j].type == 2 ) || 
 
-                 ( particles[i].type == 4 && particles[j].type == 3 ) ||
-                 ( particles[i].type == 3 && particles[j].type == 4 );
+                 ( particles[i].type == 4 && particles[j].type == 3 ) ||        // solid type 3 ( colloid ) with WCA wall
+                 ( particles[i].type == 3 && particles[j].type == 4 ) ||
+
+                 ( particles[i].type == 5 && particles[j].type == 3 ) ||        // fluid type 3 with WCA wall
+                 ( particles[i].type == 3 && particles[j].type == 5 );
 
 if ( r2 <= rc2 ) {
 
