@@ -1,14 +1,15 @@
-bckgIdxStart = 0;
+bckgIdxStart = pCount;
 // Set max and min dimensions of planar slab
 xind_min = 0.01;	// avoid boundary edge -- non-moving case
 xind_max = boxEdge[x];
 yind_min = 0.01;	// avoid boundary edge -- non-moving case
 yind_max = boxEdge[y];
 
-aCube = pow( 1. / initRho, 1./3. );
+aCube = pow( 1. /initRho, 1./3. );
 #if LOWER_WALL_ON 
-    zindLW_max = wallHeight;
-    zindLW_min = 0.01; 
+    zindLW_max = 290.;
+    zindLW_min = 288.; 
+    wallHeight = zindLW_max - zindLW_min;
     /*
     zindLW_max = 0.5 * boxEdge[z] + wallHeight * 0.5;
     zindLW_min = 0.5 * boxEdge[z] - wallHeight * 0.5; 
@@ -62,7 +63,8 @@ xind = xind_min;
         }// end of yind			
         xind += aCube*rcutoff;
     }// end of xind
-    bckgIdxEnd += lwp;
+
+    bckgIdxEnd = bckgIdxStart + lwp - 1;
 #endif 
 
 xind = xind_min;
