@@ -13,9 +13,12 @@ set cy [expr {$maxy/2.0}]
 set cz [expr {$maxz/2.0}]
 
 set delta [exec grep "\(saveCount\)" param.out | awk {{print $NF}}]
-set startFile $delta 
-set endFile [exec tail -1 "simProg.txt" | awk {{print $1}}]
-set incrFile [expr {$delta - 1}]
+#set startFile $delta 
+set startFile 500
+#set endFile [exec tail -1 "simProg.txt" | awk {{print $1}}]
+set endFile 20000000
+#set incrFile [expr {$delta - 1}]
+set incrFile 499
 
 # drawing the simulation box
 draw color white
@@ -23,13 +26,13 @@ draw color white
 puts "the simulation box is drawn"
 
 for {set x $startFile} {$x < $endFile} {incr x} {	 
-	mol addfile ./data/pos${x}.xyz step [expr {$x-0}]
+	mol addfile ./dataVisualize/pos${x}.xyz step [expr {$x-0}]
 	set x [expr {$x+ $incrFile}]
 }
 
 #mol new /storage/thejas/stage1/code/data/XYZ1.xyz
 
-pbc set {20 20 250} -all
+pbc set {20 20 600} -all
 draw pbcbox -width 5
 
 puts "the molecule for this problem is 0"
@@ -46,6 +49,10 @@ mol addrep 0
 mol modselect 2 0 type C
 mol addrep 0
 mol modselect 3 0 type B
+#mol addrep 0
+#mol modselect 3 0 type N
+#mol addrep 0
+#mol modselect 3 0 type D
 
 puts "the representation is created and the solid and fluid atoms are labelled"
 
@@ -53,6 +60,8 @@ mol modstyle  0 0 Points 3.0
 mol modstyle  1 0 Points 3.0
 mol modstyle  2 0 Points 3.0
 mol modstyle  3 0 Points 3.0
+#mol modstyle  4 0 Points 3.0
+#mol modstyle  5 0 Points 3.0
 
 puts "the Points representation is chosen for both solids and fluids"
 
@@ -60,6 +69,8 @@ mol modcolor  0 0 ColorID 0
 mol modcolor  1 0 ColorID 1
 mol modcolor  2 0 ColorID 7
 mol modcolor  3 0 ColorID 2
+#mol modcolor  4 0 ColorID 4
+#mol modcolor  5 0 ColorID 5
 
 puts "the solid is red in color and the fluid is blue in color"
 
