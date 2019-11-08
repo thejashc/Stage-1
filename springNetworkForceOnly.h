@@ -34,26 +34,28 @@ while ( idx < solidCount )
             capRij = Rij/ ext;
 
             // net-force between particle i and j
-            springForce = -kWallNgbr * ( ext - refExt ) * capRij;
+            springForce = -particles[i].springConstant * ( ext - refExt ) * capRij;
 
             // calculate the force as extension of length
             particles[i].fHarmonic += springForce;
             particles[j].fHarmonic -= springForce; 
 
-            // pressure tensor due to bonded-interactions
-            pBondInteractions_temp[0][0] += Rij.X * springForce.X;
-            pBondInteractions_temp[0][1] += Rij.X * springForce.Y;
-            pBondInteractions_temp[0][2] += Rij.X * springForce.Z;
+            #if HARD_SPHERES
+                // pressure tensor due to bonded-interactions
+                pBondInteractions_temp[0][0] += Rij.X * springForce.X;
+                pBondInteractions_temp[0][1] += Rij.X * springForce.Y;
+                pBondInteractions_temp[0][2] += Rij.X * springForce.Z;
 
-            pBondInteractions_temp[1][0] += Rij.Y * springForce.X;
-            pBondInteractions_temp[1][1] += Rij.Y * springForce.Y;
-            pBondInteractions_temp[1][2] += Rij.Y * springForce.Z;
+                pBondInteractions_temp[1][0] += Rij.Y * springForce.X;
+                pBondInteractions_temp[1][1] += Rij.Y * springForce.Y;
+                pBondInteractions_temp[1][2] += Rij.Y * springForce.Z;
 
-            pBondInteractions_temp[2][0] += Rij.Z * springForce.X;
-            pBondInteractions_temp[2][1] += Rij.Z * springForce.Y;
-            pBondInteractions_temp[2][2] += Rij.Z * springForce.Z;
+                pBondInteractions_temp[2][0] += Rij.Z * springForce.X;
+                pBondInteractions_temp[2][1] += Rij.Z * springForce.Y;
+                pBondInteractions_temp[2][2] += Rij.Z * springForce.Z;
+            #endif
 
-            springPotEn += 0.5 * kWallNgbr * pow( ext - refExt, 2. ); 
+            springPotEn += 0.5 * particles[i].springConstant * pow( ext - refExt, 2. ); 
         }
     }
 

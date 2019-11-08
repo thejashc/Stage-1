@@ -34,13 +34,13 @@ while ( idx < solidCount )
             capRij = Rij/ ext;
 
             // net-force
-            springForce = -kWallNgbr * ( ext - refExt ) * capRij;
+            springForce = -particles[i].springConstant * ( ext - refExt ) * capRij;
 
             // calculate the force as extension of length
             particles[i].fHarmonic += springForce;
             particles[j].fHarmonic -= springForce; 
 
-            springPotEn += 0.5 * kWallNgbr * pow( ext - refExt, 2. ); 
+            springPotEn += 0.5 * particles[i].springConstant * pow( ext - refExt, 2. ); 
         }
     }
     else{
