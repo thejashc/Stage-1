@@ -29,15 +29,16 @@
 #define UPPER_WALL_ON			0
 #define ROUGH_WALL			    0
 #define SPRING_CONNECTED_SLD    1
-#define BCKGRND_CONNECTED_SLD   1
+#define BCKGRND_CONNECTED_SLD   0
+#define MERCURY_POROSIMETRY     0
 
-#define CAPILLARY_CYLINDER		1
+#define CAPILLARY_CYLINDER		0
 #define CAPILLARY_SQUARE		0
-#define PISTON				    1
+#define PISTON				    0
 #define CYLINDER_ARRAY          0
 #define HARD_SPHERES            0
 #define SLIM                    0
-#define RANDOM_FIBRE_BUNDLE     0
+#define RANDOM_FIBRE_BUNDLE     1
 #define READ_FROM_FILE          0
 
 // FILE_WRITE
@@ -111,11 +112,11 @@ class DPD {
 
                 #if WALL_ON 
                     #if SPRING_CONNECTED_SLD
-                        //#include "psfWrite.h"
+                        #include "psfWrite.h"
                         springNetworkBox();
                     #endif
                 #endif 
-
+    
 				dens_calculation();
 				forceCalc();
 				resetVar();
@@ -150,8 +151,8 @@ class DPD {
 			#endif // RESTART
 
 			// write parameters and initial configuration
-			asciiFileWritePosVel();
-			//binFileWritePosVel();
+			//asciiFileWritePosVel();
+			binFileWritePosVel();
 			std::ofstream paraInfo( "param.out" );
 			paraWrite(paraInfo);
 			paraInfo.close();
@@ -259,7 +260,6 @@ class DPD {
             //#include "geometryIn.h"
 
 			#if WALL_ON
-				#include "defineWall.h"
 
 				#if SPHERICAL_DROPLET
 					#include "sphDropInit.h"
@@ -271,11 +271,11 @@ class DPD {
 
 				#if CAPILLARY_CYLINDER
                     //#include "definePiston.h"
-                    pCount = 0;
-                    bckgIdxStart = pCount;
-					#include "capillaryTube.h"
+                    //pCount = 0;
+                    //bckgIdxStart = pCount;
+					//#include "capillaryTube.h"
 					//#include "capillaryTubeHighRho.h"
-                    bckgIdxEnd = pCount - 1;
+                    //bckgIdxEnd = pCount - 1;
                     /*
                     */
 
@@ -285,17 +285,23 @@ class DPD {
                     #if PISTON
                         ngbrIdxStart = pCount;
                         #include "singleLayerWall.h"
-                        ngbrIdxEnd = pCount;
+                        ngbrIdxEnd = pCount-1;
 
                         pistonStartIndex = ngbrIdxStart;
                         pistonEndIndex = ngbrIdxEnd;
                         pistonParticles = ngbrIdxEnd - ngbrIdxStart + 1;
                         pistonForce = -appPressure * pistonArea ; 
                     #endif
+                    #if MERCURY_POROSIMETRY
+                        bckgIdxStart=pCount;
+                        #include "mercuryPorosimetry.h"
+                        bckgIdxEnd=pCount-1;
+                    #endif
+					#include "reservoir.h"                        // works for SLIM
 
                     //#include "cylindricalFluids.h"
                     //#include "wettingLiquidInCapillaryTube.h"     // works for SLIM
-					#include "reservoir.h"                        // works for SLIM
+					//#include "reservoir.h"                        // works for SLIM
                     //#include "nonWettingReservoir.h" 
                     //#include "separateReservoir.h"
                     //
@@ -311,12 +317,19 @@ class DPD {
 					// #include "capillaryTube.h"
                     
                     // FCC_WALL
+                    /*
+                    bckgIdxStart = pCount;
                     //#include "fccCylinder.h"
-					//#include "reservoir.h"
+                    //#include "glassyCylinder.h"
+                    #include "glassyCylinderWithLowerWall.h"
+                    bckgIdxEnd = pCount - 1;
+					#include "liquidLining.h"
+					#include "reservoir.h"                        // works for SLIM
+                    */
                 #endif
 
 				#if PLANAR_SLAB
-					#include "planarSlabInit.h" 
+					//#include "planarSlabInit.h" 
                     //#include "readPlanarSlabInit.h"
                 #endif
 
@@ -354,8 +367,45 @@ class DPD {
                 #endif
                 #if RANDOM_FIBRE_BUNDLE
                     //#include "randomFibreBundleParallel.h"
-                    #include "squashedFibre.h"
-                    #include "readSphericalCap.h"
+                    //#include "squashedFibre.h"
+                    //#include "readSphericalCap.h"
+                    //#include "singleFibre.h"
+                    //#include "poolAroundFibre.h"
+                    //#include "readFibreConfig.h"      // edited on Nov 01, 2k19
+                  
+                    /*
+                    pCount=0;
+                    ngbrIdxStart=pCount;
+                    #include "readSquashedFibre.h"      // edited on Nov 01, 2k19
+                    ngbrIdxEnd = pCount-1;
+                    */
+                    
+                    pCount=0;
+                    ngbrIdxStart=pCount;
+
+                    #include "readRelaxedSquashedFibre.h"      // edited on Nov 06, 2k19
+
+                    #if PISTON
+                        pistonStartIndex = pCount;
+                        #include "singleLayerWall.h"
+                        ngbrIdxEnd = pCount-1;
+                        pistonEndIndex = ngbrIdxEnd;
+
+                        pistonParticles = ngbrIdxEnd - ngbrIdxStart + 1;
+                        pistonForce = -appPressure * pistonArea ; 
+                    #else
+                        ngbrIdxEnd = pCount-1;
+                    #endif
+
+                    //#include "defineWall.h"
+
+                    #include "reservoir.h"
+
+                    /*
+                    imagWallPos1 = boxEdge[z];
+                    imagWallPos2 = 0.;
+                    */
+
 					//#include "sphericalCap.h"
                     //#include "definePiston.h"
 					//#include "sphericalCap.h"
@@ -375,7 +425,8 @@ class DPD {
 				#elif SPHERICAL_CAP
 					#include "sphericalCap.h"
 				#elif PLANAR_SLAB
-					#include "planarSlabInit.h"
+					//#include "planarSlabInit.h"
+                    #include "glassyWall.h"
 				#elif CYLINDER_DROPLET 
 					#include "cylDropInit.h"
 				#elif CRYSTAL
@@ -474,7 +525,7 @@ class DPD {
            // solidEndIndex = 0;
 
 			for ( i = 0; i < particles.size(); ++i ){
-                if ( particles[i].type == 1 || particles[i].type == 2 ){
+                if ( particles[i].type == 1 || particles[i].type == 2 || particles[i].type == 5 ){
                     fluid_index.push_back(i);
                     fluidCount++;
                 }
@@ -570,17 +621,37 @@ class DPD {
 
                         if ( i >= ngbrIdxStart && i <= ngbrIdxEnd ){
                             particles[i].bondIndex[0] = 0;
+               
+                            // assign spring constants to particles
+                            #if PISTON
+
+                            if( i >= pistonStartIndex && i <= pistonEndIndex )
+                               particles[i].springConstant = kWallNgbr2;
+                            else
+                               particles[i].springConstant = kWallNgbr1;
+
+                            #else
+                               particles[i].springConstant=kWallNgbr1; 
+                            #endif
+
                             ngbrIdxParticles++;
                         }
 
                         idx++;
                         i = solid_index[idx];
                     }
+                    #if PISTON
+                    simProg << "\n" << "Particles within indices " << pistonStartIndex << " and " << pistonEndIndex << " assigned spring constant " << kWallNgbr2;
+                    #endif
+                    simProg << "\n" << "Particles not belonging to piston assigned the spring constant " << kWallNgbr1;
                     simProg << "\n" << ngbrIdxParticles << " solid particles from " << ngbrIdxStart << " and " << ngbrIdxEnd  << " have their bond indices set to 0 \n"<< std::endl;
 
+                    /*
                     #if RANDOM_FIBRE_BUNDLE
-                        //#include "springConnectionsFibre.h"
+                        #include "springConnectionsFibre.h"
+                        #include "psfWrite.h"
                     #endif
+                    */
 
                     /*
                     m = 0;
@@ -792,35 +863,47 @@ class DPD {
             simProg << " ********************************************************************* \n";
             simProg << " Defining the matrix of repulsion parameters and attraction parameters \n";
 
-            Brep[0][0] = Bs1_s1;        Aatt[0][0] = As1_s1;
+            Brep[0][0] = Bs1_s1;        Aatt[0][0] = As1_s1;        // Solid 1
             Brep[0][1] = Bs1_l1;        Aatt[0][1] = As1_l1;     
             Brep[0][2] = Bs1_l2;        Aatt[0][2] = As1_l2;
             Brep[0][3] = Bs1_s2;        Aatt[0][3] = As1_s2;
             Brep[0][4] = Bs1_s3;        Aatt[0][4] = As1_s3;
+            Brep[0][5] = Bs1_l3;        Aatt[0][5] = As1_l3;
                                  
-            Brep[1][0] = Brep[0][1];    Aatt[1][0] = Aatt[0][1];
+            Brep[1][0] = Brep[0][1];    Aatt[1][0] = Aatt[0][1];    // Liquid 1
             Brep[1][1] = Bl1_l1;        Aatt[1][1] = Al1_l1;
             Brep[1][2] = Bl1_l2;        Aatt[1][2] = Al1_l2;
-            Brep[1][3] = Bl1_s2;        Aatt[1][3] = Al1_s2;     // Interaction of liquid 1 with both 0 and 3 is same
+            Brep[1][3] = Bl1_s2;        Aatt[1][3] = Al1_s2;     
             Brep[1][4] = Bl1_s3;        Aatt[1][4] = Al1_s3;
+            Brep[1][5] = Bl1_l3;        Aatt[1][5] = Al1_l3;
                                  
-            Brep[2][0] = Brep[0][2];    Aatt[2][0] = Aatt[0][2];    
+            Brep[2][0] = Brep[0][2];    Aatt[2][0] = Aatt[0][2];    // Liquid 2
             Brep[2][1] = Brep[1][2];    Aatt[2][1] = Aatt[1][2];
             Brep[2][2] = Bl2_l2;        Aatt[2][2] = Al2_l2;
-            Brep[2][3] = Bl2_s2;        Aatt[2][3] = Al2_s2;   // Interaction of liquid 2 with both 0 and 3 is same
+            Brep[2][3] = Bl2_s2;        Aatt[2][3] = Al2_s2;   
             Brep[2][4] = Bl2_s3;        Aatt[2][4] = Al2_s3;
+            Brep[2][5] = Bl2_l3;        Aatt[2][5] = Al2_l3;
                                  
-            Brep[3][0] = Brep[0][3];    Aatt[3][0] = Aatt[0][3];
+            Brep[3][0] = Brep[0][3];    Aatt[3][0] = Aatt[0][3];    // Solid 2
             Brep[3][1] = Brep[1][3];    Aatt[3][1] = Aatt[1][3];
             Brep[3][2] = Brep[2][3];    Aatt[3][2] = Aatt[2][3];
             Brep[3][3] = Bs2_s2;        Aatt[3][3] = As2_s2;
             Brep[3][4] = Bs2_s3;        Aatt[3][4] = As2_s3;
+            Brep[3][5] = Bs2_l3;        Aatt[3][5] = As2_l3;
                                  
-            Brep[4][0] = Brep[0][4];    Aatt[4][0] = Aatt[0][4];
+            Brep[4][0] = Brep[0][4];    Aatt[4][0] = Aatt[0][4];    // Solid 3
             Brep[4][1] = Brep[1][4];    Aatt[4][1] = Aatt[1][4];
             Brep[4][2] = Brep[2][4];    Aatt[4][2] = Aatt[2][4];
             Brep[4][3] = Brep[3][4];    Aatt[4][3] = Aatt[3][4];
             Brep[4][4] = Bs3_s3;        Aatt[4][4] = As3_s3;
+            Brep[4][5] = Bs3_l3;        Aatt[4][5] = As3_l3;
+
+            Brep[5][0] = Brep[0][5];    Aatt[5][0] = Aatt[0][5];    // Liquid 3
+            Brep[5][1] = Brep[1][5];    Aatt[5][1] = Aatt[1][5];
+            Brep[5][2] = Brep[2][5];    Aatt[5][2] = Aatt[2][5];
+            Brep[5][3] = Brep[3][5];    Aatt[5][3] = Aatt[3][5];
+            Brep[5][4] = Brep[4][5];    Aatt[5][4] = Aatt[4][5];
+            Brep[5][5] = Bl3_l3;        Aatt[5][5] = Al3_l3;
                 
             simProg << " Finished defining the matrix of repulsion parameters and attraction parameters \n";
             simProg << " ********************************************************************* \n";
@@ -830,12 +913,12 @@ class DPD {
                 simProg << " ********************************************************************* \n";
                 simProg << " Defining the matrix of noise and friction parameters \n";
 
-                sigma.resize( 5 );
-                gamma.resize( 5 );
+                sigma.resize( 6 );      // 3 solid types + 3 liquid types
+                gamma.resize( 6 );
 
-                for ( i=0; i < 5; ++i ){
-                    sigma[i].resize( 5 );
-                    gamma[i].resize( 5 );
+                for ( i=0; i < 6; ++i ){
+                    sigma[i].resize( 6 );
+                    gamma[i].resize( 6 );
                 }
 
                 // defining the elements of the sigma and gamma array
@@ -844,60 +927,85 @@ class DPD {
                sigma[0][2] 	= noise;                        // S1-L2
                sigma[0][3] 	= noise;                        // S1-S2
                sigma[0][4]  = noise;                        // S1-S3
+               sigma[0][5]  = noise;                        // S1-L3
 
-               sigma[1][0] 	= noise;                        // L1-S1 
+               sigma[1][0] 	= sigma[0][1];                  // L1-S1 
                sigma[1][1] 	= noise;       					// L1-L1    
                sigma[1][2] 	= noise12;                      // L1-L2 
    	 		   sigma[1][3] 	= noise;                        // L1-S2 = L1-S1
                sigma[1][4]  = noise;                        // L1-S3
+               sigma[1][5]  = noise13;                      // L1-L3
 
-               sigma[2][0] 	= noise;                        // L2-S1
+               sigma[2][0] 	= sigma[0][2];                  // L2-S1
                sigma[2][1] 	= sigma[1][2];                  // L2-L1 
                sigma[2][2] 	= noise2;        			    // L2-L2		
                sigma[2][3] 	= noise;        			    // L2-S2 
                sigma[2][4]  = noise;                        // L2-S3
+               sigma[2][5]  = noise;                        // L2-L3
+               sigma[2][5]  = noise23;                      // L2-L3
 
-               sigma[3][0] 	= noise;						// S2-S1 
-               sigma[3][1] 	= noise;                        // S2-L1
-               sigma[3][2] 	= noise;                        // S2-L2
+               sigma[3][0] 	= sigma[0][3];					// S2-S1 
+               sigma[3][1] 	= sigma[1][3];                  // S2-L1
+               sigma[3][2] 	= sigma[2][3];                  // S2-L2
                sigma[3][3] 	= noise;                        // S2-S2
                sigma[3][4]  = noise;                        // S2-S3
+               sigma[3][5]  = noise;                        // S2-L3
 
-               sigma[4][0] 	= noise;						// S3-S1 
-               sigma[4][1] 	= noise;                        // S3-L1
-               sigma[4][2] 	= noise;                        // S3-L2
-               sigma[4][3] 	= noise;                        // S3-S2
+               sigma[4][0] 	= sigma[0][4];					// S3-S1 
+               sigma[4][1] 	= sigma[1][4];                  // S3-L1
+               sigma[4][2] 	= sigma[2][4];                  // S3-L2
+               sigma[4][3] 	= sigma[3][4];                  // S3-S2
                sigma[4][4]  = noise;                        // S3-S3
+               sigma[4][5]  = noise;                        // S3-L3
+
+               sigma[5][0] 	= sigma[0][5];					// L3-S1 
+               sigma[5][1] 	= sigma[1][5];                  // L3-L1
+               sigma[5][2] 	= sigma[2][5];                  // L3-L2
+               sigma[5][3] 	= sigma[3][5];                  // L3-S2
+               sigma[5][4]  = sigma[4][5];                  // L3-S3
+               sigma[5][5]  = noise3;                       // L3-L3
 
    			   gamma[0][0] 	= friction;						// S1-S1 
                gamma[0][1] 	= friction;                     // S1-L1
                gamma[0][2] 	= friction;                     // S1-L2
                gamma[0][3] 	= friction;                     // S1-S2
                gamma[0][4] 	= friction;                     // S1-S3
+               gamma[0][5] 	= friction;                     // S1-L3
 
-               gamma[1][0] 	= friction;                     // L1-S1
+               gamma[1][0] 	= gamma[0][1];                  // L1-S1
                gamma[1][1] 	= friction;       		        // L1-L1     
                gamma[1][2] 	= friction12;                   // L1-L2     
                gamma[1][3] 	= friction;                     // L1-S2     
                gamma[1][4]  = friction;                     // L1-S3
+               gamma[1][5]  = friction13;                   // L1-L3
 
-               gamma[2][0] 	= friction;                     // L2-S1
+               gamma[2][0] 	= gamma[0][2];                  // L2-S1
                gamma[2][1] 	= gamma[1][2];                  // L2-L1
                gamma[2][2] 	= friction2;        	        // L2-L2	
                gamma[2][3] 	= friction;        	            // L2-S2	
                gamma[2][4]  = friction;                     // L2-S3
+               gamma[2][5]  = friction23;                   // L2-L3
 
-               gamma[3][0] 	= friction;						// S2-S1 
-               gamma[3][1] 	= friction;                     // S2-L1
-               gamma[3][2] 	= friction;                     // S2-L2
+               gamma[3][0] 	= gamma[0][3];				    // S2-S1 
+               gamma[3][1] 	= gamma[1][3];                  // S2-L1
+               gamma[3][2] 	= gamma[2][3];                  // S2-L2
                gamma[3][3] 	= friction;                     // S2-S2
                gamma[3][4]  = friction;                     // S2-S3
+               gamma[3][5]  = friction;                     // S2-L3
 
-               gamma[4][0] 	= friction;						// S3-S1 
-               gamma[4][1] 	= friction;                     // S3-L1
-               gamma[4][2] 	= friction;                     // S3-L2
-               gamma[4][3] 	= friction;                     // S3-S2
+               gamma[4][0] 	= gamma[0][4];				    // S3-S1 
+               gamma[4][1] 	= gamma[1][4];                  // S3-L1
+               gamma[4][2] 	= gamma[2][4];                  // S3-L2
+               gamma[4][3] 	= gamma[3][4];                  // S3-S2
                gamma[4][4]  = friction;                     // S3-S3
+               gamma[4][5]  = friction;                     // S3-L3
+
+               gamma[5][0] 	= gamma[0][5];					// L3-S1 
+               gamma[5][1] 	= gamma[1][5];                  // L3-L1
+               gamma[5][2] 	= gamma[2][5];                  // L3-L2
+               gamma[5][3] 	= gamma[3][5];                  // L3-S2
+               gamma[5][4]  = gamma[4][5];                  // L3-S3
+               gamma[5][5]  = friction3;                     // L3-L3
 
                simProg << " ********************************************************************* \n";
                simProg << " Finished defining the matrix of noise and friction parameters \n";
@@ -1039,17 +1147,17 @@ class DPD {
 			         mi[y] < mini[y] || mi[y] > maxi[y] ||
 				     mi[z] < mini[z] || mi[z] > maxi[z] )
 				{ 
-					simProg << "*** particle " << i << " of type " << particles[i].type  << " is outside box in step: " << step << "\n";
+					simProg << "*** particle " << i << " of type " << particles[i].type  << " is outside box in step: " << step << std::endl;
 					simProg << "*** position: " << particles[i].r << "\n";
-					simProg << mini[x] << " < " << mi[x] << " < " << maxi[x] <<"\n";
-					simProg << mini[y] << " < " << mi[y] << " < " << maxi[y] <<"\n";
-					simProg << mini[z] << " < " << mi[z] << " < " << maxi[z] <<"\n";
+					simProg << mini[x] << " < " << mi[x] << " < " << maxi[x] << std::endl;
+					simProg << mini[y] << " < " << mi[y] << " < " << maxi[y] << std::endl;
+					simProg << mini[z] << " < " << mi[z] << " < " << maxi[z] << std::endl;
 					abort();
 				}
 				if ( grid[mi[x]][mi[y]][mi[z]][0] == MaxPerCell )
 				{ 
-					simProg << "*** cell overfull at time step = " << step << " with " << grid[mi[x]][mi[y]][mi[z]][0] << " particles in cell" << "\n";
-					simProg << mi[x] << "  " << mi[y] << "  " << mi[z] << "\n";
+					simProg << "*** cell overfull at time step = " << step << " with " << grid[mi[x]][mi[y]][mi[z]][0] << " particles in cell" << std::endl;
+					simProg << mi[x] << "  " << mi[y] << "  " << mi[z] << std::endl;
 					abort();
 				}
 				grid[mi[x]][mi[y]][mi[z]][0] ++ ;
@@ -1059,18 +1167,6 @@ class DPD {
 
 		//--------------------------------------- Force Calculation --------------------------------------//
 		void forceCalc(){
-
-			#if WALL_ON
-                /*
-                repParam_Inst = 0. + repParam * ( 0.5 * ( 1.0 + tanh( ( step - 10000. ) / 10000. ) ) );	
-
-                Brep[0][1] = repParam_Inst;     Brep[1][0] = repParam_Inst;
-                Brep[0][2] = repParam_Inst;     Brep[2][0] = repParam_Inst;
-
-                Brep[3][1] = repParam_Inst;     Brep[1][3] = repParam_Inst;
-                Brep[3][2] = repParam_Inst;     Brep[2][3] = repParam_Inst;
-                */
-			#endif
 
 			for ( mi[x] = 0 ; mi[x] < NrCells[x] ; ++mi[x] )
 				for ( mi[y] = 0 ; mi[y] < NrCells[y] ; ++mi[y] )
@@ -1195,6 +1291,11 @@ class DPD {
 		//--------------------------------------- Integrate Equations of motion --------------------------------------//
 		void integrateEOM(){
 
+            double ff1=0.;
+            double ff2=0.;
+            double dWall1=0.;
+            double dWall2=0.;
+            double r7i=0.;
 			// #include "fluidParticles.h"
 
 			// #include "solidParticles.h"
@@ -1207,24 +1308,22 @@ class DPD {
                 #include "backgroundForceOnly.h"  
             #endif
 
+            /*
+            #if RANDOM_FIBRE_BUNDLE
+            if ( ( abs(imagWallPos1 - imagWallPos2) >= 20.) && (step >=6500) ){
+                    imagWallPos1 -= 0.01 * rcutoff;
+                    imagWallPos2 += 0.01 * rcutoff;
+            }
+
+            if ( step % 1000 == 0 )
+                simProg << "imaginary wall position 1 = " << imagWallPos1 << ", imaginary wall position 2 = " << imagWallPos2 << std::endl;
+            #endif
+            */
+
           /*
           #if CAPILLARY_SQUARE
               #include "penetrationIntoSquare.h"  // background repulsive potential
           #endif
-          */
-
-          /*
-          #if PISTON
-            //if ( ( step % saveCount == 0 )  && ( step > pistonT0 )  ){
-            if ( step % saveCount == 0 ){
-
-                forceOnPiston /= saveCount;
-            
-                forceOnPistonPerParticle = ( pistonForce - 0.01*( forceOnPiston - pistonForce ) ) / pistonParticles;
-
-                forceOnPiston = 0.;
-            }
-          #endif   
           */
 
           i = 0;
@@ -1236,32 +1335,61 @@ class DPD {
                 // store velocity (mid-step)
                 particles[i].r_old = particles[i].r;        // position at t: r(t)
                 particles[i].w_old = particles[i].w;        // velocity at t-dt/2 : v(t - dt/2)
-                   
+            
+                /*
+                #if RANDOM_FIBRE_BUNDLE
+                //The z-component of the force only depends on the z-distance from the top and
+                //bottom walls. The force scheme is borrowed from the paper titled 
+                // Title : Interfacial Excess Free Energies of Solid-Liquid Interfaces by Molecular
+                // Dynamics Simulation and Thermodynamic Integration. 
+                // Authors : Frederic Leroy, Daniel J.V.A. dos Santos, Florian Muller Plathe
+                // Journal : Macromolecular Rapid Communications
+                // Year : 2009
+             
+
+                    // force on particle from Wall1
+                    dWall1=particles[i].r.Z-imagWallPos1;    // distance of i^{th} particle from wall 1
+
+                    ri=1./dWall1;       // inverse distance
+                    r6i=pow(ri,6.);     // 6th inverse power
+                    r7i=ri*r6i;         // 7th inverse power
+
+                    if (abs(dWall1) <= pow(2,1./6.)*sigmaWCA )
+                        ff1 = 48. * epsilonWCA * sig6 * r7i * (sig6*r6i - 0.5); // Eqn(9) in the article
+                    else 
+                        ff1 = 0.;
+        
+                    // force on particle from Wall2
+                    dWall2=particles[i].r.Z-imagWallPos2;    // distance of i^{th} particle from wall 2
+
+                    ri=1./dWall2;       // inverse distance
+                    r6i=pow(ri,6.);     // 6th inverse power
+                    r7i=ri*r6i;         // 7th inverse power
+
+                    if (abs(dWall2) <= pow(2,1./6.)*sigmaWCA )
+                        ff2 = 48. * epsilonWCA * sig6 * r7i * (sig6*r6i - 0.5); // Eqn(9) in the article
+                    else 
+                        ff2 = 0.;
+
+                    // add forces
+                    particles[i].fext.X =0.;
+                    particles[i].fext.Y =0.;
+                    particles[i].fext.Z =ff1+ff2;
+                #endif
+                */
+
                 #if PISTON
                 if ( i >= pistonStartIndex && i <= pistonEndIndex )
                     particles[i].fext.Z = forceOnPistonPerParticle;     // adding the force deficit per particle
                 #endif
 
-                /*
-                #if CAPILLARY_CYLINDER 
-                    // WARNING : Just implementing this for a single experiment
-                    if ( i >= fluid_index[0] && i <= fluid_index[fluidCount-1] ){
-                        particles[i].fext.Z = 0.1;
-                    }
-                #endif
-                */
+                particles[i].w += ( particles[i].fC       + 
+                                    particles[i].fD       + 
+                                    particles[i].fR       + 
+                                    particles[i].fHarmonic  + 
+                                    particles[i].fext )*( dt/particles[i].m );      // evaluating velocity at t+dt/2 : v(t+dt/2)
 
-                //if ( i >= solidCount ){
-                    // update velocities (mid-step)
-                    particles[i].w += ( particles[i].fC       + 
-                                        particles[i].fD       + 
-                                        particles[i].fR       + 
-                                        particles[i].fHarmonic  + 
-                                        particles[i].fext )*( dt/particles[i].m );      // evaluating velocity at t+dt/2 : v(t+dt/2)
-
-                    // update position (integral time step) using the velocities (mid-step)
-                    particles[i].r += particles[i].w*dt;                                // evaluating position at t+dt: r(t+dt)	
-                //}
+                particles[i].r += particles[i].w*dt;                                // evaluating position at t+dt: r(t+dt)	
 
                 // implement periodic boundary condition 
                 //#include "pbcNew.h"
@@ -1295,19 +1423,8 @@ class DPD {
                 #endif
 
                 #if PISTON
-                    if ( i >= pistonStartIndex && i <= pistonEndIndex ){
-                        /*forceOnPiston += particles[i].fC.Z;*/				                    // z-component of force on the piston due to fluid, the conservative force cancels out because internal forces
+                    if ( i >= pistonStartIndex && i <= pistonEndIndex )
                         forceOnPistonInst += particles[i].fC.Z + particles[i].fR.Z + particles[i].fD.Z;	// z-component of force on the piston due to fluid, the conservative force cancels out because internal forces
-                    }
-
-                    /*
-                    if ( i >= upperPistonIdxStart && i <= upperPistonIdxEnd ){
-                        upperPistonCOMZ += particles[i].r.Z;
-                    }
-                    else if ( i >= lowerPistonIdxStart && i <= lowerPistonIdxEnd ){
-                        lowerPistonCOMZ += particles[i].r.Z;
-                    }
-                    */
                 #endif												
 
                 /* to be sorted out : calculate only for fluid particles */
@@ -1331,16 +1448,18 @@ class DPD {
                 if (step <= pistonT0)
                     forceOnPistonPerParticle = (-0.5*pistonArea)/pistonParticles;
                 else if (step > pistonT0) {
-                    std::cout << forceOnPistonInst << "\t\t\t" << fNew << std::endl;
+
+                    if ( step % 5000 == 0 ){
+                        appPressure += 0.5;
+                        pistonForce = -appPressure * pistonArea ; 
+                    }
+
+                    std::cout << forceOnPistonInst << std::endl;
                     forceOnPistonPerParticle = pistonForce / pistonParticles;
                 }
 
                 forceOnPistonInst = 0.;
             #endif
-
-            //std::cout << step << "\t\t\t" << (forceOnPistonPerParticle*pistonParticles)/pistonArea << std::endl;
-            // std::cout << step << "\t\t\t" << fNew << "\t\t\t" << (forceOnPistonPerParticle*pistonParticles)/pistonArea << std::endl;
-
 
 			// calculation of  pressure tensor 
 			#include "pTensCalc.h"
@@ -1349,17 +1468,6 @@ class DPD {
                 // #include "colloidBoxCrossing.h"
                 colloid_com_pos /= solidCount;
             #endif
-            /*
-            #if PISTON
-                #include "movePiston.h"
-                // std::cout << "upper piston center of mass = " << upperPistonCOMZ << " and lower piston center of mass = " << lowerPistonCOMZ << " pistonParticles = " << pistonParticles  << std::endl;
-                upperPistonCOMZ /= pistonParticles;
-                lowerPistonCOMZ /= pistonParticles;
-                if ( upperPistonCOMZ - lowerPistonCOMZ >= finalHeight ){
-                    #include "movePiston.h"
-                }
-            #endif 
-            */
 
 			// calculate auto-correlation
 			#if SACF
@@ -1444,13 +1552,17 @@ class DPD {
             #endif
             */
 
+            /*
             #if CAPILLARY_CYLINDER
             if ( step == 50000 ){
-                simProg << "changing the wettability of the solid to -40" << std::endl;
-                Aatt[0][1] = -40.;
-                Aatt[1][0] = -40.;
+                simProg << "changing the wettability of the solid from " << Aatt[0][2] << " to" << Aatt[0][5] << std::endl;
+                //Aatt[0][1] = -35.;
+                //Aatt[1][0] = -35.;
+                Aatt[0][2] = Aatt[0][5];    // use the value stored in Aatt[0][4]
+                Aatt[2][0] = Aatt[0][2];
             }
             #endif
+            */
 
             /*
             #if CYLINDER_ARRAY || LOWER_WALL_ON
@@ -1817,41 +1929,55 @@ class DPD {
                 paraInfo << "noise_S1_L1                  :           " << sigma[0][1] << "\n";
                 paraInfo << "noise_S1_L2                  :           " << sigma[0][2] << "\n";
                 paraInfo << "noise_S1_S2                  :           " << sigma[0][3] << "\n";
-                paraInfo << "noise_S1_S3                  :           " << sigma[0][4] << "\n\n";
+                paraInfo << "noise_S1_S3                  :           " << sigma[0][4] << "\n";
+                paraInfo << "noise_S1_L3                  :           " << sigma[0][5] << "\n\n";
 
                 paraInfo << "noise_L1_L1                  :           " << sigma[1][1] << "\n";
                 paraInfo << "noise_L1_L2                  :           " << sigma[1][2] << "\n";
                 paraInfo << "noise_L1_S2                  :           " << sigma[1][3] << "\n";
-                paraInfo << "noise_L1_S3                  :           " << sigma[1][4] << "\n\n";
+                paraInfo << "noise_L1_S3                  :           " << sigma[1][4] << "\n";
+                paraInfo << "noise_L1_L3                  :           " << sigma[1][5] << "\n\n";
 
                 paraInfo << "noise_L2_L2                  :           " << sigma[2][2] << "\n";
                 paraInfo << "noise_L2_S2                  :           " << sigma[2][3] << "\n";
-                paraInfo << "noise_L2_S3                  :           " << sigma[2][4] << "\n\n";
+                paraInfo << "noise_L2_S3                  :           " << sigma[2][4] << "\n";
+                paraInfo << "noise_L2_L3                  :           " << sigma[2][5] << "\n\n";
 
                 paraInfo << "noise_S2_S2                  :           " << sigma[3][3] << "\n";
-                paraInfo << "noise_S2_S3                  :           " << sigma[3][4] << "\n\n";
+                paraInfo << "noise_S2_S3                  :           " << sigma[3][4] << "\n";
+                paraInfo << "noise_S2_L3                  :           " << sigma[3][5] << "\n\n";
 
-                paraInfo << "noise_S3_S3                  :           " << sigma[4][4] << "\n\n";
+                paraInfo << "noise_S3_S3                  :           " << sigma[4][4] << "\n";
+                paraInfo << "noise_S3_L3                  :           " << sigma[4][5] << "\n\n";
+
+                paraInfo << "noise_L3_L3                  :           " << sigma[5][5] << "\n\n";
 
                 paraInfo << "friction_S1_S1               :           " << gamma[0][0] << "\n";
                 paraInfo << "friction_S1_L1               :           " << gamma[0][1] << "\n";
                 paraInfo << "friction_S1_L2               :           " << gamma[0][2] << "\n";
                 paraInfo << "friction_S1_S2               :           " << gamma[0][3] << "\n";
-                paraInfo << "friction_S1_S3               :           " << gamma[0][4] << "\n\n";
+                paraInfo << "friction_S1_S3               :           " << gamma[0][4] << "\n";
+                paraInfo << "friction_S1_S3               :           " << gamma[0][5] << "\n\n";
 
                 paraInfo << "friction_L1_L1               :           " << gamma[1][1] << "\n";
                 paraInfo << "friction_L1_L2               :           " << gamma[1][2] << "\n";
                 paraInfo << "friction_L1_S2               :           " << gamma[1][3] << "\n";
-                paraInfo << "friction_L1_S3               :           " << gamma[1][4] << "\n\n";
+                paraInfo << "friction_L1_S3               :           " << gamma[1][4] << "\n";
+                paraInfo << "friction_L1_L3               :           " << gamma[1][5] << "\n\n";
 
                 paraInfo << "friction_L2_L2               :           " << gamma[2][2] << "\n";
                 paraInfo << "friction_L2_S2               :           " << gamma[2][3] << "\n";
-                paraInfo << "friction_L2_S3               :           " << gamma[2][4] << "\n\n";
+                paraInfo << "friction_L2_S3               :           " << gamma[2][4] << "\n";
+                paraInfo << "friction_L2_L3               :           " << gamma[2][5] << "\n\n";
 
                 paraInfo << "friction_S2_S2               :           " << gamma[3][3] << "\n";
-                paraInfo << "friction_S2_S3               :           " << gamma[3][4] << "\n\n";
+                paraInfo << "friction_S2_S3               :           " << gamma[3][4] << "\n";
+                paraInfo << "friction_S2_L3               :           " << gamma[3][5] << "\n\n";
 
-                paraInfo << "friction_S3_S3               :           " << gamma[4][4] << "\n\n";
+                paraInfo << "friction_S3_S3               :           " << gamma[4][4] << "\n";
+                paraInfo << "friction_S3_L3               :           " << gamma[4][5] << "\n\n";
+
+                paraInfo << "friction_L3_L3               :           " << gamma[5][5] << "\n\n";
 			#endif 
 			
             paraInfo << "---------------------------------------------------" << "\n";
@@ -1864,21 +1990,28 @@ class DPD {
             paraInfo << "Aatt_S1_L1                    :           " << Aatt[0][1] << "\n";
             paraInfo << "Aatt_S1_L2                    :           " << Aatt[0][2] << "\n";
             paraInfo << "Aatt_S1_S2                    :           " << Aatt[0][3] << "\n";
-            paraInfo << "Aatt_S1_S3                    :           " << Aatt[0][4] << "\n\n";
+            paraInfo << "Aatt_S1_S3                    :           " << Aatt[0][4] << "\n";
+            paraInfo << "Aatt_S1_L3                    :           " << Aatt[0][5] << "\n\n";
 
             paraInfo << "Aatt_L1_L1                    :           " << Aatt[1][1] << "\n";
             paraInfo << "Aatt_L1_L2                    :           " << Aatt[1][2] << "\n";
             paraInfo << "Aatt_L1_S2                    :           " << Aatt[1][3] << "\n";
-            paraInfo << "Aatt_L1_S3                    :           " << Aatt[1][4] << "\n\n";
+            paraInfo << "Aatt_L1_S3                    :           " << Aatt[1][4] << "\n";
+            paraInfo << "Aatt_L1_L3                    :           " << Aatt[1][5] << "\n\n";
 
             paraInfo << "Aatt_L2_L2                    :           " << Aatt[2][2] << "\n";
             paraInfo << "Aatt_L2_S2                    :           " << Aatt[2][3] << "\n";
-            paraInfo << "Aatt_L2_S3                    :           " << Aatt[2][4] << "\n\n";
+            paraInfo << "Aatt_L2_S3                    :           " << Aatt[2][4] << "\n";
+            paraInfo << "Aatt_L2_L3                    :           " << Aatt[2][5] << "\n\n";
 
             paraInfo << "Aatt_S2_S2                    :           " << Aatt[3][3] << "\n";
-            paraInfo << "Aatt_S2_S3                    :           " << Aatt[3][4] << "\n\n";
+            paraInfo << "Aatt_S2_S3                    :           " << Aatt[3][4] << "\n";
+            paraInfo << "Aatt_S2_L3                    :           " << Aatt[3][5] << "\n\n";
 
-            paraInfo << "Aatt_S3_S3                    :           " << Aatt[4][4] << "\n\n";
+            paraInfo << "Aatt_S3_S3                    :           " << Aatt[4][4] << "\n";
+            paraInfo << "Aatt_S3_L3                    :           " << Aatt[4][5] << "\n\n";
+
+            paraInfo << "Aatt_L3_L3                    :           " << Aatt[5][5] << "\n\n";
 
             paraInfo << "---------------------------------------------------" << "\n";
 			paraInfo << "                        Bij" << "\n";
@@ -1887,21 +2020,28 @@ class DPD {
             paraInfo << "Brep_S1_L1                    :           " << Brep[0][1] << "\n";
             paraInfo << "Brep_S1_L2                    :           " << Brep[0][2] << "\n";
             paraInfo << "Brep_S1_S2                    :           " << Brep[0][3] << "\n";
-            paraInfo << "Brep_S1_S3                    :           " << Brep[0][4] << "\n\n";
+            paraInfo << "Brep_S1_S3                    :           " << Brep[0][4] << "\n";
+            paraInfo << "Brep_S1_L3                    :           " << Brep[0][5] << "\n\n";
 
             paraInfo << "Brep_L1_L1                    :           " << Brep[1][1] << "\n";
             paraInfo << "Brep_L1_L2                    :           " << Brep[1][2] << "\n";
             paraInfo << "Brep_L1_S2                    :           " << Brep[1][3] << "\n";
-            paraInfo << "Brep_L1_S3                    :           " << Brep[1][4] << "\n\n";
+            paraInfo << "Brep_L1_S3                    :           " << Brep[1][4] << "\n";
+            paraInfo << "Brep_L1_L3                    :           " << Brep[1][5] << "\n\n";
 
             paraInfo << "Brep_L2_L2                    :           " << Brep[2][2] << "\n";
             paraInfo << "Brep_L2_S2                    :           " << Brep[2][3] << "\n";
-            paraInfo << "Brep_L2_S3                    :           " << Brep[2][4] << "\n\n";
+            paraInfo << "Brep_L2_S3                    :           " << Brep[2][4] << "\n";
+            paraInfo << "Brep_L2_L3                    :           " << Brep[2][5] << "\n\n";
 
             paraInfo << "Brep_S2_S2                    :           " << Brep[3][3] << "\n";
-            paraInfo << "Brep_S2_S3                    :           " << Brep[3][4] << "\n\n";
+            paraInfo << "Brep_S2_S3                    :           " << Brep[3][4] << "\n";
+            paraInfo << "Brep_S2_L3                    :           " << Brep[3][5] << "\n\n";
 
-            paraInfo << "Brep_S3_S3                    :           " << Brep[4][4] << "\n\n";
+            paraInfo << "Brep_S3_S3                    :           " << Brep[4][4] << "\n";
+            paraInfo << "Brep_S3_L3                    :           " << Brep[4][5] << "\n\n";
+
+            paraInfo << "Brep_L3_L3                    :           " << Brep[5][5] << "\n\n";
 
             paraInfo << "---------------------------------------------------" << "\n";
 			paraInfo << "                        Wall parameters" << "\n";
@@ -1910,7 +2050,8 @@ class DPD {
             paraInfo << "Wall density (initWallRho)                                 :           " << initWallRho << "\n";
             paraInfo << "Penetration tolerance (wallPenetration)                    :           " << wallPenetration << "\n";
             paraInfo << "Background Spring constant for wall ( kWallBckg )          :           " << kWallBckg << "\n";
-            paraInfo << "Neighbour Spring constant for wall ( kWallNgbr )           :           " << kWallNgbr << "\n";
+            paraInfo << "Neighbour Spring constant for wall ( kWallNgbr1 )           :           " << kWallNgbr1 << "\n";
+            paraInfo << "Neighbour Spring constant for wall ( kWallNgbr2 )           :           " << kWallNgbr2 << "\n";
 
 			#if LEES_EDWARDS_BC
 				paraInfo << "---------------------------" << "\n";
@@ -2136,8 +2277,8 @@ class DPD {
 			if (counter>=saveCount) {				
 
 				// particle positions in ascii file format
-				asciiFileWritePosVel();
-				//binFileWritePosVel();
+				//asciiFileWritePosVel();
+				binFileWritePosVel();
 
 				// Energy
 						#if LEES_EDWARDS_BC
@@ -2297,27 +2438,26 @@ class DPD {
                          if ( particles[i].type == 0 ){
                              file  << "O" << "\t" << std::setprecision(10) << particles[i].r_old << "\n";
                              file1 << "O" << "\t" << std::setprecision(10) << particles[i].v << "\n";
-                             //file2 << "O" << "\t" << std::setprecision(10) << particles[i].r << "\n";
                          }
                         else if ( particles[i].type == 1 ){
                             file  << "H" << "\t" << std::setprecision(10) << particles[i].r_old  << "\t " << "\n";
                             file1 << "H" << "\t" << std::setprecision(10) << particles[i].v << "\n";
-                            //file2 << "H" << "\t" << std::setprecision(10) << particles[i].r << "\n";
                         }
                         else if ( particles[i].type == 2 ){
                             file  << "C" << "\t" << std::setprecision(10) << particles[i].r_old << "\t " <<  "\n";
                             file1 << "C" << "\t" << std::setprecision(10) << particles[i].v << "\n";
-                            //file2 << "C" << "\t" << std::setprecision(10) << particles[i].r << "\n";
                         }
                         else if ( particles[i].type == 3 ){
                             file  << "B" << "\t" << std::setprecision(10) << particles[i].r_old << "\n";
                             file1 << "B" << "\t" << std::setprecision(10) << particles[i].v << "\n";
-                            //file2 << "B" << "\t" << std::setprecision(10) << particles[i].r << "\n";
                         }
                         else if ( particles[i].type == 4 ){
                             file  << "N" << "\t" << std::setprecision(10) << particles[i].r_old << "\n";
                             file1 << "N" << "\t" << std::setprecision(10) << particles[i].v << "\n";
-                            //file2 << "B" << "\t" << std::setprecision(10) << particles[i].r << "\n";
+                        }
+                        else if ( particles[i].type == 5 ){
+                            file  << "D" << "\t" << std::setprecision(10) << particles[i].r_old << "\n";
+                            file1 << "D" << "\t" << std::setprecision(10) << particles[i].v << "\n";
                         }
 
                         i++;
@@ -2613,11 +2753,12 @@ class DPD {
         //------------------------------ Create spring network : FIXED geometry ------------------------------//
         // creates springs between particles based on nearest neighbour considerations for a fixed geometry //
         // supply the beginning and the ending index of the particles //
-        unsigned int springNetworkFixed(unsigned int startIndex, unsigned int endIndex){
+        unsigned int springNetworkFixed(unsigned int startIndex, unsigned int endIndex, double posBefSquash[][3]){
 
            totalBonds = 0;
            double r2;
            double bondDistCutoff = 0.8;
+           double distBefSquash;
 
             //loop over all contacts p=1..N-1, q=p+1..N to evaluate forces
             for ( i=startIndex; i< endIndex ; ++i){
@@ -2638,8 +2779,24 @@ class DPD {
 
                     r2 = minRij.getLengthSquared();
                     dist = std::sqrt( r2 );
+                    
+                    // calculations before squashing
+                    Rij.X = posBefSquash[i][0] - posBefSquash[j][0];   // Rij vector between ith and jth particle before squashing
+                    Rij.Y = posBefSquash[i][1] - posBefSquash[j][1];
+                    Rij.Z = posBefSquash[i][2] - posBefSquash[j][2];
 
-                    if ( dist < bondDistCutoff ) {
+                    temp.X = Vec3D::roundOff_x(Rij, boxEdge[x]);
+                    temp.Y = Vec3D::roundOff_y(Rij, boxEdge[y]);
+                    temp.Z = Vec3D::roundOff_z(Rij, boxEdge[z]);
+
+                    minRij.X = Rij.X - temp.X*boxEdge[x];
+                    minRij.Y = Rij.Y - temp.Y*boxEdge[y];
+                    minRij.Z = Rij.Z - temp.Z*boxEdge[z];
+
+                    r2 = minRij.getLengthSquared();
+                    distBefSquash = std::sqrt( r2 );
+
+                    if ((dist < bondDistCutoff) && (distBefSquash < bondDistCutoff)) {
 
                         // simProg << " bond between " << i << " and " << j << std::endl;
                         k = particles[i].bondIndex[0] + 1;
