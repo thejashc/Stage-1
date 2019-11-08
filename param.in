@@ -66,13 +66,33 @@ Al3_l3              -40.0   # liquid 3
 #-------------------------------------#
 #        noise parameter : gamma_ij 
 #-------------------------------------#
-kBT                 1.0 		# temperature	
-noise               6.0			# dissipation coeffecient
-noise12             6.0
-noise13             6.0
-noise2              6.0
-noise23             6.0
-noise3              6.0
+kBT                 1.0         # temperature   
+noise_s1_s1         6.0         # dissipation coeffecient
+noise_s1_l1         6.0    
+noise_s1_l2         6.0 
+noise_s1_s2         6.0 
+noise_s1_s3         6.0 
+noise_s1_l3         6.0 
+#
+noise_l1_l1         6.0 
+noise_l1_l2         6.0 
+noise_l1_s2         6.0 
+noise_l1_s3         6.0 
+noise_l1_l3         6.0 
+#
+noise_l2_l2         6.0 
+noise_l2_s2         6.0 
+noise_l2_s3         6.0 
+noise_l2_l3         6.0 
+#
+noise_s2_s2         6.0 
+noise_s2_s3         6.0 
+noise_s2_l3         6.0 
+#
+noise_s3_s3         6.0 
+noise_s3_l3         6.0 
+#
+noise_l3_l3         6.0 
 #-------------------------------------#
 #        Wall properties    
 #-------------------------------------#
