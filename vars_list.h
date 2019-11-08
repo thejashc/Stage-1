@@ -66,9 +66,38 @@ double wallHeight;
 
 // random-dissipative terms
 double kBT;				// DPD fluid temperature
-double noise, friction; std::vector<std::vector<double>> sigma, gamma; // noise and friction  
-double noise2, noise3, friction2, friction3, noise12, noise13, noise23, friction12, friction13, friction23; // noise and friction for 2nd fluid if MC on
+//double noise, friction; std::vector<std::vector<double>> sigma, gamma; // noise and friction  
+//double noise2, noise3, friction2, friction3, noise12, noise13, noise23, friction12, friction13, friction23; // noise and friction for 2nd fluid if MC on
 //double orig_noise, orig_friction, orig_noise2, orig_friction2, orig_noise12, orig_friction12;
+
+std::vector<std::vector<double>> sigma, gamma; // noise and friction
+
+double noise_s1_s1;  double friction_s1_s1;
+double noise_s1_l1;  double friction_s1_l1;
+double noise_s1_l2;  double friction_s1_l2;
+double noise_s1_s2;  double friction_s1_s2;
+double noise_s1_s3;  double friction_s1_s3;
+double noise_s1_l3;  double friction_s1_l3;
+     
+double noise_l1_l1;  double friction_l1_l1;
+double noise_l1_l2;  double friction_l1_l2;
+double noise_l1_s2;  double friction_l1_s2;
+double noise_l1_s3;  double friction_l1_s3;
+double noise_l1_l3;  double friction_l1_l3;
+     
+double noise_l2_l2;  double friction_l2_l2;
+double noise_l2_s2;  double friction_l2_s2;
+double noise_l2_s3;  double friction_l2_s3;
+double noise_l2_l3;  double friction_l2_l3;
+     
+double noise_s2_s2;  double friction_s2_s2;
+double noise_s2_s3;  double friction_s2_s3;
+double noise_s2_l3;  double friction_s2_l3;
+     
+double noise_s3_s3;  double friction_s3_s3;
+double noise_s3_l3;  double friction_s3_l3;
+
+double noise_l3_l3;  double friction_l3_l3;
 
 double dt, inv_sqrt_dt, half_dt, half_dt_sqr, sqrtTwelve;				// time step, sqrt of inverse of time step, half of dt, square of half of dt
 int step, stepMax;				// counter for step, total number of steps
