@@ -34,6 +34,7 @@ public:
 
     unsigned int bondIndex[1000];
     double eqBondLength[1000];
+    double springConstant;
     // double equilibriumBondLength[1000][3];
     // std::vector<Vec3D> equiBondLength;
 
