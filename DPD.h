@@ -28,17 +28,17 @@
 #define LOWER_WALL_ON			0
 #define UPPER_WALL_ON			0
 #define ROUGH_WALL			    0
-#define SPRING_CONNECTED_SLD    1
-#define BCKGRND_CONNECTED_SLD   0
+#define SPRING_CONNECTED_SLD    0
+#define BCKGRND_CONNECTED_SLD   1
 #define MERCURY_POROSIMETRY     0
 
-#define CAPILLARY_CYLINDER		0
+#define CAPILLARY_CYLINDER		1
 #define CAPILLARY_SQUARE		0
 #define PISTON				    0
 #define CYLINDER_ARRAY          0
 #define HARD_SPHERES            0
 #define SLIM                    0
-#define RANDOM_FIBRE_BUNDLE     1
+#define RANDOM_FIBRE_BUNDLE     0
 #define READ_FROM_FILE          0
 
 // FILE_WRITE
@@ -296,8 +296,8 @@ class DPD {
                         bckgIdxStart=pCount;
                         #include "mercuryPorosimetry.h"
                         bckgIdxEnd=pCount-1;
+                        #include "reservoir.h"                        // works for SLIM
                     #endif
-					#include "reservoir.h"                        // works for SLIM
 
                     //#include "cylindricalFluids.h"
                     //#include "wettingLiquidInCapillaryTube.h"     // works for SLIM
@@ -326,6 +326,13 @@ class DPD {
 					#include "liquidLining.h"
 					#include "reservoir.h"                        // works for SLIM
                     */
+                    // GLASSY WALL
+                    pCount=0;
+                    bckgIdxStart = pCount;
+                    #include "glassyCylinder.h"
+                    bckgIdxEnd = pCount - 1;
+					#include "reservoir.h"                        // works for SLIM
+
                 #endif
 
 				#if PLANAR_SLAB

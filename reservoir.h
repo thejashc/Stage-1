@@ -74,7 +74,9 @@ simProg << "finished initialization of  " << pCount << " particles of the wettin
 simProg << "***************************************************" << std::endl;
 */
 // read file
-sprintf(fname,"/storage/thejas/src/inputGeometry/fccLattice/fcc_Fluid_Lattice/fcc_fluid_lattice_100pc_wetting.dat");
+//sprintf(fname,"/storage/thejas/src/inputGeometry/fccLattice/fcc_Fluid_Lattice/fcc_fluid_lattice_50pc_wetting.dat");
+sprintf(fname,"./inputGeometry/fccLattice/fcc_Fluid_Lattice/fcc_fluid_lattice_50pc_wetting.dat");
+//sprintf(fname,"./inputGeometry/fccLattice/fcc_Fluid_Lattice/fcc_fluid_lattice.dat");
 //sprintf(fname,"../inputGeometry/fcc_fluid_lattice_40pc_wetting.dat");
 readConfig.open(fname, std::ios::in ); 
 if ( ! readConfig ) { simProg << "*** The file could not be opened/ does not exist *** \n Aborting !! " << std::endl; abort(); }
@@ -85,10 +87,7 @@ simProg << npart << " particle positions and velocities for the fluid reservoir 
 pCount =0;
 char dummy;
 double offset = 0.000001;
-//double zoffSet = resCOMZ;
-double zoffSet = 314.;
-
-resCOMVel=0.;
+double zoffSet = resCOMZ;
 
 for ( j = 0 ; j < npart ; ++ j ){	
 
@@ -105,7 +104,7 @@ for ( j = 0 ; j < npart ; ++ j ){
             pCount++;
         }
         else if ( dummy == 'C' ){
-            particles.push_back({1.0,1.0,{xind+offset, yind+offset, zind+zoffSet},{0., 0., resCOMVel},1});
+            particles.push_back({1.0,1.0,{xind+offset, yind+offset, zind+zoffSet},{0., 0., resCOMVel},2});
             pCount++;
         }
     }

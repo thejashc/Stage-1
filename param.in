@@ -1,9 +1,9 @@
 #-------------------------------------#
 #        Simulation Box Size        
 #-------------------------------------#
-boxEdgeX            15.0	
-boxEdgeY            15.0
-boxEdgeZ            600.0
+boxEdgeX            20.0	
+boxEdgeY            20.0
+boxEdgeZ            225.0
 initRho             6.00
 #-------------------------------------#
 #        Repulsion parameter Bij     
@@ -30,7 +30,7 @@ Bs2_s2              25.0    # solid 2
 Bs2_s3              25.0
 Bs2_l3              25.0
 #
-Bs3_s3              0.0    # solid 3
+Bs3_s3              25.0    # solid 3
 Bs3_l3              25.0
 #
 Bl3_l3              25.0    # liquid 3
@@ -38,7 +38,7 @@ Bl3_l3              25.0    # liquid 3
 #        Attraction parameter Aij   
 #-------------------------------------#
 As1_s1              -40.0   # solid 1
-As1_l1              -10.0        
+As1_l1              -40.0        
 As1_l2              -40.0        
 As1_s2              -40.0        
 As1_s3              -40.0        
@@ -59,7 +59,7 @@ As2_s2              -40.0   # solid 2
 As2_s3              -40.0
 As2_l3              -40.0
 #
-As3_s3              0.0   # solid 3
+As3_s3              -40.0   # solid 3
 As3_l3              -40.0
 #
 Al3_l3              -40.0   # liquid 3
@@ -114,9 +114,9 @@ rd_cutoff           0.75
 #        Simulation time parameters 
 #-------------------------------------#
 dt                  0.01        # time parameters	
-stepMax             500000
+stepMax             20
 rstrtFWrtFreq       1000
-saveCount           500
+saveCount           10
 psaveCount          50000
 pCorrTime           1
 #-------------------------------------#
@@ -146,12 +146,12 @@ cylRad              4.0
 #        Geometry: CAPILLARY CYLINDER
 #-------------------------------------#
 bufferLength        10.0		
-capLen              35.0
+capLen              115.0
 capRad              5.0
 capWallWdth         1.5
-resWdth             12.0
-resComZ             37.0
-resComVel           -0.00
+resWdth             24.0
+resComZ             177.0
+resComVel           -0.05
 #-------------------------------------#
 #        Geometry: PISTON
 #-------------------------------------#
