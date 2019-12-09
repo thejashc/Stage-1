@@ -22,6 +22,8 @@ rm -f param.out
 #g++ -Wl,--stack, 4194304 -o DPD.exe  -std=c++11 Vec3D.cc DPD_main.cpp -- doesnt work
 #g++ -O2 -pg -o DPD.exe -std=c++11 Vec3D.cc DPD_main.cpp
 g++ -o convert.exe -std=c++11 convertBinToAscii.cpp 
+g++ -o RDF.exe -std=c++11 measureRDF.cpp
+g++ -o temp.exe -std=c++11 measureTemp.cpp
 
 # intel compiler
 icpc -fast -o DPD.exe -std=c++11 Vec3D.cc DPD_main.cpp

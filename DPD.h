@@ -20,15 +20,15 @@
 #define SPHERICAL_CAP			0
 #define CYLINDER_DROPLET		0
 #define PLANAR_SLAB			    0
-#define CRYSTAL				    0
+#define CRYSTAL				    1
 #define RESTART				    0
 
 // WALL flags
-#define WALL_ON				    1
+#define WALL_ON				    0
 #define LOWER_WALL_ON			0
 #define UPPER_WALL_ON			0
 #define ROUGH_WALL			    0
-#define SPRING_CONNECTED_SLD    1
+#define SPRING_CONNECTED_SLD    0
 #define BCKGRND_CONNECTED_SLD   0
 #define MERCURY_POROSIMETRY     0
 
@@ -38,7 +38,7 @@
 #define CYLINDER_ARRAY          0
 #define HARD_SPHERES            0
 #define SLIM                    0
-#define RANDOM_FIBRE_BUNDLE     1
+#define RANDOM_FIBRE_BUNDLE     0
 #define READ_FROM_FILE          0
 
 // FILE_WRITE
@@ -87,7 +87,8 @@ class DPD {
 			#endif
 			tempAv 			= 0.0;
 			tempCount 		= 0;
-			volume 			= boxEdge[x] * boxEdge[y] * boxEdge[z];		// system volume
+			//volume 			= boxEdge[x] * boxEdge[y] * boxEdge[z];		// system volume
+			volume 			= boxEdge[x] * boxEdge[y];		// system 2d-volume
 			npart 			= particles.size();				// number of particles
 			rho 			= npart/volume;					// density of system 
 			half_dt 		= 0.5*dt;					// 0.5*dt to be used in the integrateEOM()
@@ -430,7 +431,8 @@ class DPD {
 				#elif CYLINDER_DROPLET 
 					#include "cylDropInit.h"
 				#elif CRYSTAL
-					#include "crystalInit.h"
+                    #include "singleLayerWall.h"
+					//#include "crystalInit.h"
 				#elif RESTART 
 					#include "restartConfig.h"
 				#endif
@@ -1391,8 +1393,8 @@ class DPD {
                 particles[i].r += particles[i].w*dt;                                // evaluating position at t+dt: r(t+dt)	
 
                 // implement periodic boundary condition 
-                //#include "pbcNew.h"
-                #include "pbcNewReflecting.h"
+                #include "pbcNew.h"
+                //#include "pbcNewReflecting.h"
                 //#include "pbcXOnly.h"
 
                 // calculate velocity (integral time step)

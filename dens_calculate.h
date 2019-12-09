@@ -16,14 +16,17 @@ if ( r2 <= rc2 ){
 	if ( r2 <= rd2 ){
 		wDij = ( 1.0 - dist/rd_cutoff );
 		wDij2 = wDij*wDij; 
-		rho_temp = fifteen_by_twopi_by_rd * wDij2;
+		//rho_temp = fifteen_by_twopi_by_rd * wDij2;
+		rho_temp = six_by_pi_rd2 * wDij2;
 
 		particles[i].dens += rho_temp;
 		particles[j].dens += rho_temp;
 	}
 
 	// rhoBar calculation 
-	rhoBartemp = fifteen_by_twopi_by_rc * wCij2;
+	//rhoBartemp = fifteen_by_twopi_by_rc * wCij2;
+	rhoBartemp = six_by_pi_rd2 * wCij2;
+
 	particles[i].rhoBar += rhoBartemp;
 	particles[j].rhoBar += rhoBartemp;
 }

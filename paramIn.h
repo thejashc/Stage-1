@@ -513,7 +513,8 @@ boxRecip[z] 	= 1.0 / boxEdge[z];
 #endif // RANDOM_DISSIPATIVE
 
 // Cutoff distances for liquid-liquid and solid-liquid interactions
-fifteen_by_twopi_by_rd = 15.0/( 2.0 * M_PI * pow( rd_cutoff,3.0) );	// 15/(2*PI*rd^3) used in Lucy weight function
+//fifteen_by_twopi_by_rd = 15.0/( 2.0 * M_PI * pow( rd_cutoff,3.0) );	// 15/(2*PI*rd^3) used in Lucy weight function
+six_by_pi_rd2= 6.0/(M_PI * pow( rd_cutoff,2.0));                       // (6/(pi*rd^2))
 fifteen_by_twopi_by_rc = 15.0/( 2.0 * M_PI * pow( rcutoff,3.0 ) );	// 15/(2*PI*rc^3) used in Lucy weight function
 
 rc2 = pow( rcutoff, 2. );

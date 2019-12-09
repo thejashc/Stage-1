@@ -751,6 +751,7 @@ double piThirty               = M_PI/30.;		// Pi/30.0
 double piFifteen              = M_PI/15.;		// Pi/15.0
 double fifteen_by_twopi_by_rd;				// (15/(2*pi*rd^3))
 double fifteen_by_twopi_by_rc;				// (15/(2*pi*rc^3))
+double six_by_pi_rd2;                       // (6/(pi*rd^2))
 double rd4;						// rd^4
 double rc4;						// rc^4
 double K1;

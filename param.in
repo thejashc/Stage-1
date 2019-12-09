@@ -3,8 +3,8 @@
 #-------------------------------------#
 boxEdgeX            15.0	
 boxEdgeY            15.0
-boxEdgeZ            600.0
-initRho             6.00
+boxEdgeZ            3.0
+initRho             8.00
 #-------------------------------------#
 #        Repulsion parameter Bij     
 #-------------------------------------#
@@ -114,9 +114,9 @@ rd_cutoff           0.75
 #        Simulation time parameters 
 #-------------------------------------#
 dt                  0.01        # time parameters	
-stepMax             500000
+stepMax             700000
 rstrtFWrtFreq       1000
-saveCount           500
+saveCount           100
 psaveCount          50000
 pCorrTime           1
 #-------------------------------------#

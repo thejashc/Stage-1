@@ -58,7 +58,8 @@ if ( r2 <= rc2 ) {
 
 		wDij2 = wDij * wDij; 
 
-        rho_temp = fifteen_by_twopi_by_rd * wDij2;
+        //rho_temp = fifteen_by_twopi_by_rd * wDij2;
+        rho_temp = six_by_pi_rd2 * wDij2;
         particles[i].dens_new += rho_temp;
         particles[j].dens_new += rho_temp;
 	}
@@ -104,7 +105,8 @@ if ( r2 <= rc2 ) {
     fCij.Z = term3 * capRij.Z; 
 
     // rhoBar calculation 
-    rhoBartemp = fifteen_by_twopi_by_rc * wCij2;
+    //rhoBartemp = fifteen_by_twopi_by_rc * wCij2;
+    rhoBartemp = six_by_pi_rd2 * wCij2;
     particles[i].rhoBar += rhoBartemp;
     particles[j].rhoBar += rhoBartemp;
 
