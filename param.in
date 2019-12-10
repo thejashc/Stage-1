@@ -1,9 +1,9 @@
 #-------------------------------------#
 #        Simulation Box Size        
 #-------------------------------------#
-boxEdgeX            20.0	
-boxEdgeY            20.0
-boxEdgeZ            225.0
+boxEdgeX            9.0	
+boxEdgeY            9.0
+boxEdgeZ            9.0
 initRho             6.00
 #-------------------------------------#
 #        Repulsion parameter Bij     
@@ -114,9 +114,9 @@ rd_cutoff           0.75
 #        Simulation time parameters 
 #-------------------------------------#
 dt                  0.01        # time parameters	
-stepMax             20
+stepMax             500000
 rstrtFWrtFreq       1000
-saveCount           10
+saveCount           500
 psaveCount          50000
 pCorrTime           1
 #-------------------------------------#

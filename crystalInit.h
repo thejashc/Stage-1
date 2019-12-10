@@ -9,9 +9,9 @@ readConfig >> dummyString;
 */
 
 /***************************** Single Component / Multi component fluid fcc crystal *************************************/
-//sprintf(posfname, "/storage/thejas/src/readConfig/fluids/CRYSTAL/fccCrystalMC_boxSize_%d.dat", int(boxEdge[x]) );
+sprintf(posfname, "/storage/thejas/src/readConfig/fluids/CRYSTAL/fccCrystalMC_boxSize_%d.dat", int(boxEdge[x]) );
 //sprintf(posfname, "/storage/thejas/src/readConfig/fluids/CRYSTAL/fccCrystalMC_boxSize_%d_3Layer.dat", int(boxEdge[x]) );
-sprintf(posfname, "./readConfig/fluids/CRYSTAL/fccCrystalMC_boxSize_%d_3Layer.dat", int(boxEdge[x]) );
+//sprintf(posfname, "./readConfig/fluids/CRYSTAL/fccCrystalMC_boxSize_%d_3Layer.dat", int(boxEdge[x]) );
 
 std::ifstream readConfig( posfname, std::ifstream::in);
 
