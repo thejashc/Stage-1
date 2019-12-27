@@ -20,17 +20,19 @@
 #define SPHERICAL_CAP			0
 #define CYLINDER_DROPLET		0
 #define PLANAR_SLAB			    0
-#define CRYSTAL				    1
+#define CRYSTAL				    0
 #define RESTART				    0
+#define EXTERNAL_FORCING        0
 
 // WALL flags
-#define WALL_ON				    0
+#define WALL_ON				    1
 #define LOWER_WALL_ON			0
 #define UPPER_WALL_ON			0
 #define ROUGH_WALL			    0
 #define SPRING_CONNECTED_SLD    0
-#define BCKGRND_CONNECTED_SLD   0
+#define BCKGRND_CONNECTED_SLD   1
 #define MERCURY_POROSIMETRY     0
+#define RANDOM_PILLAR_ARRAY     1
 
 #define CAPILLARY_CYLINDER		0
 #define CAPILLARY_SQUARE		0
@@ -102,6 +104,22 @@ class DPD {
 			counter 		= 0;						// initialize time, counter for file writing
 			pcounter 		= 0;						// initialize time, counter for file writing
 
+			#if RESTART	
+				std::ofstream enStats 		( "./data/en_data.dat"	, std::ios_base::app);	// Kinetic, Potential and total energy
+				std::ofstream eosStats		( "./data/eos_data.dat"	, std::ios_base::app);	// Mean Pressure and temperature data
+				std::ofstream pTensStats	( "./data/pTens.dat"	, std::ios_base::app);	// Pressure tensor data
+				std::ofstream momStats		( "./data/mom_data.dat"	, std::ios_base::app);	// pressure and temperature data
+			#else
+                std::ofstream enStats       ( "./data/en_data.dat"  , std::ios_base::app);  // Kinetic, Potential and total energy
+                std::ofstream eosStats      ( "./data/eos_data.dat" , std::ios_base::app);  // Mean Pressure and temperature data
+                std::ofstream pTensStats    ( "./data/pTens.dat"    , std::ios_base::app);  // Pressure tensor data
+                std::ofstream momStats      ( "./data/mom_data.dat" , std::ios_base::app);  // pressure and temperature data
+                MSDStats.open( "./data/particleBoxCrossing.dat", std::ios_base::app );
+                #if HARD_SPHERES
+                    std::ofstream colloidStats   ("./data/colloid_box_crossing.dat", std::ios_base::app );
+                #endif
+			#endif // RESTART
+
 			#if !(RESTART)
                 i = 0;
                 while( i < npart ){
@@ -136,21 +154,6 @@ class DPD {
                 #endif 
 			#endif
 
-			#if RESTART	
-				std::ofstream enStats 		( "./data/en_data.dat"	, std::ios_base::app);	// Kinetic, Potential and total energy
-				std::ofstream eosStats		( "./data/eos_data.dat"	, std::ios_base::app);	// Mean Pressure and temperature data
-				std::ofstream pTensStats	( "./data/pTens.dat"	, std::ios_base::app);	// Pressure tensor data
-				std::ofstream momStats		( "./data/mom_data.dat"	, std::ios_base::app);	// pressure and temperature data
-			#else
-                std::ofstream enStats       ( "./data/en_data.dat"  , std::ios_base::app);  // Kinetic, Potential and total energy
-                std::ofstream eosStats      ( "./data/eos_data.dat" , std::ios_base::app);  // Mean Pressure and temperature data
-                std::ofstream pTensStats    ( "./data/pTens.dat"    , std::ios_base::app);  // Pressure tensor data
-                std::ofstream momStats      ( "./data/mom_data.dat" , std::ios_base::app);  // pressure and temperature data
-                #if HARD_SPHERES
-                    std::ofstream colloidStats   ("./data/colloid_box_crossing.dat", std::ios_base::app );
-                #endif
-			#endif // RESTART
-
 			// write parameters and initial configuration
 			//asciiFileWritePosVel();
 			binFileWritePosVel();
@@ -168,6 +171,7 @@ class DPD {
 
 				forceCalc();
                 // forceCalc_bruteForce();
+
 
 				integrateEOM();
                
@@ -245,9 +249,10 @@ class DPD {
 			// velHistCalc();
 
 
-			// enStats.close();	// close file-streams
-			// eosStats.close();
-			// momStats.close();
+			enStats.close();	// close file-streams
+			eosStats.close();
+			momStats.close();
+            MSDStats.close();
 			
 			simProg << " ********************* ENDING SIMULATION *************************";	
 			simProg.close();
@@ -269,6 +274,11 @@ class DPD {
 				#if CYLINDER_DROPLET
 					#include "cylDropInit.h"
                 #endif
+
+                #if RANDOM_PILLAR_ARRAY
+                    #include "squarePillarAssembly.h"
+                    //#include "randomPillarAssembly.h"
+                #endif 
 
 				#if CAPILLARY_CYLINDER
                     //#include "definePiston.h"
@@ -438,6 +448,19 @@ class DPD {
 				#endif
 			#endif // WALL_ON
 
+            // Initialize the box-crossing array to calculate MSD
+            /*
+            particleBoxCrossing.resize( nPartPerStructure );      
+
+            for ( i=0; i < nPartPerStructure; ++i )
+                particleBoxCrossing[i].resize(3); 
+
+            // initialize them to zero
+            for(i=0; i<nPartPerStructure; ++i)
+                for(j=0; j<3; ++j)
+                    particleBoxCrossing[i][j]=0;
+            */
+
 			// Initialize the gR_nCount array
             gR_nCount.resize( gR_nElem );
 
@@ -584,7 +607,7 @@ class DPD {
 
             simProg << fluidCount << " fluid particles indexed \n" << std::endl;
             simProg << solidCount << " solid particles indexed \n" << std::endl;
-            simProg << fluidCount + solidCount << " total particles indexed \n";
+            simProg << fluidCount + solidCount << " total particles indexed" << std::endl;
 
 			#if WALL_ON
                 /*
@@ -1327,6 +1350,10 @@ class DPD {
           #endif
           */
 
+          #if RANDOM_PILLAR_ARRAY
+              #include "calculateDragForce.h"
+          #endif
+
           i = 0;
           while ( i < npart ){
 
@@ -1378,6 +1405,13 @@ class DPD {
                     particles[i].fext.Z =ff1+ff2;
                 #endif
                 */
+                
+                #if RANDOM_PILLAR_ARRAY || EXTERNAL_FORCING
+                    if( i >= solidCount && (particles[i].r.X > 0.) && (particles[i].r.X < 15.) ){
+                        particles[i].fext.X = externalForcing;
+                        particles[i].fext.Y = 0.;
+                    }
+                #endif
 
                 #if PISTON
                 if ( i >= pistonStartIndex && i <= pistonEndIndex )
@@ -1393,20 +1427,13 @@ class DPD {
                 particles[i].r += particles[i].w*dt;                                // evaluating position at t+dt: r(t+dt)	
 
                 // implement periodic boundary condition 
+                //#include "calculateBoxCrossing.h"
                 #include "pbcNew.h"
                 //#include "pbcNewReflecting.h"
                 //#include "pbcXOnly.h"
 
                 // calculate velocity (integral time step)
                 particles[i].v = 0.5*( particles[i].w_old + particles[i].w );       // calculate v(t) = v(t-dt/2) + v(t+dt/2)
-
-                #if LEES_EDWARDS_BC
-                    conservativePower += Vec3D::dot( particles[i].fC, particles[i].v );
-                    randomPower       += Vec3D::dot( particles[i].fR, particles[i].v );
-                    dissipativePower  += Vec3D::dot( particles[i].fD, particles[i].v );
-
-                    //std::cout << "particles[i].fC = " << particles[i].fC << "particles[i].v = " << particles[i].v << ", dot product = " << Vec3D::dot( particles[i].fC, particles[i].v ); 
-                #endif
 
                 momX += particles[i].w.X;
                 momY += particles[i].w.Y;
@@ -1461,6 +1488,7 @@ class DPD {
 
                 forceOnPistonInst = 0.;
             #endif
+
 
 			// calculation of  pressure tensor 
 			#include "pTensCalc.h"
@@ -2479,12 +2507,12 @@ class DPD {
                     // particle types
                     writeBinary.write( reinterpret_cast< const char * >( &p.type ), sizeof( p.type ) );
 
-                    // particle positions - r(t + dt)
+                    // particle positions - r(t)
                     writeBinary.write( reinterpret_cast< const char * >( &p.r_old.X ), sizeof( p.r_old.X ) );
                     writeBinary.write( reinterpret_cast< const char * >( &p.r_old.Y ), sizeof( p.r_old.Y ) );
                     writeBinary.write( reinterpret_cast< const char * >( &p.r_old.Z ), sizeof( p.r_old.Z ) );
 
-                    // mid-step velocities ( from Verlet ) - v( t - 0.5 * dt )
+                    // mid-step velocities - v(t)
                     writeBinary.write( reinterpret_cast< const char * >( &p.v.X ), sizeof( p.v.X ) );
                     writeBinary.write( reinterpret_cast< const char * >( &p.v.Y ), sizeof( p.v.Y ) );
                     writeBinary.write( reinterpret_cast< const char * >( &p.v.Z ), sizeof( p.v.Z ) );
