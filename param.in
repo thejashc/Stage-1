@@ -1,44 +1,44 @@
 #-------------------------------------#
 #        Simulation Box Size        
 #-------------------------------------#
-boxEdgeX            15.0	
-boxEdgeY            15.0
+boxEdgeX            81.0	
+boxEdgeY            50.0
 boxEdgeZ            3.0
-initRho             8.00
+initRho             6.00
 #-------------------------------------#
 #        Repulsion parameter Bij     
 #-------------------------------------#
-Bs1_s1              25.0    # solid 1
-Bs1_l1              25.0        
-Bs1_l2              25.0        
-Bs1_s2              25.0        
-Bs1_s3              25.0        
-Bs1_l3              25.0        
+Bs1_s1              30.0    # solid 1
+Bs1_l1              30.0        
+Bs1_l2              30.0        
+Bs1_s2              30.0        
+Bs1_s3              30.0        
+Bs1_l3              30.0        
 #
-Bl1_l1              25.0    # liquid 1
-Bl1_l2              25.0
-Bl1_s2              25.0
-Bl1_s3              25.0
-Bl1_l3              25.0
+Bl1_l1              30.0    # liquid 1
+Bl1_l2              30.0
+Bl1_s2              30.0
+Bl1_s3              30.0
+Bl1_l3              30.0
 #
-Bl2_l2              25.0    # liquid 2
-Bl2_s2              25.0
-Bl2_s3              25.0
-Bl2_l3              25.0
+Bl2_l2              30.0    # liquid 2
+Bl2_s2              30.0
+Bl2_s3              30.0
+Bl2_l3              30.0
 #
-Bs2_s2              25.0    # solid 2
-Bs2_s3              25.0
-Bs2_l3              25.0
+Bs2_s2              30.0    # solid 2
+Bs2_s3              30.0
+Bs2_l3              30.0
 #
 Bs3_s3              0.0    # solid 3
-Bs3_l3              25.0
+Bs3_l3              30.0
 #
-Bl3_l3              25.0    # liquid 3
+Bl3_l3              30.0    # liquid 3
 #-------------------------------------#
 #        Attraction parameter Aij   
 #-------------------------------------#
 As1_s1              -40.0   # solid 1
-As1_l1              -10.0        
+As1_l1              -40.0        
 As1_l2              -40.0        
 As1_s2              -40.0        
 As1_s3              -40.0        
@@ -96,7 +96,7 @@ noise_l3_l3         6.0
 #-------------------------------------#
 #        Wall properties    
 #-------------------------------------#
-kWallBckg           12.5        # spring stiffness -- background
+kWallBckg           50.0        # spring stiffness -- background
 kWallNgbr1          25.0      # inter-particle spring stifness 1-- neighbour
 kWallNgbr2          2500.0      # inter-particle spring stifness 2-- neighbour
 wallHeight          2.0			
@@ -105,6 +105,7 @@ wallHeight          2.0
 #-------------------------------------#
 sigmaWCA            0.8
 epsilonWCA          10.0
+externalForcing     0.1
 #-------------------------------------#
 #        Interaction cutoffs      
 #-------------------------------------#
@@ -114,7 +115,7 @@ rd_cutoff           0.75
 #        Simulation time parameters 
 #-------------------------------------#
 dt                  0.01        # time parameters	
-stepMax             700000
+stepMax             1000
 rstrtFWrtFreq       1000
 saveCount           100
 psaveCount          50000

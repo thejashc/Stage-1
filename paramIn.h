@@ -239,8 +239,9 @@ readParam >> buffer;                readParam.ignore(256,'\n');
 readParam >> buffer;                readParam.ignore(256,'\n');		
 readParam >> buffer;                readParam.ignore(256,'\n');		
 
-readParam >> buffer >> sigmaWCA;	readParam.ignore(256,'\n');		
-readParam >> buffer >> epsilonWCA;	readParam.ignore(256,'\n');		
+readParam >> buffer >> sigmaWCA;	    readParam.ignore(256,'\n');		
+readParam >> buffer >> epsilonWCA;	    readParam.ignore(256,'\n');		
+readParam >> buffer >> externalForcing;	readParam.ignore(256,'\n');		
 
 simProg << "----------------------------------" << std::endl;
 simProg << "Reading Interaction cutoff's" << std::endl;
