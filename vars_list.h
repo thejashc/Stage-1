@@ -40,11 +40,11 @@ double Al3_l3;  double Bl3_l3;
 double Aatt[6][6];                 // DPD Warren conservative force -- attractive parameter
 double Brep[6][6];                 // DPD Warren conservative force -- repulsive parameter
 
-double rcutoff = 1.0;	// cut-off distance -- attractive force, 	
-double rc2 = pow(rcutoff, 2.0);		                    // square of the cutoff distance -- attractive force
+double rcutoff;	// cut-off distance -- attractive force, 	
+double rc2;		                    // square of the cutoff distance -- attractive force
 
-double rd_cutoff = 0.75;	
-double rd2 = pow(rd_cutoff,2.0);		// (1) cut-off distance -- repulsive force, (2)  square of the cutoff distance -- repulsive force
+double rd_cutoff;	
+double rd2;		// (1) cut-off distance -- repulsive force, (2)  square of the cutoff distance -- repulsive force
 
 // wall parameters
 double kWallBckg;
@@ -71,6 +71,12 @@ double kBT;				// DPD fluid temperature
 //double orig_noise, orig_friction, orig_noise2, orig_friction2, orig_noise12, orig_friction12;
 
 std::vector<std::vector<double>> sigma, gamma; // noise and friction
+std::vector<std::vector<unsigned int>> partIdxInCyl;
+
+std::vector<double> dragForceOnCyl;
+std::vector<double> liftForceOnCyl;
+
+//std::vector<std::vector<int>> particleBoxCrossing;
 
 double noise_s1_s1;  double friction_s1_s1;
 double noise_s1_l1;  double friction_s1_l1;
@@ -336,6 +342,7 @@ int gR_tStart;				// start time for measuring g(r)
 int gR_tDelta;				// time between measurements g(r)
 int gR_tEnd;				// end time for the measurement g(r)
 int gR_tSamples;		 	// number of samples for g(r)	
+int nSamples=0;
 
 std::vector<std::vector<double>> gR_nCount;// g(r) function
 
@@ -439,6 +446,7 @@ bool wcaInteraction;
 Vec3D p0, p1, p2;
 double sigmaWCA;
 double epsilonWCA;
+double externalForcing;
 
 #if RANDOM_FIBRE_BUNDLE
 double imagWallPos1;
@@ -801,3 +809,4 @@ std::string emptyLine;
 
 std::ofstream simProg;
 std::ofstream flagList;
+std::ofstream MSDStats;
