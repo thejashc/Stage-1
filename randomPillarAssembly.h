@@ -15,15 +15,17 @@ double dummy2;
 double xDist;
 double yDist;
 
-double scaleFactor=5.;
+double scaleFactor=10.;
 double scaleFactor2=pow(scaleFactor,2.);
 
 unsigned int pCountCyl=0;
 unsigned int pCountFluid=0;
 
-double porosity=0.9;
+double xOffset=15.;
+
+double porosity=0.6;
 double ATot=20.*20.;
-unsigned int NPillars=1;
+unsigned int NPillars=800;
 double pillarRad2=( ATot / (NPillars * 3.14159) ) * ( 1. - porosity ) * scaleFactor2;
 
 std::ifstream readConfig;
@@ -32,7 +34,8 @@ double pillarCenters[NPillars][2];
 
 simProg << "The pillar radius for a porosity of " << porosity << " is = " << sqrt(pillarRad2) << std::endl;
 
-sprintf(fname,"./inputGeometry/randomPillarAssembly_porosity_0_6_check.dat");
+//sprintf(fname,"./inputGeometry/randomPillarAssembly_porosity_0_6_check.dat");
+sprintf(fname,"../inputGeometry/randomPillarAssembly_porosity_0_6.dat");           // use this to run on cluster
 
 simProg << " ********************************************************" << std::endl;
 simProg << " Reading the centers of the cylinders for a porosity of " << porosity << std::endl;
@@ -45,7 +48,7 @@ for ( i=0; i<NPillars; ++i ){
     readConfig >> dummy1;
     readConfig >> dummy2;
 
-    pillarCenters[i][0] = dummy1 * scaleFactor;
+    pillarCenters[i][0] = dummy1 * scaleFactor + xOffset;
     pillarCenters[i][1] = dummy2 * scaleFactor;
 
     //simProg << pillarCenters[i][0] << "\t" << pillarCenters[i][1] << std::endl;
@@ -85,10 +88,29 @@ if( readConfig.is_open() ){
             xDist -= boxEdge[x] * round( xDist / boxEdge[x] ); 
             yDist -= boxEdge[y] * round( yDist / boxEdge[y] ); 
 
-            partOfPillar= ( pow( xDist, 2.) + pow( yDist, 2.) < pillarRad2 );
+            r2 = pow( xDist, 2.) + pow( yDist, 2.);
 
-            if ( partOfPillar ){
+            partOfPillar= ( pow( xDist, 2.) + pow( yDist, 2.) < pillarRad2 );
+            partOfInnerPillar= (  r2 < pillarInnerRad2 );
+            partOfOuterPillar= ( (r2 > pillarInnerRad2) && (r2 < pillarRad2) ); 
+            partOfDomain=( (xind > 0) && (xind < boxEdge[x]) && (yind > 0) && (yind < boxEdge[y]) );
+
+            if ( partOfInnerPillar && partOfDomain ){
+                particles.push_back({1.0,1.0,{xind, yind, zind},{0., 0., 0.},3});
+
+                partIdxInCyl[i][0] += 1;  
+                dummy = partIdxInCyl[i][0]; 
+                partIdxInCyl[i][dummy]=pCountCyl;  
+
+                pCountCyl++;
+            }
+            else if ( partOfOuterPillar && partOfDomain ){
                 particles.push_back({1.0,1.0,{xind, yind, zind},{0., 0., 0.},0});
+            
+                partIdxInCyl[i][0] += 1;  
+                dummy = partIdxInCyl[i][0]; 
+                partIdxInCyl[i][dummy]=pCountCyl;  
+
                 pCountCyl++;
             }
         }

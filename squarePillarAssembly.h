@@ -19,18 +19,18 @@ double dummy2;
 double xDist;
 double yDist;
 
-double scaleFactor=5.;
+double scaleFactor=10.;
 double scaleFactor2=pow(scaleFactor,2.);
 
 unsigned int pCountCyl=0;
 unsigned int pCountFluid=0;
 
-//double xOffset=31.;
-double xOffset=0.;
+double xOffset=10.;
+//double xOffset=4.;
 
-double porosity=0.80;
-double ATot=10.*10.;
-unsigned int NPillars=25;
+double porosity=0.55;
+double ATot=20.*20.;
+unsigned int NPillars=800;
 double pillarRad2=( ATot / (NPillars * 3.14159) ) * ( 1. - porosity ) * scaleFactor2;
 double pillarInnerRad2=pillarRad2/4.;
 
@@ -40,7 +40,11 @@ double pillarCenters[NPillars][2];
 
 simProg << "The pillar radius for a porosity of " << porosity << " is = " << sqrt(pillarRad2) << std::endl;
 
-sprintf(fname,"/storage/thejas/src/inputGeometry/squarePillarArray_small.dat");
+//sprintf(fname,"/storage/thejas/src/inputGeometry/squarePillarArray_small.dat");
+//sprintf(fname,"/storage/thejas/src/inputGeometry/squarePillarArray.dat");
+//
+sprintf(fname,"/storage/thejas/src/inputGeometry/permeabilityMeasurements/randomPillarAssembly_porosity_0_55.dat");   //  for use on my desktop
+//sprintf(fname,"../readConfig/randomPillarAssembly_porosity_0_55.dat");   // for use on cluster
 
 simProg << " ********************************************************" << std::endl;
 simProg << " Reading the centers of the cylinders for a porosity of " << porosity << std::endl;
@@ -70,7 +74,10 @@ liftForceOnCyl.resize(NPillars);
 for( i=0; i <NPillars; ++i )
     partIdxInCyl[i].resize(1000);
 
-sprintf(fname,"/storage/thejas/src/inputGeometry/2D_Fluid/data/posVel70000.bin");
+//sprintf(fname,"/storage/thejas/src/inputGeometry/2D_Fluid/data/posVel70000.bin");       // Lx=130, Ly=100
+sprintf(fname,"/storage/thejas/Year3/porousStructure/2D_MDPD_simulations/2D_fluid_slab/data/posVel50000.bin");       // Lx=230, Ly=200 ( for use on Desktop )
+//sprintf(fname,"../readConfig/posVel50000.bin");       // Lx=230, Ly=200 ( for use on Cluster )
+
 simProg << " Reading the equilibriated fluid particles " << porosity << std::endl;
 
 readConfig.open( fname, std::ios_base::in);

@@ -1,7 +1,7 @@
 //***************************************************************************************
 //******************************* BCC LATTICE ******************************************//
 //***************************************************************************************
-   nPartPerStructure = 0;
+nPartPerStructure = 0;
 // Lower positional indices of particles
 xind_min = 0.01;	// avoid boundary edge -- non-moving case
 xind_max = boxEdge[x];
@@ -17,17 +17,17 @@ aCube = pow( 1. / initRho, 1./2. );
 xind = xind_min;
 // Particle position in upper wall
 while ( xind < xind_max){
-yind = yind_min;
-while( yind < yind_max){
+    yind = yind_min;
+    while( yind < yind_max){
 
-particles.push_back( {1.0, 1.0, {xind, yind, boxEdge[z]*0.5}, {0., 0., 0.}, 1} );
+        particles.push_back( {1.0, 1.0, {xind, yind, boxEdge[z]*0.5}, {0., 0., 0.}, 1} );
 
-// increment no. of particles
-nPartPerStructure++;
+        // increment no. of particles
+        nPartPerStructure++;
 
-yind += aCube*rcutoff;
-}// end of yind			
-xind += aCube*rcutoff;
+        yind += aCube*rcutoff;
+    }// end of yind			
+    xind += aCube*rcutoff;
 }// end of xind
 
 pCount += nPartPerStructure;
@@ -109,11 +109,11 @@ simProg << "***************************************************" << std::endl;
 //******************************* READ FROM FILE ******************************************//
 //***************************************************************************************
 /*
-pCount=0;
-char fname[100];
-unsigned int particleType;
+   pCount=0;
+   char fname[100];
+   unsigned int particleType;
 
-sprintf(fname,"./inputGeometry/test.bin");
+   sprintf(fname,"./inputGeometry/test.bin");
 //sprintf(fname,"/storage/thejas/Year3/porousStructure/2D_MDPD_simulations/thinFilm/set4/data/posVel100000.bin");
 simProg << " Reading the equilibriated fluid particles from a file" << std::endl;
 
@@ -125,28 +125,28 @@ simProg << "2D planar fluid containing " << npart << " particles  is being read\
 
 if( readConfig.is_open() ){
 
-    for ( j = 0 ; j < npart ; ++ j ){	
+for ( j = 0 ; j < npart ; ++ j ){	
 
-        readConfig.read ( ( char * ) &particleType,		sizeof (unsigned int ) );
+readConfig.read ( ( char * ) &particleType,		sizeof (unsigned int ) );
 
-        readConfig.read ( ( char * ) &xind,		        sizeof ( double ) );
-        readConfig.read ( ( char * ) &yind,		        sizeof ( double )  );
-        readConfig.read ( ( char * ) &zind,		        sizeof ( double )  );
+readConfig.read ( ( char * ) &xind,		        sizeof ( double ) );
+readConfig.read ( ( char * ) &yind,		        sizeof ( double )  );
+readConfig.read ( ( char * ) &zind,		        sizeof ( double )  );
 
-        readConfig.read ( ( char * ) &rand_gen_velx,	sizeof ( double ) );
-        readConfig.read ( ( char * ) &rand_gen_vely,	sizeof ( double ) );
-        readConfig.read ( ( char * ) &rand_gen_velz,	sizeof ( double ) );
+readConfig.read ( ( char * ) &rand_gen_velx,	sizeof ( double ) );
+readConfig.read ( ( char * ) &rand_gen_vely,	sizeof ( double ) );
+readConfig.read ( ( char * ) &rand_gen_velz,	sizeof ( double ) );
 
-        particles.push_back({1.0,1.0,{xind, yind - boxEdge[y]*0.5, zind},{0., 0., 0.},1});
-        //particles.push_back({1.0,1.0,{xind, yind - boxEdge[y]*0.5, zind},{rand_gen_velx, rand_gen_vely, rand_gen_velz},1});
-        pCount++;
+particles.push_back({1.0,1.0,{xind, yind - boxEdge[y]*0.5, zind},{0., 0., 0.},1});
+//particles.push_back({1.0,1.0,{xind, yind - boxEdge[y]*0.5, zind},{rand_gen_velx, rand_gen_vely, rand_gen_velz},1});
+pCount++;
 
-    }
+}
 
 }
 else{
-    std::cout << "Error opening file" << std::endl;
-    exit(0);
+std::cout << "Error opening file" << std::endl;
+exit(0);
 }
 
 
