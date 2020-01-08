@@ -20,19 +20,19 @@
 #define SPHERICAL_CAP			0
 #define CYLINDER_DROPLET		0
 #define PLANAR_SLAB			    0
-#define CRYSTAL				    0
+#define CRYSTAL				    1
 #define RESTART				    0
 #define EXTERNAL_FORCING        0
 
 // WALL flags
-#define WALL_ON				    1
+#define WALL_ON				    0
 #define LOWER_WALL_ON			0
 #define UPPER_WALL_ON			0
 #define ROUGH_WALL			    0
 #define SPRING_CONNECTED_SLD    0
-#define BCKGRND_CONNECTED_SLD   1
+#define BCKGRND_CONNECTED_SLD   0
 #define MERCURY_POROSIMETRY     0
-#define RANDOM_PILLAR_ARRAY     1
+#define RANDOM_PILLAR_ARRAY     0
 
 #define CAPILLARY_CYLINDER		0
 #define CAPILLARY_SQUARE		0
@@ -1407,7 +1407,7 @@ class DPD {
                 */
                 
                 #if RANDOM_PILLAR_ARRAY || EXTERNAL_FORCING
-                    if( i >= solidCount && (particles[i].r.X > 0.) && (particles[i].r.X < 15.) ){
+                    if( i >= solidCount && (particles[i].r.X > 0.) && (particles[i].r.X < 2.) ){
                         particles[i].fext.X = externalForcing;
                         particles[i].fext.Y = 0.;
                     }
