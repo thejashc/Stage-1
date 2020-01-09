@@ -20,23 +20,23 @@
 #define SPHERICAL_CAP			0
 #define CYLINDER_DROPLET		0
 #define PLANAR_SLAB			    0
-#define CRYSTAL				    1
+#define CRYSTAL				    0
 #define RESTART				    0
 
 // WALL flags
-#define WALL_ON				    0
+#define WALL_ON				    1
 #define LOWER_WALL_ON			0
 #define UPPER_WALL_ON			0
 #define ROUGH_WALL			    0
-#define SPRING_CONNECTED_SLD    0
-#define BCKGRND_CONNECTED_SLD   0
+#define SPRING_CONNECTED_SLD    1
+#define BCKGRND_CONNECTED_SLD   1
 #define MERCURY_POROSIMETRY     0
 
-#define CAPILLARY_CYLINDER		0
+#define CAPILLARY_CYLINDER		1
 #define CAPILLARY_SQUARE		0
 #define PISTON				    0
 #define CYLINDER_ARRAY          0
-#define HARD_SPHERES            0
+#define HARD_SPHERES            1
 #define SLIM                    0
 #define RANDOM_FIBRE_BUNDLE     0
 #define READ_FROM_FILE          0
@@ -331,7 +331,8 @@ class DPD {
                     bckgIdxStart = pCount;
                     #include "glassyCylinder.h"
                     bckgIdxEnd = pCount - 1;
-					#include "reservoir.h"                        // works for SLIM
+
+					//#include "reservoir.h"                        // works for SLIM
 
                 #endif
 
@@ -363,7 +364,10 @@ class DPD {
                     #include "planarSlab.h"
                 #endif
                 #if HARD_SPHERES
-                    #include "sphericalColloids.h"
+                    ngbrIdxStart = particles.size();
+                    #include "readColloids.h"
+                    ngbrIdxEnd=particles.size()-1;
+                    //#include "sphericalColloids.h"
                 #endif
                 #if SLIM
                     //#include "definePiston.h"

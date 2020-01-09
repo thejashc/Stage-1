@@ -1,9 +1,9 @@
 #-------------------------------------#
 #        Simulation Box Size        
 #-------------------------------------#
-boxEdgeX            9.0	
-boxEdgeY            9.0
-boxEdgeZ            9.0
+boxEdgeX            20.0	
+boxEdgeY            20.0
+boxEdgeZ            250.0
 initRho             6.00
 #-------------------------------------#
 #        Repulsion parameter Bij     
@@ -97,7 +97,7 @@ noise_l3_l3         6.0
 #        Wall properties    
 #-------------------------------------#
 kWallBckg           12.5        # spring stiffness -- background
-kWallNgbr1          25.0      # inter-particle spring stifness 1-- neighbour
+kWallNgbr1          1000.0      # inter-particle spring stifness 1-- neighbour
 kWallNgbr2          2500.0      # inter-particle spring stifness 2-- neighbour
 wallHeight          2.0			
 #-------------------------------------#
@@ -114,9 +114,9 @@ rd_cutoff           0.75
 #        Simulation time parameters 
 #-------------------------------------#
 dt                  0.01        # time parameters	
-stepMax             500000
+stepMax             500
 rstrtFWrtFreq       1000
-saveCount           500
+saveCount           10
 psaveCount          50000
 pCorrTime           1
 #-------------------------------------#
