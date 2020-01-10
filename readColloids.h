@@ -5,12 +5,12 @@ double yLowerCutOff=0.;
 double yUpperCutOff=boxEdge[y];
 
 double zLowerCutOff=0.;
-double zUpperCutOff=50.;
+double zUpperCutOff=resWdth;
 
 double colloidRad = 1.5;
 double colloidRadSqr = pow(colloidRad, 2.);
 
-double zOffset = bufferLen + capLen + capWallWdth + 40.;
+double zOffset = bufferLen + capLen + capWallWdth + resCOMZ;
 
 unsigned int flag;
 
@@ -25,8 +25,7 @@ double colloidPos[NColloids][3];
 double xPos, yPos, zPos;
 unsigned int dummyNum;
 
-sprintf(fname, "./readConfig/solids/HARD_SPHERES/colloid_N_%d.dat", NColloids);
-std::ifstream readColloidPos( fname, std::ifstream::in );
+std::ifstream readColloidPos(readColloidsFrom);
 
 if ( ! readColloidPos ) { simProg << "*** The colloids position file does not exist *** \n Aborting !! " << std::endl; abort(); }
 
@@ -51,12 +50,7 @@ for (i=0; i<NColloids; ++i){
 
 readColloidPos.close();
 
-sprintf(fname,"./inputGeometry/glassyWall/combinedSlab/Lx_35_Ly_30_Lz_30/posVel6500.bin");
-
-//sprintf(fname,"../inputGeometry/solid.bin");
-
-readConfig.open(fname, std::ios::binary | std::ios::in ); 
-//readConfig.open(fname, std::ios::binary | std::ios::in ); 
+readConfig.open(readFluidFrom, std::ios::binary | std::ios::in ); 
 if ( ! readConfig ) { simProg << "*** The file could not be opened/ does not exist *** \n Aborting !! " << std::endl; abort(); }
 
 readConfig.read ( ( char * ) &npart, sizeof (unsigned int) );
@@ -93,7 +87,7 @@ for ( j = 0 ; j < npart ; ++ j ){
         r2 = Rij.getLengthSquared();
 
         if ( r2 < colloidRadSqr  ){
-            particles.push_back({1.0,1.0,{xind, yind, zind + zOffset},{rand_gen_velx, rand_gen_vely, rand_gen_velz}, 4});
+            particles.push_back({1.0,1.0,{xind, yind, zind + zOffset},{0., 0., resCOMVel}, 4});
             flag = 0;
         }
 
@@ -105,7 +99,7 @@ for ( j = 0 ; j < npart ; ++ j ){
             && xind >= xLowerCutOff && xind <= xUpperCutOff
             && yind >= yLowerCutOff && yind <= yUpperCutOff
             && zind >= zLowerCutOff && zind <= zUpperCutOff ){
-        particles.push_back({1.0,1.0,{xind, yind, zind + zOffset},{rand_gen_velx, rand_gen_vely, rand_gen_velz}, 1});
+        particles.push_back({1.0,1.0,{xind, yind, zind + zOffset},{0., 0., resCOMVel}, 1});
     }
 
     /*
