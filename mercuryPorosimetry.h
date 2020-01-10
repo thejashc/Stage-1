@@ -6,9 +6,6 @@ char fname[100];
 unsigned int nTrials=4;
 unsigned int npart;
 
-double origLx=45.;
-double origLy=40.;
-
 double xlim_min=3.5;
 double ylim_min=3.5;
 
