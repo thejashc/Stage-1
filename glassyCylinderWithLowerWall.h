@@ -7,9 +7,6 @@ unsigned int npart;
 unsigned int pCountCyl=0;
 unsigned int pCountWall=0;
 
-double origLx=45.;
-double origLy=40.;
-
 double cylCenterX = 0.5*boxEdge[x];
 double cylCenterY = 0.5*boxEdge[y];
 

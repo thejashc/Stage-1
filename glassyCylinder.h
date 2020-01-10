@@ -1,18 +1,11 @@
 // read file
 int particleType;
-char fname[100];
+char fname[200];
 unsigned int nTrials=4;
 unsigned int npart;
 
 unsigned int pCountCyl=0;
 unsigned int pCountWall=0;
-
-//double origLx=45.;
-//double origLy=40.;
-
-double origLx=35.;
-double origLy=25.;
-double origLz=120.;
 
 double cylCenterX = 0.5*boxEdge[x];
 double cylCenterY = 0.5*boxEdge[y];
@@ -36,13 +29,8 @@ double wallHeight =2.;
 double cylVol = 3.14159 * (ro2 - ri2) * capLen;
 double wallVol = (boxEdge[x]*boxEdge[y] - 3.14159 * ri2)*wallHeight;
 
-//sprintf(fname,"./inputGeometry/glassyWall/combinedSlab/Lx_45_Ly_40_Lz_15/posVel15000.bin");
-sprintf(fname,"./inputGeometry/glassyWall/combinedSlab/Lx_35_Ly_30_Lz_30/posVel6500.bin");
+std::ifstream readConfig(readSolidFrom, std::ios::binary | std::ios::in ); 
 
-//sprintf(fname,"../inputGeometry/solid.bin");
-
-std::ifstream readConfig(fname, std::ios::binary | std::ios::in ); 
-//readConfig.open(fname, std::ios::binary | std::ios::in ); 
 if ( ! readConfig ) { simProg << "*** The file could not be opened/ does not exist *** \n Aborting !! " << std::endl; abort(); }
 
 readConfig.read ( ( char * ) &npart, sizeof (unsigned int) );
