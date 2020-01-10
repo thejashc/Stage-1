@@ -19,7 +19,17 @@ readParam >> buffer >> boxEdge[y];	readParam.ignore(256,'\n');
 readParam >> buffer >> boxEdge[z];	readParam.ignore(256,'\n');     
 readParam >> buffer >> initRho;		readParam.ignore(256,'\n');     
 
-//readParam >> emptyLine ;		readParam.ignore(256,'\n');         
+simProg << "----------------------------" << std::endl;
+simProg << "Original Reservoir Size" << std::endl;
+simProg << "---------------------------" << std::endl;
+
+readParam >> buffer;                readParam.ignore(256,'\n');		
+readParam >> buffer;                readParam.ignore(256,'\n');		
+readParam >> buffer;                readParam.ignore(256,'\n');		
+
+readParam >> buffer >> origLx;	    readParam.ignore(256,'\n');		
+readParam >> buffer >> origLy;	    readParam.ignore(256,'\n');		
+readParam >> buffer >> origLz;	    readParam.ignore(256,'\n');     
 
 simProg << "----------------------------------" << std::endl;
 simProg << "Reading Repulsion parameter Bij" << std::endl;

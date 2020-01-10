@@ -1,10 +1,16 @@
 #-------------------------------------#
 #        Simulation Box Size        
 #-------------------------------------#
-boxEdgeX            20.0	
-boxEdgeY            20.0
+boxEdgeX            40.0	
+boxEdgeY            40.0
 boxEdgeZ            250.0
 initRho             6.00
+#-------------------------------------#
+#        Original Reservoir Size
+#-------------------------------------#
+origLx            45.0	    # alternate - Lx=35, Ly=30, Lz=120
+origLy            40.0
+origLz            90.0
 #-------------------------------------#
 #        Repulsion parameter Bij     
 #-------------------------------------#
@@ -114,7 +120,7 @@ rd_cutoff           0.75
 #        Simulation time parameters 
 #-------------------------------------#
 dt                  0.01        # time parameters	
-stepMax             500
+stepMax             100
 rstrtFWrtFreq       1000
 saveCount           10
 psaveCount          50000
@@ -133,24 +139,24 @@ mCorr               2
 #-------------------------------------#
 #        Geometry : PLANAR SLAB  
 #-------------------------------------#
-slabWidth           25.0	     
+slabWidth           25.0
 #-------------------------------------#
 #        Geometry : SPHERICAL DROPLET 
 #-------------------------------------#
-sphDropRad          7.5		
+sphDropRad          7.5
 #-------------------------------------#
 #        Geometry : CYLINDRICAL DROPLET
 #-------------------------------------#
-cylRad              4.0			
+cylRad              4.0
 #-------------------------------------#
 #        Geometry: CAPILLARY CYLINDER
 #-------------------------------------#
 bufferLength        10.0		
-capLen              115.0
-capRad              5.0
+capLen              85.0
+capRad              10.0
 capWallWdth         1.5
-resWdth             24.0
-resComZ             177.0
+resWdth             25.0
+resComZ             40.0       #distance from capillary entrance
 resComVel           -0.05
 #-------------------------------------#
 #        Geometry: PISTON
@@ -163,4 +169,4 @@ pistonW             100.0
 #-------------------------------------#
 #        GEOMETRY : SPHERICAL COLLOIDS
 #-------------------------------------#
-NColloids           10          # No. of Colloids
+NColloids           600          # No. of Colloids
