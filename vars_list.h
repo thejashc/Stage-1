@@ -7,6 +7,7 @@ unsigned int idx;
 
 // global parameters
 double boxEdge[3];	double boxHalve[3];     double boxRecip[3];			// (1) box length in x,y,z directions, (2) half box-length in x,y,z directions, (3)	reciprocal box-length in x,y,z directions
+double origLx, origLy, origLz;
 double initRho;	double aCube;			// (1) initial placement density of atoms, (2) length of a side of cube corresponding to prescribed density			
 
 // interaction paramters
@@ -189,9 +190,9 @@ int Ncely;				// number of cells in y
 int Ncelz;				// number of cells in z
 
 unsigned int MaxPerCell = 100;		// maximum number of particles in a cell
-const int x = 0;			// value for x, y, z co-ordinates -- never change this
-const int y = 1;			
-const int z = 2;
+static const int x = 0;			// value for x, y, z co-ordinates -- never change this
+static const int y = 1;			
+static const int z = 2;
 int NrCells[3];				// Number of cells in x, y and z direction	
 int mi[3];				// index for particle i in any cell
 int mj[3];				// index for particle j in any cell
