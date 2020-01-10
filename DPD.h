@@ -255,9 +255,8 @@ class DPD {
 		//--------------------------------------- INITIALIZATION ROUTINE --------------------------------------//
 		void init(){
             
-            //#include "inputFields.h"
 			#include "paramIn.h"
-            //#include "geometryIn.h"
+            #include "geometryIn.h"
 
 			#if WALL_ON
 
