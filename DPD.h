@@ -20,19 +20,19 @@
 #define SPHERICAL_CAP			0
 #define CYLINDER_DROPLET		0
 #define PLANAR_SLAB			    0
-#define CRYSTAL				    1
+#define CRYSTAL				    0
 #define RESTART				    0
-#define EXTERNAL_FORCING        0
+#define EXTERNAL_FORCING        1
 
 // WALL flags
-#define WALL_ON				    0
+#define WALL_ON				    1
 #define LOWER_WALL_ON			0
 #define UPPER_WALL_ON			0
 #define ROUGH_WALL			    0
 #define SPRING_CONNECTED_SLD    0
-#define BCKGRND_CONNECTED_SLD   0
+#define BCKGRND_CONNECTED_SLD   1
 #define MERCURY_POROSIMETRY     0
-#define RANDOM_PILLAR_ARRAY     0
+#define RANDOM_PILLAR_ARRAY     1
 
 #define CAPILLARY_CYLINDER		0
 #define CAPILLARY_SQUARE		0
@@ -1407,7 +1407,8 @@ class DPD {
                 */
                 
                 #if RANDOM_PILLAR_ARRAY || EXTERNAL_FORCING
-                    if( i >= solidCount && (particles[i].r.X > 0.) && (particles[i].r.X < 2.) ){
+                    //if( i >= solidCount && (particles[i].r.X > 0.) && (particles[i].r.X < 2.) ){ --- driving region x=[0,2] for the random pillar configuration running on the cluster
+                    if( i >= solidCount && (particles[i].r.X > 0.) && (particles[i].r.X < 5.) ){    // -- driving region x=[0,5] for the square pillar config running on my system
                         particles[i].fext.X = externalForcing;
                         particles[i].fext.Y = 0.;
                     }
