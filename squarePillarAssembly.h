@@ -19,38 +19,30 @@ double dummy2;
 double xDist;
 double yDist;
 
-double scaleFactor=10.;
 double scaleFactor2=pow(scaleFactor,2.);
 
 unsigned int pCountCyl=0;
 unsigned int pCountFluid=0;
 
-double xOffset=10.;
-//double xOffset=4.;
-
-double porosity=0.8;
-//double ATot=20.*20.;  // kazem's box size
-double ATot=10.*50.;
-unsigned int NPillars=500;
+double ATot=unitCellLx*unitCellLy;  // kazem's box size
 double pillarRad2=( ATot / (NPillars * 3.14159) ) * ( 1. - porosity ) * scaleFactor2;
 double pillarInnerRad2=pillarRad2/4.;
 
 std::ifstream readConfig;
 
-double pillarCenters[NPillars][2];
+std::vector<std::vector<double> > pillarCenters;
+
+pillarCenters.resize(NPillars);
+
+for (i=0;i<NPillars;++i)
+    pillarCenters[i].resize(2);
 
 simProg << "The pillar radius for a porosity of " << porosity << " is = " << sqrt(pillarRad2) << std::endl;
-
-//sprintf(fname,"/storage/thejas/src/inputGeometry/squarePillarArray_small.dat");
-sprintf(fname,"/storage/thejas/src/inputGeometry/squarePillarArray_N_10_M_50.dat");
-//
-//sprintf(fname,"/storage/thejas/src/inputGeometry/permeabilityMeasurements/randomPillarAssembly_porosity_0_55.dat");   //  for use on my desktop
-//sprintf(fname,"../readConfig/randomPillarAssembly_porosity_0_55.dat");   // for use on cluster
 
 simProg << " ********************************************************" << std::endl;
 simProg << " Reading the centers of the cylinders for a porosity of " << porosity << std::endl;
 
-readConfig.open(fname, std::ios::in ); 
+readConfig.open(readPillarCentersFrom, std::ios::in ); 
 if ( ! readConfig ) { simProg << "*** The file could not be opened/ does not exist *** \n Aborting !! " << std::endl; abort(); }
 
 for ( i=0; i<NPillars; ++i ){
@@ -73,15 +65,11 @@ dragForceOnCyl.resize(NPillars);
 liftForceOnCyl.resize(NPillars);
 
 for( i=0; i <NPillars; ++i )
-    partIdxInCyl[i].resize(1000);
-
-//sprintf(fname,"/storage/thejas/src/inputGeometry/2D_Fluid/data/posVel70000.bin");       // Lx=130, Ly=100
-sprintf(fname,"/storage/thejas/Year3/porousStructure/2D_MDPD_simulations/2D_fluid_slab/Lx_530_Ly_100/data/posVel50000.bin");       // Lx=230, Ly=200 ( for use on Desktop )
-//sprintf(fname,"../readConfig/posVel50000.bin");       // Lx=230, Ly=200 ( for use on Cluster )
+    partIdxInCyl[i].resize(2000);
 
 simProg << " Reading the equilibriated fluid particles " << porosity << std::endl;
 
-readConfig.open( fname, std::ios_base::in);
+readConfig.open(readSolidFrom, std::ios_base::in);
 if ( ! readConfig ) { simProg << "*** The file could not be opened/ does not exist *** \n Aborting !! " << std::endl; abort(); }
 
 readConfig.read ( ( char * ) &npart, sizeof (unsigned int) );
@@ -134,14 +122,12 @@ if( readConfig.is_open() ){
             }
         }
 
-        /*
            simProg << particleType << "\t"   << xind << "\t" << std::setprecision(15)  
            << yind << "\t"  << std::setprecision(15)     
            << zind << "\t" << std::setprecision(15)   
            << rand_gen_velx << "\t" << std::setprecision(15)  
            << rand_gen_vely << "\t" << std::setprecision(15)  
            << rand_gen_velz << std::endl;
-           */
     }
 
 }
@@ -160,7 +146,7 @@ simProg << "Number of particles in pillars with radius = " << sqrt(pillarRad2) <
 /*****************************************************************************************************************/
 pCountFluid=0;
 
-std::ifstream readFluidConfig(fname, std::ios::binary | std::ios::in );  
+std::ifstream readFluidConfig(readFluidFrom, std::ios::binary | std::ios::in );  
 
 if ( ! readFluidConfig ) { simProg << "*** The file could not be opened/ does not exist *** \n Aborting !! " << std::endl; abort(); }
 

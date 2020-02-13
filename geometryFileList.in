@@ -1,0 +1,3 @@
+SOLID            /storage/thejas/Year3/porousStructure/2D_MDPD_simulations/2D_fluid_slab/Lx_230_Ly_200/data/posVel50000.bin  # Pillar structure
+LIQUID           /storage/thejas/Year3/porousStructure/2D_MDPD_simulations/2D_fluid_slab/Lx_230_Ly_200/data/posVel50000.bin     # Liquid Reservoir
+PILLARS         ./inputGeometry/squarePillarArray.dat                                                                           # Pillar Centers
