@@ -72,6 +72,11 @@ double kBT;				// DPD fluid temperature
 
 std::vector<std::vector<double>> sigma, gamma; // noise and friction
 std::vector<std::vector<unsigned int>> partIdxInCyl;
+std::vector<unsigned int> N_vs_x;
+std::vector<double> v_vs_x;
+double forceRegionBegin;
+double forceRegionEnd;
+double xbinWdth;
 
 std::vector<double> dragForceOnCyl;
 std::vector<double> liftForceOnCyl;
@@ -166,27 +171,6 @@ unsigned int fluidCount;	// number of fluid particles
 
 std::vector<int> fluid_index;	// index of fluid type
 std::vector<int> solid_index;	// index of solid type
-
-// geometry initialization
-#if SPHERICAL_DROPLET 
-double sphDropRad;
-#elif CYLINDER_DROPLET 
-double cylCenterX;
-double cylCenterY;
-double cylCenterZ;
-double cylRad;	
-double cylHeight;
-double xCOM;
-double yCOM;
-double zCOM;
-
-#elif PLANAR_SLAB
-double slabWidth;
-double xCOM;
-double yCOM;
-double zCOM;
-
-#endif
 
 // Cell list variables
 double rn;				// size of a cell in x, y, z directions
@@ -616,6 +600,18 @@ double residual;
     double BslW;
     double BslT0;
 #endif
+
+#if RANDOM_PILLAR_ARRAY
+
+    double scaleFactor; 
+    double xOffset;
+    double porosity;
+    double unitCellLx;
+    double unitCellLy;
+    double NPillars;
+
+#endif
+
 //***************** CAPILLARY_CYLINDER *****************//
 #if CAPILLARY_SQUARE
     double capEntrance_startIndex;
