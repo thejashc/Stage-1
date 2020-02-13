@@ -114,6 +114,9 @@ class DPD {
                 std::ofstream eosStats      ( "./data/eos_data.dat" , std::ios_base::app);  // Mean Pressure and temperature data
                 std::ofstream pTensStats    ( "./data/pTens.dat"    , std::ios_base::app);  // Pressure tensor data
                 std::ofstream momStats      ( "./data/mom_data.dat" , std::ios_base::app);  // pressure and temperature data
+                std::ofstream flowStats2D   ( "./data/v_vs_x.dat",    std::ios_base::app);  // average velocity along the flow direction
+                std::ofstream rhoStats2D    ( "./data/N_vs_x.dat",    std::ios_base::app);  // Total number of particles in a section  
+
                 MSDStats.open( "./data/particleBoxCrossing.dat", std::ios_base::app );
                 #if HARD_SPHERES
                     std::ofstream colloidStats   ("./data/colloid_box_crossing.dat", std::ios_base::app );
@@ -194,7 +197,7 @@ class DPD {
                  */
 
 				counter += 1;						// filewriting
-				fileWrite(enStats, eosStats, momStats, pTensStats);
+				fileWrite(enStats, eosStats, momStats, pTensStats, flowStats2D, rhoStats2D);
                
                 /*
                 #if HARD_SPHERES
@@ -252,6 +255,8 @@ class DPD {
 			enStats.close();	// close file-streams
 			eosStats.close();
 			momStats.close();
+            flowStats2D.close();
+            rhoStats2D.close();
             MSDStats.close();
 			
 			simProg << " ********************* ENDING SIMULATION *************************";	
@@ -261,9 +266,8 @@ class DPD {
 		//--------------------------------------- INITIALIZATION ROUTINE --------------------------------------//
 		void init(){
             
-            //#include "inputFields.h"
 			#include "paramIn.h"
-            //#include "geometryIn.h"
+            #include "geometryIn.h"
 
 			#if WALL_ON
 
@@ -716,6 +720,14 @@ class DPD {
                         }
                     #endif
                     simProg << "\n" << bckgIdxParticles << " solid particles from " << bckgIdxStart << " and " << bckgIdxEnd  << " have their positions attached to their initial position \n"<< std::endl;
+                #endif
+
+                #if RANDOM_PILLAR_ARRAY
+                    unsigned int xTotBins=floor(boxEdge[x]/xbinWdth);   
+
+                    N_vs_x.resize(xTotBins);
+                    v_vs_x.resize(xTotBins);
+
                 #endif
 			#endif // WALL_ON
 			
@@ -1407,10 +1419,21 @@ class DPD {
                 */
                 
                 #if RANDOM_PILLAR_ARRAY || EXTERNAL_FORCING
-                    //if( i >= solidCount && (particles[i].r.X > 0.) && (particles[i].r.X < 2.) ){ --- driving region x=[0,2] for the random pillar configuration running on the cluster
-                    if( i >= solidCount && (particles[i].r.X > 0.) && (particles[i].r.X < 5.) ){    // -- driving region x=[0,5] for the square pillar config running on my system
-                        particles[i].fext.X = externalForcing;
-                        particles[i].fext.Y = 0.;
+                    if(i >= solidCount){      //--- driving region x=[0,2] for the random pillar configuration running on the cluster
+                    //if( i >= solidCount && (particles[i].r.X > 0.) && (particles[i].r.X < 5.) ){    // -- driving region x=[0,5] for the square pillar config running on my system
+                    
+                        unsigned int particleIdx;       // determine to which bin in the x direction the particle belongs
+                       
+                        particleIdx=floor(particles[i].r.X /xbinWdth); 
+
+                        v_vs_x[particleIdx] += particles[i].w.X;
+                        N_vs_x[particleIdx] += 1;
+
+                        if( particleIdx==0 ){           // assuming here that the driving region is equal to width of the bin
+                            particles[i].fext.X = externalForcing;
+                            particles[i].fext.Y = 0.;
+
+                        }
                     }
                 #endif
 
@@ -2217,7 +2240,7 @@ class DPD {
 		}
 
 		//--------------------------------------- Velocity, Momentum and Pressure file writing--------------------------------------//
-		void fileWrite( std::ofstream& enStats, std::ofstream& eosStats, std::ofstream& momStats, std::ofstream& pTensStats ){
+		void fileWrite( std::ofstream& enStats, std::ofstream& eosStats, std::ofstream& momStats, std::ofstream& pTensStats, std::ofstream& flowStats2D, std::ofstream& rhoStats2D ){
 
 			if ( step % saveCount == 0){
 				simProg << step << " steps out of " << stepMax << " completed " << "\n";
@@ -2318,26 +2341,6 @@ class DPD {
 				        	<< std::setw(20) << std::setprecision(15) << conservativePower << "\t"
 				        	<< std::setw(20) << std::setprecision(15) << dissipativePower << "\t"
 				        	<< std::setw(20) << std::setprecision(15) << randomPower << "\n";
-						#else
-							#if WALL_ON
-								#if CAPILLARY_CYLINDER || CAPILLARY_SQUARE || HARD_SPHERES
-									#if PISTON
-                                    enStats     << std::setw(20) << std::setprecision(15) << pot_en << "\t" 
-                                                << std::setw(20) << std::setprecision(15) << kin_en << "\t" 
-                                                << std::setw(20) << std::setprecision(15) << tot_en << "\t" << "\n";
-                                                // << std::setw(20) << std::setprecision(15) << forceOnPiston << "\n";
-                                    #else 
-                                       enStats     << std::setw(20) << std::setprecision(15) << pot_en << "\t" 
-                                                    << std::setw(20) << std::setprecision(15) << kin_en << "\t" 
-                                                    << std::setw(20) << std::setprecision(15) << tot_en << "\t" << "\n";
-									#endif
-								#endif
-							#else
-								enStats 	<< std::setw(20) << std::setprecision(15) << pot_en << "\t" 
-										<< std::setw(20) << std::setprecision(15) << kin_en << "\t" 
-										<< std::setw(20) << std::setprecision(15) << tot_en << "\n";
-							#endif
-
 						#endif
 
 				// Density, Temperature, Average Pressure
@@ -2353,87 +2356,21 @@ class DPD {
 				        	<< std::setw(20) << std::setprecision(15) << momY << "\t" 
 				        	<< std::setw(20) << std::setprecision(15) << momZ << "\n";
 
+                // write average density and average flux as a function of x
+                for( int i=0; i < N_vs_x.size(); ++i ){
 
-				// density profile rhoZ
-				#if PLANAR_SLAB 
+                    rhoStats2D << N_vs_x[i] << "\t";
+                    flowStats2D << v_vs_x[i] << "\t";
 
-				sprintf( filename, "./data/rhoZ_%d.dat", step );  
-				std::ofstream rhoZStats( filename );
+                    N_vs_x[i]=0;        // reset them to 0 after writing
+                    v_vs_x[i]=0.;       // reset them to 0 after writing
+                }
+                    
+                rhoStats2D << "\n";
+                flowStats2D << "\n";
 
-				for ( iRhoZ = 0; iRhoZ < rhoZ_bins ; ++iRhoZ )  {
-
-					bin_lower = rhoZ_Zmin + ( iRhoZ ) * rhoZ_Zdelta;
-					bin_upper = rhoZ_Zmin + ( iRhoZ + 1 ) * rhoZ_Zdelta;
-					Zpos = ( bin_lower + bin_upper )*0.5;
-					vol = rhoZ_Zdelta * boxEdge[x] * boxEdge[y];
-
-					rhoZStats << Zpos << "\t" << vol << "\t" << rhoZ[iRhoZ] << "\t" << counter << "\n";
-
-					// reset value of rhoZ vector
-					rhoZ[iRhoZ] = 0.0;
-				}
-
-					#if WALL_ON
-					/*
-					// COM calculation
-					if ( step > nZ_tStart ) {
-						sprintf( filename, "./data/segPlane_%d.dat", step );  
-						std::ofstream segPlaneStats( filename );
-					
-						// writing the center of mass		
-						for ( segPlane_ind = 0; segPlane_ind < segPlane_bins; ++segPlane_ind ){
-							segPlane_xCOM[segPlane_ind] /= segPlane_count[segPlane_ind];
-							segPlane_zCOM[segPlane_ind] /= segPlane_count[segPlane_ind];
-
-							segPlaneStats << segPlane_xCOM[segPlane_ind] << "\t" << segPlane_zCOM[segPlane_ind] << "\n";
-
-							// reset values
-							segPlane_count[segPlane_ind] = 0;
-							segPlane_xCOM[segPlane_ind] = 0.0;
-							segPlane_zCOM[segPlane_ind] = 0.0;
-						}
-
-					}
-					*/
-
-					/*
-					if ( step > nZ_tStart){
-						sprintf( filename, "./data/nzStats_%d.dat", step );  
-						std::ofstream nZStats( filename );
-
-						for ( nZ_indz = 0; nZ_indz < nZ_zbins; ++nZ_indz ){
-							for ( nZ_indx = 0; nZ_indx < nZ_xbins; ++nZ_indx ){
-
-								nZStats << ( nZ[nZ_indz][nZ_indx] / counter ) << "\t";
-							}
-							nZStats << "\n" << "\n";
-						}
-					}
-					*/
-					#endif
-
-					#elif CYLINDER_DROPLET
-
-					sprintf( filename, "./data/rhor_%d.dat", step );  
-					std::ofstream rhorStats( filename );
-
-					for ( iRhor = 0; iRhor < rhor_bins ; ++iRhor )  {
-
-						bin_lower = rhor_rmin + ( iRhor ) * rhor_rdelta;
-						bin_upper = rhor_rmin + ( iRhor + 1 ) * rhor_rdelta;
-						radPos = ( bin_lower + bin_upper )*0.5;
-						vol = M_PI * ( pow( bin_upper, 2.0 ) - pow( bin_lower, 2.0 ) ) * cylHeight;
-
-						rhorStats << radPos << "\t" << vol << "\t" << rhor[iRhor] << "\t" << counter << "\n";
-
-						// reset value of rhor vector
-						rhor[iRhor] = 0.0;
-					}
-					#endif	
-
-
-					//reset the counter, write time to terminal
-					counter = 0;
+                //reset the counter, write time to terminal
+                counter = 0;
 			}
 		}
 
