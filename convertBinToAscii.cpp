@@ -27,7 +27,7 @@ int main(int argc, char** argv){
     for (time=tStart;time<=tEnd;time+=tDiff){
 
         // open file streams
-        sprintf(fName, "./data/posVel%d.bin",time);
+        sprintf(fName, "./%s/posVel%d.bin", argv[4], time);
         readPosVel.open( fName, std::ios_base::in);
 
         sprintf(fName, "./dataVisualize/pos%d.xyz",time);
