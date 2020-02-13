@@ -287,158 +287,35 @@ readParam >> buffer >> pCorrTime;	    readParam.ignore(256,'\n');
 	readParam.ignore(256, '\n');    // 4 Lines for the parameters
 #endif  // LEES_EDWARDS_BC
 
-#if SACF
+#if RANDOM_PILLAR_ARRAY
     simProg << "----------------------------------" << std::endl;
-    simProg << "Reading Stress Autocorrelation (SACF)" << std::endl;
+    simProg << "Reading 2D PILLAR ASSEMBLY        " << std::endl;
     simProg << "----------------------------------" << std::endl;
 
     readParam >> buffer;                readParam.ignore(256,'\n');		
     readParam >> buffer;                readParam.ignore(256,'\n');		
     readParam >> buffer;                readParam.ignore(256,'\n');		
 
-	readParam >> buffer >> n_vars;		readParam.ignore(256,'\n');		// L58
-	readParam >> buffer >> corLevels;	readParam.ignore(256,'\n');		// L59
-	readParam >> buffer >> pCorr;		readParam.ignore(256,'\n');		// L60
-	readParam >> buffer >> mCorr;		readParam.ignore(256,'\n');		// L61
-#else
+    readParam >> buffer >> scaleFactor;	readParam.ignore(256,'\n');	    
+    readParam >> buffer >> xOffset;	    readParam.ignore(256,'\n');	    
+    readParam >> buffer >> porosity;	readParam.ignore(256,'\n');	    
+    readParam >> buffer >> unitCellLx;	readParam.ignore(256,'\n');	    
+    readParam >> buffer >> unitCellLy;	readParam.ignore(256,'\n');	    
+    readParam >> buffer >> NPillars;	readParam.ignore(256,'\n');	    
+    readParam >> buffer >> forceRegionBegin;	readParam.ignore(256,'\n');	    
+    readParam >> buffer >> forceRegionEnd;	    readParam.ignore(256,'\n');	    
+#else 
 	readParam.ignore(256, '\n');    // 3 Lines for the Heading
 	readParam.ignore(256, '\n');
 	readParam.ignore(256, '\n');
 
-	readParam.ignore(256, '\n');    // 4 Lines for the parameters
-	readParam.ignore(256, '\n');
-	readParam.ignore(256, '\n');
-	readParam.ignore(256, '\n');
-#endif  // SACF
-
-#if PLANAR_SLAB
-    simProg << "----------------------------------" << std::endl;
-    simProg << "Reading Geometry : PLANAR SLAB  " << std::endl;
-    simProg << "----------------------------------" << std::endl;
-
-    readParam >> buffer;                readParam.ignore(256,'\n');		
-    readParam >> buffer;                readParam.ignore(256,'\n');		
-    readParam >> buffer;                readParam.ignore(256,'\n');		
-
-    readParam >> buffer >> slabWidth;	readParam.ignore(256,'\n');		    
-#else
-    readParam.ignore(256, '\n');    // 3 Lines for the heading
-    readParam.ignore(256, '\n');		
-    readParam.ignore(256, '\n');
-
-    readParam.ignore(256, '\n');
-#endif  // PLANAR_SLAB
-
-#if SPHERICAL_DROPLET
-    simProg << "----------------------------------" << std::endl;
-    simProg << "Reading Geometry : SPHERICAL DROPLET  " << std::endl;
-    simProg << "----------------------------------" << std::endl;
-
-    readParam >> buffer;                readParam.ignore(256,'\n');		
-    readParam >> buffer;                readParam.ignore(256,'\n');		
-    readParam >> buffer;                readParam.ignore(256,'\n');		
-
-    readParam >> buffer >> sphDropRad;	readParam.ignore(256,'\n');		    
-#else
-    readParam.ignore(256, '\n');    // 3 Lines for the heading
-    readParam.ignore(256, '\n');		
-    readParam.ignore(256, '\n');
-
-    readParam.ignore(256, '\n');
-#endif  // SPHERICAL_DROPLET
-
-#if CYLINDRICAL_DROPLET
-    simProg << "----------------------------------" << std::endl;
-    simProg << "Reading Geometry : CYLINDRICAL DROPLET  " << std::endl;
-    simProg << "----------------------------------" << std::endl;
-
-    readParam >> buffer;                readParam.ignore(256,'\n');		
-    readParam >> buffer;                readParam.ignore(256,'\n');		
-    readParam >> buffer;                readParam.ignore(256,'\n');		
-
-    readParam >> buffer >> cylRad;	readParam.ignore(256,'\n');		    
-#else
-    readParam.ignore(256, '\n');    // 3 Lines for the heading
-    readParam.ignore(256, '\n');		
-    readParam.ignore(256, '\n');
-
-    readParam.ignore(256, '\n');
-#endif  // CYLINDRICAL_DROPLET
-
-#if CAPILLARY_CYLINDER || CAPILLARY_SQUARE || FCC_WALL 
-    simProg << "----------------------------------" << std::endl;
-    simProg << "Reading Geometry : CAPILLARY CYLINDER " << std::endl;
-    simProg << "----------------------------------" << std::endl;
-
-    readParam >> buffer;                readParam.ignore(256,'\n');		
-    readParam >> buffer;                readParam.ignore(256,'\n');		
-    readParam >> buffer;                readParam.ignore(256,'\n');		
-
-	readParam >> buffer >> bufferLen;	readParam.ignore(256,'\n');		// L63 
-	readParam >> buffer >> capLen;		readParam.ignore(256,'\n');		// L64 
-	readParam >> buffer >> capRad;		readParam.ignore(256,'\n');		// L65 
-	readParam >> buffer >> capWallWdth;	readParam.ignore(256,'\n');		// L66 
-	readParam >> buffer >> resWdth;		readParam.ignore(256,'\n');		// L67 
-	readParam >> buffer >> resCOMZ;		readParam.ignore(256,'\n');		// L68 
-	readParam >> buffer >> resCOMVel;	readParam.ignore(256,'\n');		// L69 
-
-#else
-	readParam.ignore(256, '\n');
-	readParam.ignore(256, '\n');
-	readParam.ignore(256, '\n');
-
-	readParam.ignore(256, '\n');
-	readParam.ignore(256, '\n');
-	readParam.ignore(256, '\n');
-	readParam.ignore(256, '\n');
-	readParam.ignore(256, '\n');
-	readParam.ignore(256, '\n');
-	readParam.ignore(256, '\n');
-#endif // WALL_ON
-
-#if PISTON
-    simProg << "----------------------------------" << std::endl;
-    simProg << "Reading Geometry : PISTON" << std::endl;
-    simProg << "----------------------------------" << std::endl;
-
-    readParam >> buffer;                readParam.ignore(256,'\n');		
-    readParam >> buffer;                readParam.ignore(256,'\n');		
-    readParam >> buffer;                readParam.ignore(256,'\n');		
-
-    readParam >> buffer >> pistonZStart; readParam.ignore(256,'\n');		// L71
-    readParam >> buffer >> pistonThickness; readParam.ignore(256,'\n');		// L71
-    readParam >> buffer >> appPressure;	 readParam.ignore(256,'\n');		// L71
-    readParam >> buffer >> pistonT0;	 readParam.ignore(256,'\n');		// L72
-    readParam >> buffer >> pistonW;		 readParam.ignore(256,'\n');		// L73
-#else 
-    readParam.ignore(256, '\n');    // 3 Heading Lines
-    readParam.ignore(256, '\n');
-    readParam.ignore(256, '\n');
-
-    readParam.ignore(256, '\n');    // 5 parameter lines
-    readParam.ignore(256, '\n');
-    readParam.ignore(256, '\n');
-    readParam.ignore(256, '\n');
-    readParam.ignore(256, '\n');
-#endif // PISTON
-
-#if HARD_SPHERES
-    simProg << "----------------------------------" << std::endl;
-    simProg << "Reading Geometry : SPHERICAL COLLOIDS" << std::endl;
-    simProg << "----------------------------------" << std::endl;
-
-    readParam >> buffer;                readParam.ignore(256,'\n');		
-    readParam >> buffer;                readParam.ignore(256,'\n');		
-    readParam >> buffer;                readParam.ignore(256,'\n');		
-
-    readParam >> buffer >> NColloids;	    readParam.ignore(256,'\n');	
-#else
-    readParam.ignore(256,'\n');		
-    readParam.ignore(256,'\n');		
-    readParam.ignore(256,'\n');		
-
-    readParam.ignore(256,'\n');		
-#endif  // HARD_SPHERES
+	readParam.ignore(256, '\n');    // 6 Lines for the parameters
+	readParam.ignore(256, '\n');    
+	readParam.ignore(256, '\n');    
+	readParam.ignore(256, '\n');    
+	readParam.ignore(256, '\n');    
+	readParam.ignore(256, '\n');    
+#endif
 
 simProg << "Closing the file stream for param.in \n";
 
@@ -558,6 +435,6 @@ ecutWCA = -1.0;
     strainRate = gammaDot * boxEdge[y];
 #endif
 
-#if SACF
-    pCorr2 = pCorr / 2;
+#if RANDOM_PILLAR_ARRAY
+    xbinWdth=forceRegionEnd - forceRegionBegin;
 #endif

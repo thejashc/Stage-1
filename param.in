@@ -1,8 +1,8 @@
 #-------------------------------------#
 #        Simulation Box Size        
 #-------------------------------------#
-boxEdgeX            530.0	
-boxEdgeY            100.0
+boxEdgeX            230.0	
+boxEdgeY            200.0
 boxEdgeZ            3.0
 initRho             6.00
 #-------------------------------------#
@@ -115,9 +115,9 @@ rd_cutoff           0.75
 #        Simulation time parameters 
 #-------------------------------------#
 dt                  0.01        # time parameters	
-stepMax             500
+stepMax             25
 rstrtFWrtFreq       1000
-saveCount           100
+saveCount           1
 psaveCount          50000
 pCorrTime           1
 #-------------------------------------#
@@ -125,43 +125,13 @@ pCorrTime           1
 #-------------------------------------#
 gammaDot            0.01		# Shear-rate
 #-------------------------------------#
-#        Stress Autocorrelation (SACF)
+#        2D PILLAR ASSEMBLY
 #-------------------------------------#
-n_vars              4			# SACF 
-corLevels           20
-pCorr               64
-mCorr               2
-#-------------------------------------#
-#        Geometry : PLANAR SLAB  
-#-------------------------------------#
-slabWidth           25.0	     
-#-------------------------------------#
-#        Geometry : SPHERICAL DROPLET 
-#-------------------------------------#
-sphDropRad          7.5		
-#-------------------------------------#
-#        Geometry : CYLINDRICAL DROPLET
-#-------------------------------------#
-cylRad              4.0			
-#-------------------------------------#
-#        Geometry: CAPILLARY CYLINDER
-#-------------------------------------#
-bufferLength        10.0		
-capLen              35.0
-capRad              5.0
-capWallWdth         1.5
-resWdth             12.0
-resComZ             37.0
-resComVel           -0.00
-#-------------------------------------#
-#        Geometry: PISTON
-#-------------------------------------#
-pistonZStart        350.0 
-pistonThickness     0.25
-appPressure         0.5
-pistonT0	        2000.0
-pistonW             100.0
-#-------------------------------------#
-#        GEOMETRY : SPHERICAL COLLOIDS
-#-------------------------------------#
-NColloids           10          # No. of Colloids
+scaleFactor         10.0
+xOffset             15.0
+porosity            0.55
+unitCellLx          20.0
+unitCellLy          20.0
+NPillars            100
+forceRegionBegin    0
+forceRegionEnd      2
