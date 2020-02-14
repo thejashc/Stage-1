@@ -327,59 +327,6 @@ double magDiss;
 
 // file writing parameters
 
-// parameters for post-processing
-// g(r) -- structure function
-double gR_radMin;			// minimum radius for g(r)
-double gR_radDelta;			// thickness of shell 
-double gR_radMax;			// maximum radius for g(r)
-int gR_nElem;				// number of elements in g(r)    
-int gR_tStart;				// start time for measuring g(r)
-int gR_tDelta;				// time between measurements g(r)
-int gR_tEnd;				// end time for the measurement g(r)
-int gR_tSamples;		 	// number of samples for g(r)	
-
-std::vector<std::vector<double>> gR_nCount;// g(r) function
-
-double ri;	// inner radius
-double ro;	// outer radius
-double rad;	// mean radius
-int ig;		// index for r
-
-// rhoZ calculation-- liquid density calculation
-#if PLANAR_SLAB
-double rhoZ_Zmin;		// minimum Z for rhoZ
-double rhoZ_Zdelta;		// thickness of differential slab 
-double rhoZ_Zmax;		// maximum Z for rhoZ
-double vol;			// volume of differential slab
-
-int rhoZ_bins;			// number of bins for rhoZ
-
-std::vector<double> rhoZ;// keeps count of rhoZ at given Z
-
-int iRhoZ;			// index -- bookkeeping
-
-double Zpos;
-
-char filename[40];		// filename for data writing
-
-#elif CYLINDER_DROPLET
-double rhor_rmin;
-double rhor_rdelta;
-double rhor_rmax;
-double vol;
-
-int rhor_bins;
-
-std::vector<double> rhor;
-
-int iRhor;
-double radPos;
-
-char filename[40];
-#endif // PLANAR_SLAB
-
-// defining wall
-
 unsigned int totalBonds;
 unsigned int repParam_Inst;
 double resCOMVel;

@@ -16,45 +16,19 @@
 
 // configuration of particles
 #define RANDOM_DISSIPATIVE		1
-#define SPHERICAL_DROPLET		0
-#define SPHERICAL_CAP			0
-#define CYLINDER_DROPLET		0
-#define PLANAR_SLAB			    0
-#define CRYSTAL				    0
 #define RESTART				    0
 
 // WALL flags
 #define WALL_ON				    1
-#define LOWER_WALL_ON			0
-#define UPPER_WALL_ON			0
-#define ROUGH_WALL			    0
 #define SPRING_CONNECTED_SLD    1
 #define BCKGRND_CONNECTED_SLD   1
-#define MERCURY_POROSIMETRY     0
 
 #define CAPILLARY_CYLINDER		1
 #define CAPILLARY_SQUARE		0
-#define PISTON				    0
-#define CYLINDER_ARRAY          0
 #define HARD_SPHERES            1
-#define SLIM                    0
-#define RANDOM_FIBRE_BUNDLE     0
-#define READ_FROM_FILE          0
-
-// FILE_WRITE
-#define STYLE_VMD			    0
-
-// CORRELATION FUNCTIONS
-#define SACF				    0
-
-// LEES-EDWARDS BOUNDARY CONDITION
-#define LEES_EDWARDS_BC			0
 
 // DENSITY CALCULATION
 #define DENS_EXACT			    0    
-
-// MULTI-VISCOSITY LIQUIDS
-#define MULTI_VISCOSITY_LIQUIDS 0
 
 //declare DPD solver
 class DPD {
@@ -177,17 +151,6 @@ class DPD {
                 */
 				tot_en = kin_en + pot_en;
 
-                /*
-				if ( (step > gR_tStart) && (step % gR_tDelta == 0) ) {  
-                                                                        grSample(0, fluidCount, 0);
-                                                                        #if MULTI_VISCOSITY_LIQUIDS
-                                                                            grSample(fluidType1_idxStart, fluidType1_idxEnd, 1); 
-                                                                            grSample(fluidType2_idxStart, fluidType2_idxEnd, 2); 
-                                                                        #endif
-                                                                     }
-
-                 */
-
 				counter += 1;						// filewriting
 				fileWrite(enStats, eosStats, momStats, pTensStats);
                
@@ -211,12 +174,6 @@ class DPD {
 					writeConfig.close();
 				}
 
-				#if SACF 
-					if ( step % 100000 == 0 ) { writeCorr(); }
-				#endif
-
-
-				// from lyophobic to lyophilic
 				step += 1;						// increment time step
 
                 if( step % 1000 == 0 ){
@@ -239,11 +196,6 @@ class DPD {
 
 			}//end time loop
 
-			// post-processing
-			// grCalc();	 
-			// velHistCalc();
-
-
 			// enStats.close();	// close file-streams
 			// eosStats.close();
 			// momStats.close();
@@ -260,218 +212,31 @@ class DPD {
 
 			#if WALL_ON
 
-				#if SPHERICAL_DROPLET
-					#include "sphDropInit.h"
-                #endif
-
-				#if CYLINDER_DROPLET
-					#include "cylDropInit.h"
-                #endif
-
 				#if CAPILLARY_CYLINDER
-                    //#include "definePiston.h"
-                    //pCount = 0;
-                    //bckgIdxStart = pCount;
-					//#include "capillaryTube.h"
-					//#include "capillaryTubeHighRho.h"
-                    //bckgIdxEnd = pCount - 1;
-                    /*
-                    */
-
-                    //#include "readPiston.h"
-                    //#include "readCapillaryTube.h"
-                    //bckgIdxEnd = pCount - 1;
-                    #if PISTON
-                        ngbrIdxStart = pCount;
-                        #include "singleLayerWall.h"
-                        ngbrIdxEnd = pCount-1;
-
-                        pistonStartIndex = ngbrIdxStart;
-                        pistonEndIndex = ngbrIdxEnd;
-                        pistonParticles = ngbrIdxEnd - ngbrIdxStart + 1;
-                        pistonForce = -appPressure * pistonArea ; 
-                    #endif
-                    #if MERCURY_POROSIMETRY
-                        bckgIdxStart=pCount;
-                        #include "mercuryPorosimetry.h"
-                        bckgIdxEnd=pCount-1;
-                        #include "reservoir.h"                        // works for SLIM
-                    #endif
-
-                    //#include "cylindricalFluids.h"
-                    //#include "wettingLiquidInCapillaryTube.h"     // works for SLIM
-					//#include "reservoir.h"                        // works for SLIM
-                    //#include "nonWettingReservoir.h" 
-                    //#include "separateReservoir.h"
-                    //
-					//#include "mixedReservoir.h"
-					//#include "separateReservoir.h"
-                    // SLIM
-					//#include "reservoir.h"
-                    //#include "SLIM_capillary.h"
-                    //#include "definePiston.h"
-
-                    // COLLOIDS
-                    // #include "multipleColloids.h"
-					// #include "capillaryTube.h"
-                    
-                    // FCC_WALL
-                    /*
-                    bckgIdxStart = pCount;
-                    //#include "fccCylinder.h"
-                    //#include "glassyCylinder.h"
-                    #include "glassyCylinderWithLowerWall.h"
-                    bckgIdxEnd = pCount - 1;
-					#include "liquidLining.h"
-					#include "reservoir.h"                        // works for SLIM
-                    */
                     // GLASSY WALL
                     pCount=0;
                     bckgIdxStart = pCount;
                     #include "glassyCylinder.h"
                     bckgIdxEnd = pCount - 1;
-
-					//#include "reservoir.h"                        // works for SLIM
-
                 #endif
 
-				#if PLANAR_SLAB
-					//#include "planarSlabInit.h" 
-                    //#include "readPlanarSlabInit.h"
-                #endif
-
-				#if CAPILLARY_SQUARE
-					//#include "squarecapillaryTube.h"
-                    //#include "rectangularCapillaryTube.h"
-                    #include "rectangularCapillaryTubeOpen.h"
-                    //ngbrIdxStart = particles.size();              // no of particles present + 1 -- particles.size() takes care of that
-                    //#include "singleLayerWall.h"
-                    //ngbrIdxEnd = particles.size() - 1;
-                    #if PISTON
-                        pistonStartIndex = ngbrIdxStart;
-                        pistonEndIndex = ngbrIdxEnd;
-                        pistonParticles = ngbrIdxEnd - ngbrIdxStart + 1;
-                        pistonForce = -appPressure * pistonArea ; 
-                    #endif
-					//#include "reservoir.h"
-					#include "reservoirNew.h"
-                #endif
-                #if CYLINDER_ARRAY
-                    //#include "cylinderArray.h"
-                    //#include "ellipseArray.h"
-                    #include "createSquareArray.h"
-                    #include "planarSlab.h"
-                #endif
                 #if HARD_SPHERES
                     ngbrIdxStart = particles.size();
                     #include "readColloids.h"
                     ngbrIdxEnd=particles.size()-1;
                     //#include "sphericalColloids.h"
                 #endif
-                #if SLIM
-                    //#include "definePiston.h"
-                    //#include "SLIMLiquid.h"
-                    //#include "SLIMSolid.h"
-                    #include "randomPillarAssembly.h"
-					//#include "reservoir.h"
-                    //#include "SLIM_capillary.h"
-                #endif
-                #if RANDOM_FIBRE_BUNDLE
-                    //#include "randomFibreBundleParallel.h"
-                    //#include "squashedFibre.h"
-                    //#include "readSphericalCap.h"
-                    //#include "singleFibre.h"
-                    //#include "poolAroundFibre.h"
-                    //#include "readFibreConfig.h"      // edited on Nov 01, 2k19
-                  
-                    /*
-                    pCount=0;
-                    ngbrIdxStart=pCount;
-                    #include "readSquashedFibre.h"      // edited on Nov 01, 2k19
-                    ngbrIdxEnd = pCount-1;
-                    */
-                    
-                    pCount=0;
-                    ngbrIdxStart=pCount;
-
-                    #include "readRelaxedSquashedFibre.h"      // edited on Nov 06, 2k19
-
-                    #if PISTON
-                        pistonStartIndex = pCount;
-                        #include "singleLayerWall.h"
-                        ngbrIdxEnd = pCount-1;
-                        pistonEndIndex = ngbrIdxEnd;
-
-                        pistonParticles = ngbrIdxEnd - ngbrIdxStart + 1;
-                        pistonForce = -appPressure * pistonArea ; 
-                    #else
-                        ngbrIdxEnd = pCount-1;
-                    #endif
-
-                    //#include "defineWall.h"
-
-                    #include "reservoir.h"
-
-                    /*
-                    imagWallPos1 = boxEdge[z];
-                    imagWallPos2 = 0.;
-                    */
-
-					//#include "sphericalCap.h"
-                    //#include "definePiston.h"
-					//#include "sphericalCap.h"
-                #endif
-                #if READ_FROM_FILE & !(CAPILLARY_CYLINDER)
-                    pCount = 0;
-                    //#include "readConfigFromFile.h"
-                    #include "SLIM_capillary.h"
-                    bckgIdxEnd = npart - 1;         // this is a temporary workaround
-				#endif
 				#if RESTART 
 					#include "restartConfig.h"
 				#endif
+
 			#else
-				#if SPHERICAL_DROPLET 
-					#include "sphDropInit.h"
-				#elif SPHERICAL_CAP
-					#include "sphericalCap.h"
-				#elif PLANAR_SLAB
-					//#include "planarSlabInit.h"
-                    #include "glassyWall.h"
-				#elif CYLINDER_DROPLET 
-					#include "cylDropInit.h"
-				#elif CRYSTAL
-					#include "crystalInit.h"
-				#elif RESTART 
+
+				#if RESTART 
 					#include "restartConfig.h"
 				#endif
+
 			#endif // WALL_ON
-
-			// Initialize the gR_nCount array
-            gR_nCount.resize( gR_nElem );
-
-			for (i=0; i < gR_nElem; ++i)
-                gR_nCount[i].resize(3);
-
-			// Initialize the velocity histogram array
-			for (i=0; i < velHist_bins ; ++i){
-				velHistX.push_back(0);
-				velHistY.push_back(0);
-				velHistZ.push_back(0);
-			}	
-
-			#if PLANAR_SLAB
-				// Initialize the rhoZ array
-				for ( i=0; i < rhoZ_bins ; ++i ){
-					rhoZ.push_back(0.0);
-				}	
-
-			#elif CYLINDER_DROPLET
-				// Initialize the rhor array
-				for ( i=0; i < rhor_bins ; ++i ){
-					rhor.push_back(0.0);
-				}	
-			#endif
 
             #include "cellGridInit.h"
 
@@ -546,78 +311,11 @@ class DPD {
 				}
 			}
 
-            /*
-            if ( solidCount > 0 ){
-                solidStartIndex = solid_index[0];
-                solidEndIndex   = solid_index[solidCount-1];
-
-            }
-
-            if ( fluidCount > 0 ){
-                fluidStartIndex = fluid_index[0];
-                fluidEndIndex   = fluid_index[fluidCount-1];
-            }
-
-            i=0;
-            simProg << " SOLID " << std::endl;
-            while( i < solidCount ){
-                simProg << " i = " << solid_index[i] << std::endl;
-
-                i++;
-            }
-
-            i=0;
-            simProg << " FLUID " << std::endl;
-            while( i < fluidCount ){
-                simProg << " i = " << fluid_index[i] << std::endl;
-
-                i++;
-            }
-            
-            simProg << fluidStartIndex << " : starting index of fluid particles " << std::endl;
-            simProg << fluidEndIndex << " : ending index of fluid particles " << std::endl;
-			simProg << fluidCount << " : fluid particles indexed \n" << std::endl;
-
-            simProg << solidStartIndex << " : starting index of solid particles " << std::endl;
-            simProg << solidEndIndex << " : ending index of solid particles " << std::endl;
-			simProg << solidCount << " : solid particles indexed \n" << std::endl;
-            */
-
-            #if PISTON
-                //pistonStartIndex = solidEndIndex - pistonParticles + 1;
-                //pistonEndIndex = solidEndIndex;
-
-                //simProg << pistonStartIndex << " : start index of piston particles" << std::endl; 
-                //simProg << pistonEndIndex << " : end index of piston particles \n" << std::endl; 
-            #endif
-
             simProg << fluidCount << " fluid particles indexed \n" << std::endl;
             simProg << solidCount << " solid particles indexed \n" << std::endl;
             simProg << fluidCount + solidCount << " total particles indexed \n";
 
 			#if WALL_ON
-                /*
-				j = 0;
-                i = solid_index[j];
-                #if BCKGRND_CONNECTED_SLD
-                    while ( j <  solidCount ) {
-                            particles[i].r0 = particles[i].r;
-
-                            j++;
-                            i = solid_index[j];
-                    }
-                    simProg << "\n" << solidCount << " solid particles stuck to their initial positions" << std::endl;
-                #endif
-                #if SPRING_CONNECTED_SLD
-                    while( j < solidCount ){
-                        particles[i].bondIndex[0] = 0;
-
-                        j++;
-                        i = solid_index[j];
-                    }
-                    simProg << "\n" << solidCount << " solid particles bond indices set to 0" << std::endl;
-                #endif
-                */
 
                 #if SPRING_CONNECTED_SLD
                 simProg << "*************************************************** \n" << std::endl;
@@ -657,19 +355,8 @@ class DPD {
                     simProg << "\n" << "Particles not belonging to piston assigned the spring constant " << kWallNgbr1;
                     simProg << "\n" << ngbrIdxParticles << " solid particles from " << ngbrIdxStart << " and " << ngbrIdxEnd  << " have their bond indices set to 0 \n"<< std::endl;
 
-                    /*
-                    #if RANDOM_FIBRE_BUNDLE
-                        #include "springConnectionsFibre.h"
-                        #include "psfWrite.h"
-                    #endif
-                    */
-
-                    /*
-                    m = 0;
-                    for (unsigned int k=1; k<= particles[m].bondIndex[0]; ++k )
-                        simProg << " Particle " << particles[m].bondIndex[k] << " , eq bond length = " << particles[m].eqBondLength[k] << std::endl; 
-                        */
                 #endif
+
                 #if BCKGRND_CONNECTED_SLD
                 simProg << "*************************************************** \n" << std::endl;
                 simProg << "Background Connected Solid Structures \n"<<std::endl;
@@ -677,9 +364,7 @@ class DPD {
                 bckgIdxParticles=0;
                 i = solid_index[idx];
 
-                    #if READ_FROM_FILE
-                        #include "readInitPosFromFile.h"
-                    #elif RESTART
+                    #if RESTART
                         while( idx < solidCount ){
 
                             if ( i >= bckgIdxStart && i <= bckgIdxEnd ){
@@ -703,173 +388,9 @@ class DPD {
                     #endif
                     simProg << "\n" << bckgIdxParticles << " solid particles from " << bckgIdxStart << " and " << bckgIdxEnd  << " have their positions attached to their initial position \n"<< std::endl;
                 #endif
+
 			#endif // WALL_ON
 			
-			// Remove excess velocity and set particle density to 0
-            /*
-			Vec3D velAvg={0.0, 0.0, 0.0};
-			if ( fluidCount != 0 ){
-                j = 0;
-				i = fluid_index[j];
-				while( j < fluidCount ){
-                        velAvg 					+= particles[i].w/fluidCount;
-                        particles[i].dens 	 	= 0.0;
-                        particles[i].dens_new	= 0.0;
-                        particles[i].fC.setZero();
-
-                        j++;
-                        i = fluid_index[j];
-				}
-
-                j = 0;
-				i = fluid_index[j];
-				while( k < fluidCount ){
-					particles[i].w -= velAvg;
-
-                    j++;
-                    i = fluid_index[j];
-				}
-
-				simProg << "Excess average velocity from fluid particles removed" << std::endl;
-				simProg << "Densities of the fluid particles set to 0" << std::endl;
-
-                #if SPHERICAL_CAP || CAPILLARY_CYLINDER || CAPILLARY_SQUARE
-                    k = 0;
-                    i = fluid_index[k];
-                    while( k < fluidCount ){
-                        //if ( particles[i].type == 2 )
-                        particles[i].w.Z += resCOMVel;
-
-                        k++;
-                        i = fluid_index[k];
-                    }
-                    simProg << "The fluid particles have been assigned a velocity of " << resCOMVel << " rc/dt" << std::endl;
-                #endif
-            }
-			else{
-				simProg << "No fluid particles intialized" << std::endl;
-			}
-            */
-
-			#if WALL_ON
-                    /*
-				velAvg={0.0, 0.0, 0.0};
-				// Remove excess velocity and set particle density to 0
-                k = 0;
-                i = solid_index[k];
-				while ( k < solidCount ){
-					velAvg 					+= particles[i].w/solidCount;
-					particles[i].dens 	 	= 0.0;
-					particles[i].dens_new	 = 0.0;
-
-					k++;
-                    i = solid_index[k];
-				}
-
-                k = 0;
-                i = solid_index[k];
-				while ( k < solidCount ){
-					particles[i].w.X -= velAvg.X;
-					particles[i].w.Y -= velAvg.Y;
-					particles[i].w.Z -= velAvg.Z;
-
-                    particles[i].rUnfolded.X = particles[i].r.X;
-                    particles[i].rUnfolded.Y = particles[i].r.Y;
-                    particles[i].rUnfolded.Z = particles[i].r.Z;
-
-					k++;
-                    i = solid_index[k];
-				}
-				
-				simProg << "Excess average velocity from solid particles removed" << std::endl;
-				simProg << "Densities of the solid particles set to 0" << std::endl;
-                */
-			#endif
-
-			#if LEES_EDWARDS_BC
-				conservativePower = 0.0;
-				dissipativePower = 0.0;
-				randomPower      = 0.0;
-			#endif
-
-			#if SACF
-                // multi-tau correlation matrix definition
-                fCorr.resize(n_vars * n_vars);		// fcor stores the calculated correlation at a given level
-                nCorr.resize(n_vars * n_vars);		// ncor stores the number of samples used for averaging the correlation
-                
-                fCorrAv.resize(n_vars * n_vars);	// used for file-writing purpose at intermediate times
-
-                normalizeCorr.resize(n_vars * n_vars);		// normalized values for every stress vector element
-                normalizeCorrAv.resize(n_vars * n_vars);	// used for file-writing purpose at intermediate times
-
-                aCorr.resize(n_vars);		// acor stores the data used to calculate correlation
-                pointCorr.resize(n_vars);	// pointcor stores the array-indes at which the last data was stored
-
-                // fCorr matrix initialize
-                for ( i=0 ; i<n_vars*n_vars ; ++i ) {
-
-                    fCorr[i].resize( corLevels );
-                    nCorr[i].resize( corLevels );
-                    fCorrAv[i].resize( corLevels );
-
-                    for (  j=0 ; j<corLevels ; ++j ){
-                        fCorr[i][j].resize( pCorr2 );
-                        nCorr[i][j].resize( pCorr2 );
-                        fCorrAv[i][j].resize( pCorr2 );
-                    }// j
-                }// i
-
-                // aCorr, pointCorr, nCorr matrix initialize
-                for ( i=0 ; i<n_vars ; ++i ) {
-
-                    aCorr[i].resize( corLevels );
-                    pointCorr[i].resize( corLevels );
-
-                    for (  j=0 ; j<corLevels ; ++j ){
-                        aCorr[i][j].resize( pCorr );
-                    }// j
-                }// i
-
-                // initialize aCorr -- WARNING : assign large initial negative 
-                // (or positive) values to ensure that the data read is larger(smaller)
-                // than this initial value 
-                for ( i=0 ; i<n_vars ; ++i )
-                    for ( j=0 ; j<corLevels ; ++j )
-                        for( k=0 ; k<pCorr ; ++k )
-                            aCorr[i][j][k] = -10e20;
-
-                // initialize fCorr
-                for ( i=0 ; i<n_vars*n_vars ; ++i )
-                    for ( j=0 ; j<corLevels ; ++j )
-                        for( k=0 ; k<pCorr2 ; ++k )
-                            fCorr[i][j][k] = 0.;
-
-                // initialize norr
-                for ( i=0 ; i<n_vars*n_vars ; ++i )
-                    for ( j=0 ; j<corLevels ; ++j )
-                        for( k=0 ; k<pCorr2 ; ++k )
-                            nCorr[i][j][k] = 0;
-
-                // initialize pointCorr
-                for ( i=0 ; i<n_vars ; ++i )
-                    for ( j=0 ; j<corLevels ; ++j )
-                        pointCorr[i][j] = -1;
-
-                // initialize normalizeCorr
-                for ( i=0 ; i<n_vars*n_vars ; ++i ){
-                        normalizeCorr[i] = 0.;
-                        normalizeCorrAv[i] = 0.;}
-
-                // initialize sacpunt
-                sacpunt = 0;
-
-                // finding size of arrays
-                // simProg << "aCorr [" << aCorr.size() << "][" << aCorr[0].size() << "][" << aCorr[0][0].size() << "]" << std::endl;
-                // simProg << "fCorr [" << fCorr.size() << "][" << fCorr[0].size() << "][" << fCorr[0][0].size() << "]" << std::endl;
-                // simProg << "nCorr [" << nCorr.size() << "][" << nCorr[0].size() << "][" << nCorr[0][0].size() << "]" << std::endl;
-                // simProg << "pointCorr [" << pointCorr.size() << "][" << pointCorr[0].size() << "]" << std::endl;
-			#endif
-            
             // defining the matrix for Brep and Aatt
             simProg << " ********************************************************************* \n";
             simProg << " Defining the matrix of repulsion parameters and attraction parameters \n";
@@ -1318,24 +839,6 @@ class DPD {
                 #include "backgroundForceOnly.h"  
             #endif
 
-            /*
-            #if RANDOM_FIBRE_BUNDLE
-            if ( ( abs(imagWallPos1 - imagWallPos2) >= 20.) && (step >=6500) ){
-                    imagWallPos1 -= 0.01 * rcutoff;
-                    imagWallPos2 += 0.01 * rcutoff;
-            }
-
-            if ( step % 1000 == 0 )
-                simProg << "imaginary wall position 1 = " << imagWallPos1 << ", imaginary wall position 2 = " << imagWallPos2 << std::endl;
-            #endif
-            */
-
-          /*
-          #if CAPILLARY_SQUARE
-              #include "penetrationIntoSquare.h"  // background repulsive potential
-          #endif
-          */
-
           i = 0;
           while ( i < npart ){
 
@@ -1346,53 +849,6 @@ class DPD {
                 particles[i].r_old = particles[i].r;        // position at t: r(t)
                 particles[i].w_old = particles[i].w;        // velocity at t-dt/2 : v(t - dt/2)
             
-                /*
-                #if RANDOM_FIBRE_BUNDLE
-                //The z-component of the force only depends on the z-distance from the top and
-                //bottom walls. The force scheme is borrowed from the paper titled 
-                // Title : Interfacial Excess Free Energies of Solid-Liquid Interfaces by Molecular
-                // Dynamics Simulation and Thermodynamic Integration. 
-                // Authors : Frederic Leroy, Daniel J.V.A. dos Santos, Florian Muller Plathe
-                // Journal : Macromolecular Rapid Communications
-                // Year : 2009
-             
-
-                    // force on particle from Wall1
-                    dWall1=particles[i].r.Z-imagWallPos1;    // distance of i^{th} particle from wall 1
-
-                    ri=1./dWall1;       // inverse distance
-                    r6i=pow(ri,6.);     // 6th inverse power
-                    r7i=ri*r6i;         // 7th inverse power
-
-                    if (abs(dWall1) <= pow(2,1./6.)*sigmaWCA )
-                        ff1 = 48. * epsilonWCA * sig6 * r7i * (sig6*r6i - 0.5); // Eqn(9) in the article
-                    else 
-                        ff1 = 0.;
-        
-                    // force on particle from Wall2
-                    dWall2=particles[i].r.Z-imagWallPos2;    // distance of i^{th} particle from wall 2
-
-                    ri=1./dWall2;       // inverse distance
-                    r6i=pow(ri,6.);     // 6th inverse power
-                    r7i=ri*r6i;         // 7th inverse power
-
-                    if (abs(dWall2) <= pow(2,1./6.)*sigmaWCA )
-                        ff2 = 48. * epsilonWCA * sig6 * r7i * (sig6*r6i - 0.5); // Eqn(9) in the article
-                    else 
-                        ff2 = 0.;
-
-                    // add forces
-                    particles[i].fext.X =0.;
-                    particles[i].fext.Y =0.;
-                    particles[i].fext.Z =ff1+ff2;
-                #endif
-                */
-
-                #if PISTON
-                if ( i >= pistonStartIndex && i <= pistonEndIndex )
-                    particles[i].fext.Z = forceOnPistonPerParticle;     // adding the force deficit per particle
-                #endif
-
                 particles[i].w += ( particles[i].fC       + 
                                     particles[i].fD       + 
                                     particles[i].fR       + 
@@ -1409,14 +865,6 @@ class DPD {
                 // calculate velocity (integral time step)
                 particles[i].v = 0.5*( particles[i].w_old + particles[i].w );       // calculate v(t) = v(t-dt/2) + v(t+dt/2)
 
-                #if LEES_EDWARDS_BC
-                    conservativePower += Vec3D::dot( particles[i].fC, particles[i].v );
-                    randomPower       += Vec3D::dot( particles[i].fR, particles[i].v );
-                    dissipativePower  += Vec3D::dot( particles[i].fD, particles[i].v );
-
-                    //std::cout << "particles[i].fC = " << particles[i].fC << "particles[i].v = " << particles[i].v << ", dot product = " << Vec3D::dot( particles[i].fC, particles[i].v ); 
-                #endif
-
                 momX += particles[i].w.X;
                 momY += particles[i].w.Y;
                 momZ += particles[i].w.Z;
@@ -1432,63 +880,14 @@ class DPD {
                     }
                 #endif
 
-                #if PISTON
-                    if ( i >= pistonStartIndex && i <= pistonEndIndex )
-                        forceOnPistonInst += particles[i].fC.Z + particles[i].fR.Z + particles[i].fD.Z;	// z-component of force on the piston due to fluid, the conservative force cancels out because internal forces
-                #endif												
-
-                /* to be sorted out : calculate only for fluid particles */
-                #include "pNonIdealKinCalc.h"
-	
                 // update count for fluid particles
                 i++;
           }
-
-            #if PISTON
-
-                /*
-                std::cout << pistonT0 << ", " 
-                          << avgWindow << ", " 
-                          << pistonW << ", " 
-                          << expFactor << ", "
-                          << delOverTau << ", " 
-                          << pistonForce << ", "
-                          << pistonParticles << std::endl;*/
-
-                if (step <= pistonT0)
-                    forceOnPistonPerParticle = (-0.5*pistonArea)/pistonParticles;
-                else if (step > pistonT0) {
-
-                    if ( step % 5000 == 0 ){
-                        appPressure += 0.5;
-                        pistonForce = -appPressure * pistonArea ; 
-                    }
-
-                    std::cout << forceOnPistonInst << std::endl;
-                    forceOnPistonPerParticle = pistonForce / pistonParticles;
-                }
-
-                forceOnPistonInst = 0.;
-            #endif
-
-			// calculation of  pressure tensor 
-			#include "pTensCalc.h"
 
             #if HARD_SPHERES
                 // #include "colloidBoxCrossing.h"
                 colloid_com_pos /= solidCount;
             #endif
-
-			// calculate auto-correlation
-			#if SACF
-				if ( step > 5e4 ){
-                    #if HARD_SPHERES 
-                        #include "colloid_VACF.h"
-                    #else
-					    #include "ACF.h"
-                    #endif
-				}
-			#endif
 
 		} // run over all fluid particles
 		//--------------------------------------- Resetting variables--------------------------------------//
@@ -1506,21 +905,10 @@ class DPD {
 			momX		= 0.;
 			momY		= 0.;
 			momZ		= 0.;
-            #if PISTON
-                //forceOnPiston = 0.;
-            #endif
-
-            // std::cout << step << ", " << totCOM/npart << std::endl;
 
             totCOM.X      = 0.;
             totCOM.Y      = 0.;
             totCOM.Z      = 0.;
-
-			#if LEES_EDWARDS_BC
-                conservativePower	= 0.0;
-                dissipativePower = 0.0;
-                randomPower	= 0.0;
-			#endif
 
             #if HARD_SPHERES
                 colloid_com_pos.X = 0.;
@@ -1550,340 +938,7 @@ class DPD {
 
 			} // set density equal to zero for solid type particles
 
-            /*
-            #if CRYSTAL
-                if( step % 5000 == 0 ){
-                    simProg << "Aatt[2][2] = " << Aatt[2][2] << ", Aatt[3][3]=" << Aatt[4][4] << std::endl;
-                    if ( floor(Aatt[2][2]) != floor(Aatt[4][4] ) ){
-                        Aatt[2][2] += 2.5;    // set the attraction parameter between the two fluids 
-                        simProg << "The attraction parameter between the fluid is set to " << Aatt[2][2] << std::endl;
-                    }
-                }
-            #endif
-            */
-
-            /*
-            #if CAPILLARY_CYLINDER
-            if ( step == 50000 ){
-                simProg << "changing the wettability of the solid from " << Aatt[0][2] << " to" << Aatt[0][5] << std::endl;
-                //Aatt[0][1] = -35.;
-                //Aatt[1][0] = -35.;
-                Aatt[0][2] = Aatt[0][5];    // use the value stored in Aatt[0][4]
-                Aatt[2][0] = Aatt[0][2];
-            }
-            #endif
-            */
-
-            /*
-            #if CYLINDER_ARRAY || LOWER_WALL_ON
-                    if ( step % 1000 == 0 && residual > 0.)
-                        simProg << "droplet Zcom = " << droplet_Zcom << ", capRad = " << capRad << ", zind_max = " << zind_max << " & residual= " << residual << " at time " << step << std::endl;
-
-                    droplet_Zcom = droplet_ZcomNew / fluidCount;
-                    droplet_ZcomNew = 0.;
-
-                    residual = droplet_Zcom - capRad - zind_max;
-            #endif
-            */
-
-			// reset temporary ideal and non-ideal component of pressure tensor
-			// to 0 at every time step. 
-			pNonIdeal_temp[0][0] = 0.;
-			pNonIdeal_temp[0][1] = 0.;
-			pNonIdeal_temp[0][2] = 0.;
-
-			pNonIdeal_temp[1][0] = 0.;
-			pNonIdeal_temp[1][1] = 0.;
-			pNonIdeal_temp[1][2] = 0.;
-
-			pNonIdeal_temp[2][0] = 0.;
-			pNonIdeal_temp[2][1] = 0.;
-			pNonIdeal_temp[2][2] = 0.;
-	
-			pNonIdealKin_temp[0][0] = 0.;
-			pNonIdealKin_temp[0][1] = 0.;
-			pNonIdealKin_temp[0][2] = 0.;
-
-			pNonIdealKin_temp[1][0] = 0.;
-			pNonIdealKin_temp[1][1] = 0.;
-			pNonIdealKin_temp[1][2] = 0.;
-
-			pNonIdealKin_temp[2][0] = 0.;
-			pNonIdealKin_temp[2][1] = 0.;
-			pNonIdealKin_temp[2][2] = 0.;
-
-			#if RANDOM_DISSIPATIVE
-                // Dissipative
-                pDissipative_temp[0][0] = 0.;
-                pDissipative_temp[0][1] = 0.;
-                pDissipative_temp[0][2] = 0.;
-
-                pDissipative_temp[1][0] = 0.;
-                pDissipative_temp[1][1] = 0.;
-                pDissipative_temp[1][2] = 0.;
-
-                pDissipative_temp[2][0] = 0.;
-                pDissipative_temp[2][1] = 0.;
-                pDissipative_temp[2][2] = 0.;
-
-                // Random
-                pRandom_temp[0][0] = 0.;
-                pRandom_temp[0][1] = 0.;
-                pRandom_temp[0][2] = 0.;
-
-                pRandom_temp[1][0] = 0.;
-                pRandom_temp[1][1] = 0.;
-                pRandom_temp[1][2] = 0.;
-
-                pRandom_temp[2][0] = 0.;
-                pRandom_temp[2][1] = 0.;
-                pRandom_temp[2][2] = 0.;
-			#endif
-
-            #if HARD_SPHERES
-                pBondInteractions_temp[0][0] = 0.;
-                pBondInteractions_temp[0][1] = 0.;
-                pBondInteractions_temp[0][2] = 0.;
-
-                pBondInteractions_temp[1][0] = 0.;
-                pBondInteractions_temp[1][1] = 0.;
-                pBondInteractions_temp[1][2] = 0.;
-
-                pBondInteractions_temp[2][0] = 0.;
-                pBondInteractions_temp[2][1] = 0.;
-                pBondInteractions_temp[2][2] = 0.;
-            #endif
-
 		}
-		//--------------------------------------- g(r) sampling --------------------------------------//
-		void grSample(unsigned int idxStart, unsigned int idxEnd, unsigned int idx){    // idx specifies the gR is between AA, AB, BB species
-
-			//loop over all contacts p=1..N-1, q=p+1..N to evaluate forces
-             for( i=idxStart; i <= idxEnd-1; ++i ){
-                 for ( j=i+1; j<= idxEnd; ++j ){
-					Rij     = particles[i].r - particles[j].r;	
-
-                    // nearest image distance
-                    Rij.X   = Rij.X - boxEdge[x] * round( Rij.X / boxEdge[x] );		// rij shear-flow correction : dR
-                    Rij.Y   = Rij.Y - boxEdge[y] * round( Rij.Y / boxEdge[y] );
-                    Rij.Z   = Rij.Z - boxEdge[z] * round( Rij.Z / boxEdge[z] );
-
-					r2      = Rij.getLengthSquared();
-					dist    = std::sqrt(r2);
-
-                    ig = ceil( dist / gR_radDelta ) - 1;
-                    if ( (ig < 0) || (ig >= gR_nElem) ) {simProg << " gRcalc(): out of bounds for dist = " << dist << " and ig = " << ig  << std::endl; abort();} 
-                    gR_nCount[ig][idx] += 2.0;	
-					j++;
-				}
-				i++;
-			}
-
-
-		}
-		//--------------------------------------- g(r) calculation --------------------------------------//
-		// Structure function g(r) calculation
-		void grCalc(){
-
-			// write the g(r) data to a file
-			std::ofstream grWrite("./data/gr_data.dat");
-			grWrite << "ri \t ro \t rad \t gr_count \t tot_part \t samples \t nHomo \t rho" << std::endl;
-
-			for (i=0; i < gR_nElem; ++i){
-
-				rad = gR_radDelta*( i + 0.5) + gR_radMin;		// radius in question	
-				ri = i*gR_radDelta + gR_radMin;				// radius at i^th bin
-				ro = (i+1)*gR_radDelta + gR_radMin;				// radius at (i+1)^th bin
-				// double shellVol = (4/3)*M_PI*( pow(ro, 3.0) - pow(ri, 3.0) );	// volume of shell
-				// double nHomo = shellVol*rho;					// number of particles if homogeneous
-
-				// gR_nCount[i] /= (npart*gR_tSamples*nHomo);				// normalizing g(r)
-
-				grWrite << ri << "\t" << ro << "\t" << rad << "\t" << gR_nCount[i][0] << "\t" << gR_nCount[i][1] << "\t" << gR_nCount[i][2] << "\t" << npart << "\t" << gR_tSamples << "\t" << rho << std::endl;
-			}
-
-			simProg << " the total number of samples is: " << gR_tSamples	<< std::endl;
-			simProg << " the homogeneous density is: " << rho << std::endl;
-			simProg << " the number of particles is: " << npart << std::endl;
-
-			// file close	
-			grWrite.close();
-		}//grCalc()
-
-		//--------------------------------------- velocity histogram calculation --------------------------------------//
-		void velHistCalc(){
-
-			std::ofstream velDistdata("./data/velDist_data.dat"); 
-			velDistdata << "velBin" << "\t" << "AvgTemp" << "\t" << "velHistX" << "\t" << "trapzAreaX" << "\t" << "velHistY" << "\t" << "trapzAreaY" << "\t" << "velHistZ[i]" << "\t" << "trapzAreaZ" << std::endl;	
-
-			trapzAreaX = 0.0;
-			trapzAreaY = 0.0;
-			trapzAreaZ = 0.0;
-
-			for (i=1; i <= velHist_bins-2; ++i){
-
-				trapzAreaX += 2.0*velHistX[i];	
-				trapzAreaY += 2.0*velHistY[i]; 	
-				trapzAreaZ += 2.0*velHistZ[i];	
-			}	
-
-			// adding the contributions from the first and last element
-			trapzAreaX += velHistX[0] + velHistX[velHist_bins - 1];
-			trapzAreaY += velHistY[0] + velHistY[velHist_bins - 1];
-			trapzAreaZ += velHistZ[0] + velHistZ[velHist_bins - 1];
-
-			// multiplying the distance between the bins to get the final area
-			trapzAreaX *= velHist_velDelta/2.0;
-			trapzAreaY *= velHist_velDelta/2.0;
-			trapzAreaZ *= velHist_velDelta/2.0;
-
-			// converting histogram to PDF
-			for (i=0; i< velHist_bins; ++i){
-				bin_lower = velHist_velMin + i*velHist_velDelta;
-				bin_upper = velHist_velMin + (i+1)*velHist_velDelta;
-				vel = (bin_lower + bin_upper)*0.5;
-				tempAv = tempSum/tempCount;
-
-				velDistdata << vel << "\t" << tempAv << "\t" << velHistX[i] << "\t" << trapzAreaX << "\t" << velHistY[i] << "\t" << trapzAreaY << "\t" << velHistZ[i] << "\t" << trapzAreaZ << std::endl;	
-			}
-
-			velDistdata.close();
-		}
-
-		//---------------------------------------- Auto-correlation function calculation------------------------------//
-		#if SACF
-		void recursive_addCorr(double f, unsigned int nf, unsigned int k){
-
-			// shift-pointer and put in f
-			point               = ( pointCorr[nf][k] + 1 ) % pCorr;
-			pointCorr[nf][k]    = point;
-			aCorr[nf][k][point] = f;
-
-			//std::cout << "point = " << point  << "\t f = " << f << "\t nf= " << nf << "\t k = " << k << std::endl;
-
-			// correlate data
-			// WARNING: ensure that none of the data is smaller than -9e9
-			// If this is the case, the aCorr[nf][k][j] is discounted, leading to 
-			// wrong correlations. For example: if " > -1" leads to erroneous results
-			for ( i=0 ; i<pCorr2 ; ++i ){
-
-				j = ( point + pCorr - i - pCorr2 ) % pCorr;			// see report for explanation
-
-				n_base = n_vars * nf;
-				if ( aCorr[nf][k][j] > -9e20 ){					// nf+0 -- SxyC(t) * SxyC(0) / SxyR(t) * SxyR(0) / SxyD(t) * SxyD(0)
-					fCorr[n_base][k][i] += f*aCorr[nf][k][j];
-					nCorr[n_base][k][i] += 1; 
-				}
-			
-				nf1 = (nf+1) % n_vars;	
-				if ( aCorr[nf1][k][j] > -9e20 ){				// nf+1 -- SxyC(t) * SxyR(0) / SxyR(t) * SxyD(0) / SxyD(t) * SxyC(0)
-					fCorr[n_base + 1][k][i] += f*aCorr[nf1][k][j];
-					nCorr[n_base + 1][k][i] += 1; 
-				}
-								
-				nf2 = (nf+2) % n_vars;	
-				if ( aCorr[nf2][k][j] > -9e20 ){				// nf+2 -- SxyC(t) * SxyD(0) / SxyR(t) * SxyC(0) / SxyD(t) * SxyR(0)
-					fCorr[n_base + 2][k][i] += f*aCorr[nf2][k][j];
-					nCorr[n_base + 2][k][i] += 1; 
-				}
-
-				nf3 = (nf+3) % n_vars;	
-				if ( aCorr[nf3][k][j] > -9e20 ){				// nf+2 -- SxyC(t) * SxyD(0) / SxyR(t) * SxyC(0) / SxyD(t) * SxyR(0)
-					fCorr[n_base + 3][k][i] += f*aCorr[nf3][k][j];
-					nCorr[n_base + 3][k][i] += 1; 
-				}
-
-			} // do the correlation only when the array is filled up
-			
-			// putting in 0 missing values -- from 1 to pCorr2-1
-			if ( k == 1 ){
-				for ( i=0 ; i<pCorr2-1 ; ++i ){
-		
-					j = ( point + pCorr - i - 1 ) % pCorr;
-				
-					n_base = n_vars * nf;
-					if ( aCorr[nf][1][j] > -9e20 ){
-						fCorr[n_base][0][i] += aCorr[nf][1][point] * aCorr[nf][1][j];
-						nCorr[n_base][0][i] += 1;
-					}
-
-					nf1 = (nf+1) % n_vars;	
-					if ( aCorr[nf1][1][j] > -9e20 ){			
-						fCorr[n_base + 1][0][i] += aCorr[nf][1][point] * aCorr[nf1][k][j];
-						nCorr[n_base + 1][0][i] += 1; 
-					}
-									
-					nf2 = (nf+2) % n_vars;	
-					if ( aCorr[nf2][1][j] > -9e20 ){				
-						fCorr[n_base + 2][0][i] += aCorr[nf][1][point] * aCorr[nf2][k][j];
-						nCorr[n_base + 2][0][i] += 1; 
-					}
-					
-					nf3 = (nf+3) % n_vars;	
-					if ( aCorr[nf3][1][j] > -9e20 ){				
-						fCorr[n_base + 3][0][i] += aCorr[nf][1][point] * aCorr[nf3][k][j];
-						nCorr[n_base + 3][0][i] += 1; 
-					}
-				}
-			}
-	
-			// shift to next-level : WARNING: Observe that this is hard-coded to handle only mCorr = 2
-			// ideally: (1. / mCorr ) * ( aCorr[nf][k][point] + aCorr[nf][k][point - 1] + ... aCorr[nf][k][point - mCorr + 1] ) -- average over m terms
-			if ( ( (point + 1) % mCorr == 0 ) && k < (corLevels - 1) )
-				recursive_addCorr( (1. / mCorr) * ( aCorr[nf][k][point] + aCorr[nf][k][point - 1] ), nf, k+1);
-			else 
-				return;
-		}
-		//--------------------------------------- velocity histogram calculation --------------------------------------//
-		void writeCorr(){
-
-			std::ofstream corrdata("./data/correlationData.dat"); 
-			#if SACF_TEST
-                std::ofstream corrdata("./cbp7_li_ForLi/thejas/mycorrelationData_p_16.dat"); 
-			#endif
-			
-			// std::cout << "before avg fcorr[0][0][0]= " << fCorr[0][0][0] << std::endl;
-	
-			// data averaging
-			for ( i1=0 ; i1<n_vars*n_vars ; ++i1 ){
-				for( j1=0; j1<corLevels ; ++j1 ){
-					for( k1=0; k1<pCorr2 ; ++k1 ){
-						fCorrAv[i1][j1][k1] = fCorr[i1][j1][k1] / nCorr[i1][j1][k1];
-						// fCorr[i1][j1][k1] /= nCorr[i1][j1][k1];
-					} // blocks
-				} // levels
-			} // variables
-
-			for ( i1=0 ; i1<n_vars*n_vars ; ++i1 )
-				normalizeCorrAv[i1] = normalizeCorr[i1] / normalizeCorr_count;
-				// normalizeCorr[i1] /= normalizeCorr_count;
-
-			// writing data -- writing level 0 and other levels separately
-			// Level 0
-			for( k1=0 ; k1<pCorr2-1 ; ++k1 ){
-
-				corrdata << k1+1 << "\t\t";
-				for( i1=0 ; i1<n_vars*n_vars ; ++i1){
-					corrdata << fCorrAv[i1][0][k1] << "\t\t" << normalizeCorrAv[i1] << "\t\t"; 
-				}
-				corrdata << std::endl;
-			}
-	
-			// Level1 to corLevels-1
-			for( j1=1 ; j1<corLevels ; ++j1 ){
-				for( k1=0 ; k1<pCorr2 ; ++k1 ){
-					
-					corrdata << ( pCorr2 + k1 ) * pow(2. , j1 - 1) << "\t\t";
-					for ( i1=0 ; i1<n_vars*n_vars ; ++i1 ){
-						corrdata << fCorrAv[i1][j1][k1] << "\t\t" << normalizeCorrAv[i1] << "\t\t";
-					}
-					corrdata << std::endl;	
-				}
-
-			} 
-			corrdata.close();
-		}
-		#endif
 		//--------------------------------------- Parameter file writing--------------------------------------//
 		void paraWrite(std::ofstream& paraInfo){
 
@@ -2203,86 +1258,6 @@ class DPD {
 				simProg << step << " steps out of " << stepMax << " completed " << "\n";
 			}
 
-			// separate module for pressure -- requires better averaging
-			if ( pcounter >= psaveCount ) {
-
-                // std::cout << "pCounter = " << pcounter << ", at step = " << step << "\n";
-				
-				// average and reset the pTensor
-				#include "pTensAverage.h"
-
-				// Pressure tensor	
-				pTensStats 	<<  pIdeal[0][0]		 << " " 
-					        <<  pIdeal[0][1]		 << " " 
-	        				<<  pIdeal[0][2]		 << " "
-		        			<<  pIdeal[1][0]		 << " "
-			        		<<  pIdeal[1][1]		 << " "
-				        	<<  pIdeal[1][2]		 << " "
-				        	<<  pIdeal[2][0]		 << " "
-	        				<<  pIdeal[2][1]		 << " "
-		        			<<  pIdeal[2][2]		 << " "
-
-			        		<<  pNonIdeal[0][0]		 << " " 
-				        	<<  pNonIdeal[0][1]		 << " " 
-        					<<  pNonIdeal[0][2]		 << " "
-	        				<<  pNonIdeal[1][0]		 << " "
-		        			<<  pNonIdeal[1][1]		 << " "
-		        			<<  pNonIdeal[1][2]		 << " "
-			        		<<  pNonIdeal[2][0]		 << " "
-		        			<<  pNonIdeal[2][1]		 << " "
-			        		<<  pNonIdeal[2][2]		 << " " 
-
-				        	<<  pNonIdealKin[0][0]		 << " " 
-				        	<<  pNonIdealKin[0][1]		 << " " 
-        					<<  pNonIdealKin[0][2]		 << " "
-	        				<<  pNonIdealKin[1][0]		 << " "
-		        			<<  pNonIdealKin[1][1]		 << " "
-		        			<<  pNonIdealKin[1][2]		 << " "
-			        		<<  pNonIdealKin[2][0]		 << " "
-		        			<<  pNonIdealKin[2][1]		 << " "
-			        		<<  pNonIdealKin[2][2]		 << " " 
-
-			        		<<  pDissipative[0][0]	         << " " 
-				        	<<  pDissipative[0][1]	         << " " 
-        					<<  pDissipative[0][2]	         << " "
-	        				<<  pDissipative[1][0]	         << " "
-		        			<<  pDissipative[1][1]	         << " "
-		        			<<  pDissipative[1][2]	         << " "
-			        		<<  pDissipative[2][0]	         << " "
-		        			<<  pDissipative[2][1]	         << " "
-			        		<<  pDissipative[2][2]	         << " " 
-
-			        		<<  pRandom[0][0]                << " " 
-				        	<<  pRandom[0][1]                << " " 
-        					<<  pRandom[0][2]                << " "
-	        				<<  pRandom[1][0]                << " "
-		        			<<  pRandom[1][1]                << " "
-		        			<<  pRandom[1][2]                << " "
-			        		<<  pRandom[2][0]                << " "
-		        			<<  pRandom[2][1]                << " "
-                            #if HARD_SPHERES
-                                <<  pRandom[2][2]                << " "
-
-                                <<  pBondInteractions[0][0]                << " " 
-                                <<  pBondInteractions[0][1]                << " " 
-                                <<  pBondInteractions[0][2]                << " "
-
-                                <<  pBondInteractions[1][0]                << " "
-                                <<  pBondInteractions[1][1]                << " "
-                                <<  pBondInteractions[1][2]                << " "
-
-                                <<  pBondInteractions[2][0]                << " "
-                                <<  pBondInteractions[2][1]                << " "
-                                <<  pBondInteractions[2][2]                << "\n";
-                            #else 
-                                <<  pRandom[2][2]                << " " << "\n";
-                            #endif
-						
-				#include "pTensReset.h"
-
-				pcounter = 0;	
-			}
-
 			//write output file in the .data format
 			if (counter>=saveCount) {				
 
@@ -2332,85 +1307,6 @@ class DPD {
 				momStats 	<< std::setw(20) << std::setprecision(15) << momX << "\t" 
 				        	<< std::setw(20) << std::setprecision(15) << momY << "\t" 
 				        	<< std::setw(20) << std::setprecision(15) << momZ << "\n";
-
-
-				// density profile rhoZ
-				#if PLANAR_SLAB 
-
-				sprintf( filename, "./data/rhoZ_%d.dat", step );  
-				std::ofstream rhoZStats( filename );
-
-				for ( iRhoZ = 0; iRhoZ < rhoZ_bins ; ++iRhoZ )  {
-
-					bin_lower = rhoZ_Zmin + ( iRhoZ ) * rhoZ_Zdelta;
-					bin_upper = rhoZ_Zmin + ( iRhoZ + 1 ) * rhoZ_Zdelta;
-					Zpos = ( bin_lower + bin_upper )*0.5;
-					vol = rhoZ_Zdelta * boxEdge[x] * boxEdge[y];
-
-					rhoZStats << Zpos << "\t" << vol << "\t" << rhoZ[iRhoZ] << "\t" << counter << "\n";
-
-					// reset value of rhoZ vector
-					rhoZ[iRhoZ] = 0.0;
-				}
-
-					#if WALL_ON
-					/*
-					// COM calculation
-					if ( step > nZ_tStart ) {
-						sprintf( filename, "./data/segPlane_%d.dat", step );  
-						std::ofstream segPlaneStats( filename );
-					
-						// writing the center of mass		
-						for ( segPlane_ind = 0; segPlane_ind < segPlane_bins; ++segPlane_ind ){
-							segPlane_xCOM[segPlane_ind] /= segPlane_count[segPlane_ind];
-							segPlane_zCOM[segPlane_ind] /= segPlane_count[segPlane_ind];
-
-							segPlaneStats << segPlane_xCOM[segPlane_ind] << "\t" << segPlane_zCOM[segPlane_ind] << "\n";
-
-							// reset values
-							segPlane_count[segPlane_ind] = 0;
-							segPlane_xCOM[segPlane_ind] = 0.0;
-							segPlane_zCOM[segPlane_ind] = 0.0;
-						}
-
-					}
-					*/
-
-					/*
-					if ( step > nZ_tStart){
-						sprintf( filename, "./data/nzStats_%d.dat", step );  
-						std::ofstream nZStats( filename );
-
-						for ( nZ_indz = 0; nZ_indz < nZ_zbins; ++nZ_indz ){
-							for ( nZ_indx = 0; nZ_indx < nZ_xbins; ++nZ_indx ){
-
-								nZStats << ( nZ[nZ_indz][nZ_indx] / counter ) << "\t";
-							}
-							nZStats << "\n" << "\n";
-						}
-					}
-					*/
-					#endif
-
-					#elif CYLINDER_DROPLET
-
-					sprintf( filename, "./data/rhor_%d.dat", step );  
-					std::ofstream rhorStats( filename );
-
-					for ( iRhor = 0; iRhor < rhor_bins ; ++iRhor )  {
-
-						bin_lower = rhor_rmin + ( iRhor ) * rhor_rdelta;
-						bin_upper = rhor_rmin + ( iRhor + 1 ) * rhor_rdelta;
-						radPos = ( bin_lower + bin_upper )*0.5;
-						vol = M_PI * ( pow( bin_upper, 2.0 ) - pow( bin_lower, 2.0 ) ) * cylHeight;
-
-						rhorStats << radPos << "\t" << vol << "\t" << rhor[iRhor] << "\t" << counter << "\n";
-
-						// reset value of rhor vector
-						rhor[iRhor] = 0.0;
-					}
-					#endif	
-
 
 					//reset the counter, write time to terminal
 					counter = 0;
@@ -2542,292 +1438,7 @@ class DPD {
                 #endif
 			}
 		}
-        //---------------------- Create cylinder array -----------------------------//
-        #if CYLINDER_ARRAY 
-        /*
-        void createCylinderArray ( Vec3D p1, Vec3D p2, double cylRad ){
 
-            pCount = 0;
-
-            xind_min = 0.00;
-            yind_min = 0.00;
-            zind_min = 0.00;
-
-            xind_max = boxEdge[x];
-            yind_max = boxEdge[y];
-            zind_max = boxEdge[z];
-            
-            zind = zind_min;
-            aCube = pow( 1. / initRho, 1./3. );
-
-            simProg << "***************************************************" << std::endl;
-            // simProg << "cylinder with cylCenterX: " << cylCenterX << ", cylCenterZ: " << cylCenterZ << ", cylRad: " << cylRad << std::endl;
-
-            while ( zind < zind_max ){
-                xind = xind_min;
-                // Particle position intialization in a crystal structure 
-                while ( xind < xind_max){
-                    yind = yind_min;
-                    while( yind < yind_max){
-
-                        x01.X = xind - p1.X; x01.Y = yind - p1.Y; x01.Z = zind - p1.Z;
-                        x02.X = xind - p2.X; x02.Y = yind - p2.Y; x02.Z = zind - p2.Z;
-
-                        x21.X = p2.X - p1.X; x21.Y = p2.Y - p1.Y; x21.Z = p2.Z - p1.Z;
-
-                        x012Cross = x01%x02;
-
-                        Num = x012Cross.getLength(); 
-                        Den = x21.getLength(); 
-
-                        shortestDist = Num / Den; 
-                        // std::cout << "x01 = " <<  x01 << ", x02 = " << x02 <<", x012Cross = " << x012Cross << ", x21= " << x21 << std::endl;
-                        // std::cout << "shortestDist = " << shortestDist << std::endl;
-            
-                        // if ( pow( xind - cylCenterX, 2.0 ) + pow( zind - cylCenterZ, 2.0 ) <= pow( cylRad, 2.0 ) ){
-                        if ( shortestDist <= cylRad ){
-            
-                            // generate random velocities
-                            rand_gen_velx = ((double) rand() / (RAND_MAX));
-                            rand_gen_vely = ((double) rand() / (RAND_MAX));
-                            rand_gen_velz = ((double) rand() / (RAND_MAX));
-            
-                            // initializing particle radius, mass, position and velocity
-                            // if ( xind*xind + yind*yind + zind*zind <= radSqr )
-                            particles.push_back({1.0,1.0,{xind, yind, zind},{rand_gen_velx, rand_gen_vely, rand_gen_velz},0});
-                            pCount += 1;
-            
-                        }// inside cylinder
-                        yind += aCube*rcutoff;
-                    }// yind			
-                    xind += aCube*rcutoff;
-                }
-                zind += aCube*rcutoff;
-            }// zind
-
-            simProg << "finished initialization of  " << pCount << " particles inside crystal lattice" << std::endl;
-            simProg << "***************************************************" << std::endl;
-        }
-        */
-        #endif
-
-        /******************************* ELLIPSE **********************************************/
-        void createEllipseArray ( double Xc, double Zc, double alphaOut, double majAxisOut, double alphaIn, double majAxisIn, bool y_axis ){
-
-            pCount = 0;
-
-            xind_min = 0.00;
-            yind_min = 0.00;
-            zind_min = 0.00;
-
-            xind_max = boxEdge[x];
-            yind_max = boxEdge[y];
-            zind_max = boxEdge[z];
-
-            bool outerEllipse, innerEllipse;
-            
-            zind = zind_min;
-            aCube = pow( 1. / initRho, 1./3. );
-
-            simProg << "***************************************************" << std::endl;
-            // simProg << "cylinder with cylCenterX: " << cylCenterX << ", cylCenterZ: " << cylCenterZ << ", cylRad: " << cylRad << std::endl;
-
-            while ( zind < zind_max ){
-                xind = xind_min;
-                // Particle position intialization in a crystal structure 
-                while ( xind < xind_max){
-                    yind = yind_min;
-                    while( yind < yind_max){
-
-                            rand_gen_velx = ((double) rand() / (RAND_MAX));
-                            rand_gen_vely = ((double) rand() / (RAND_MAX));
-                            rand_gen_velz = ((double) rand() / (RAND_MAX));
-
-                            if ( y_axis ) {
-                                outerEllipse = pow( yind - Xc, 2. ) +  pow(alphaIn, 2. ) * pow( zind - Zc , 2. ) <= pow(majAxisOut, 2.);
-                                innerEllipse = pow( yind - Xc, 2. ) +  pow(alphaOut, 2. ) * pow( zind - Zc , 2. ) >= pow(majAxisIn, 2.);
-                            }
-                            else {
-                                outerEllipse = pow( xind - Xc, 2. ) +  pow(alphaIn, 2. ) * pow( zind - Zc , 2. ) <= pow(majAxisOut, 2.);
-                                innerEllipse = pow( xind - Xc, 2. ) +  pow(alphaOut, 2. ) * pow( zind - Zc , 2. ) >= pow(majAxisIn, 2.);
-                            }
-            
-                            if ( outerEllipse && innerEllipse  ){
-                                particles.push_back({0.5,1.0,{xind, yind, zind},{0., 0., 0.},0});
-                                pCount++;
-                            }
-            
-                        yind += aCube*rcutoff;
-                    }// yind			
-                    xind += aCube*rcutoff;
-                }
-                zind += aCube*rcutoff;
-            }// zind
-
-            simProg << "finished initialization of  " << pCount << " particles inside elliptical cylinder" << std::endl;
-            simProg << "***************************************************" << std::endl;
-        }
-        /******************************* SQUARE **********************************************/
-        /*
-        void createSquareArray ( double squareCenterX, double squareCenterZ, double squareEdge, double rotationTheta ){
-
-            // defining variables
-            bool insideSquare;
-            double xindRotated;
-            double zindRotated;
-
-            // creating a rectangular region
-            double innerEdgeX    = - 0.5 * squareEdge;
-            double outerEdgeX    =   0.5 * squareEdge;
-
-            double innerEdgeZ    = - 0.5 * squareEdge;
-            double outerEdgeZ    =   0.5 * squareEdge;
-
-            aCube = pow( 1. / initRho, 1./3. );
-
-            xind_min = -boxEdge[x];
-            yind_min = 0.01;
-            zind_min = -boxEdge[z];
-
-            xind_max = boxEdge[x];
-            yind_max = boxEdge[y];
-            zind_max = boxEdge[z];
-            
-            zind = zind_min;
-            aCube = pow( 1. / initRho, 1./3. );
-
-            simProg << "***************************************************" << std::endl;
-            // simProg << "cylinder with cylCenterX: " << cylCenterX << ", cylCenterZ: " << cylCenterZ << ", cylRad: " << cylRad << std::endl;
-
-            pCount = 0;
-            while ( zind < zind_max ){
-                xind = xind_min;
-                while ( xind < xind_max){
-                    yind = yind_min;
-                    while( yind < yind_max){
-
-                        insideSquare = ( (xind <= outerEdgeX ) && ( xind >= innerEdgeX  ) && (zind <= outerEdgeZ ) && ( zind >= innerEdgeZ ) ) ;
-
-                        if ( insideSquare ){
-
-                            // rotate co-ordinates
-                            xindRotated = xind * cos( rotationTheta ) - zind * sin( rotationTheta );
-                            zindRotated = xind * sin( rotationTheta ) + zind * cos( rotationTheta );
-
-                            particles.push_back( { 1.0, 1.0, {xindRotated + squareCenterX, yind, zindRotated + squareCenterZ}, {0., 0., 0.}, 0} );
-                            pCount++;
-
-                        }// inside square
-                        yind += aCube * rcutoff;
-                    }// yind			
-                    xind += aCube * rcutoff;
-                }
-                zind += aCube * rcutoff;
-            }// zind
-
-            simProg << "finished initialization of  " << pCount << " particles inside elliptical cylinder" << std::endl;
-            simProg << "***************************************************" << std::endl;
-        }
-        */
-        void createSquareArray ( double squareCenterX, double squareCenterZ, double squareEdge, double rotationTheta ){
-
-            for (auto p = particles.begin();  p!=particles.end(); ++p){
-
-                double Expr1 = p->r.Z + p->r.X - ( squareCenterZ + squareCenterX + 0.5 * squareEdge );
-                double Expr2 = p->r.Z + p->r.X - ( squareCenterZ + squareCenterX - 0.5 * squareEdge );
-                double Expr3 = p->r.Z - p->r.X - ( squareCenterZ - squareCenterX + 0.5 * squareEdge );
-                double Expr4 = p->r.Z - p->r.X - ( squareCenterZ - squareCenterX - 0.5 * squareEdge );
-
-                bool insideSquare = ( Expr1 <= 0. && Expr2 >=0. && Expr3 <=0. && Expr4 >= 0. );
-
-                if ( insideSquare ){
-                    p->type = 0;
-                    pCount++;
-                }
-
-                Expr1 = p->r.Z + p->r.X - ( squareCenterZ + squareCenterX + 0.2 * squareEdge );
-                Expr2 = p->r.Z + p->r.X - ( squareCenterZ + squareCenterX - 0.2 * squareEdge );
-                Expr3 = p->r.Z - p->r.X - ( squareCenterZ - squareCenterX + 0.2 * squareEdge );
-                Expr4 = p->r.Z - p->r.X - ( squareCenterZ - squareCenterX - 0.2 * squareEdge );
-
-                bool insideCore = ( Expr1 <= 0. && Expr2 >=0. && Expr3 <=0. && Expr4 >= 0. );
-
-                if ( insideCore ){
-                    p->type = 3;
-                    pCount++;
-                }
-
-            }
-
-        }
-        //------------------------------ Create spring network : FIXED geometry ------------------------------//
-        // creates springs between particles based on nearest neighbour considerations for a fixed geometry //
-        // supply the beginning and the ending index of the particles //
-        unsigned int springNetworkFixed(unsigned int startIndex, unsigned int endIndex, double posBefSquash[][3]){
-
-           totalBonds = 0;
-           double r2;
-           double bondDistCutoff = 0.8;
-           double distBefSquash;
-
-            //loop over all contacts p=1..N-1, q=p+1..N to evaluate forces
-            for ( i=startIndex; i< endIndex ; ++i){
-                for ( j=i+1;  j<= endIndex; ++j){
-
-                    Vec3D temp;
-                    Vec3D minRij;
-
-                    Vec3D Rij = particles[i].r - particles[j].r;    
-
-                    temp.X = Vec3D::roundOff_x(Rij, boxEdge[x]);
-                    temp.Y = Vec3D::roundOff_y(Rij, boxEdge[y]);
-                    temp.Z = Vec3D::roundOff_z(Rij, boxEdge[z]);
-
-                    minRij.X = Rij.X - temp.X*boxEdge[x];
-                    minRij.Y = Rij.Y - temp.Y*boxEdge[y];
-                    minRij.Z = Rij.Z - temp.Z*boxEdge[z];
-
-                    r2 = minRij.getLengthSquared();
-                    dist = std::sqrt( r2 );
-                    
-                    // calculations before squashing
-                    Rij.X = posBefSquash[i][0] - posBefSquash[j][0];   // Rij vector between ith and jth particle before squashing
-                    Rij.Y = posBefSquash[i][1] - posBefSquash[j][1];
-                    Rij.Z = posBefSquash[i][2] - posBefSquash[j][2];
-
-                    temp.X = Vec3D::roundOff_x(Rij, boxEdge[x]);
-                    temp.Y = Vec3D::roundOff_y(Rij, boxEdge[y]);
-                    temp.Z = Vec3D::roundOff_z(Rij, boxEdge[z]);
-
-                    minRij.X = Rij.X - temp.X*boxEdge[x];
-                    minRij.Y = Rij.Y - temp.Y*boxEdge[y];
-                    minRij.Z = Rij.Z - temp.Z*boxEdge[z];
-
-                    r2 = minRij.getLengthSquared();
-                    distBefSquash = std::sqrt( r2 );
-
-                    if ((dist < bondDistCutoff) && (distBefSquash < bondDistCutoff)) {
-
-                        // simProg << " bond between " << i << " and " << j << std::endl;
-                        k = particles[i].bondIndex[0] + 1;
-
-                        // add neighbor to the list
-                        particles[i].bondIndex[k]    = j;
-                        particles[i].eqBondLength[k] = dist;
-
-                        // increment the number of neighbors
-                        particles[i].bondIndex[0]    += 1;                    
-                        particles[i].eqBondLength[0] += 1;                 
-
-                        totalBonds++;
-
-                    }       
-
-                }
-            }
-
-            return( totalBonds );
-        }
         //------------------------------ Create spring network : ENTIRE box ------------------------------//
         // creates springs between particles based on nearest neighbour considerations for the entire box //
         void springNetworkBox(){
@@ -2951,46 +1562,5 @@ class DPD {
 
             return( result );
         }
-        //------------------------------ Brute force ------------------------------//
-        // Brute force implementation of the Force Calculation 
-        void forceCalc_bruteForce(){
-
-            //loop over all contacts p=1..N-1, q=p+1..N to evaluate forces
-            for (auto p = particles.begin();  p!=particles.end()-1; ++p){
-                for (auto q = p+1;  q!=particles.end(); ++q) {
-
-                    Vec3D temp;
-                    Vec3D minRij;
-
-                    Vec3D Rij = p->r - q->r;    
-
-                    temp.X = Vec3D::roundOff_x(Rij, boxEdge[x]);
-                    temp.Y = Vec3D::roundOff_y(Rij, boxEdge[y]);
-                    temp.Z = Vec3D::roundOff_z(Rij, boxEdge[z]);
-
-                    minRij.X = Rij.X - temp.X*boxEdge[x];
-                    minRij.Y = Rij.Y - temp.Y*boxEdge[y];
-                    minRij.Z = Rij.Z - temp.Z*boxEdge[z];
-
-                    double r2 = minRij.getLengthSquared();
-
-                    if ( r2 < rc2 ) {
-                        double r2i = 1/r2;
-                        double r6i = pow(r2i,3);
-
-                        double ff = 48.*1.*sig6*r2i*r6i*(sig6*r6i - 0.5);
-                        Vec3D Fij = ff*minRij;
-                        p->fC += Fij;
-                        q->fC += Fij*(-1.0); 
-
-                        // potential energy
-                        double pair_pot_en = 4.0*1.*sig6*r6i*(sig6*r6i - 1.0);
-                        pot_en += pair_pot_en - ecutLJ;
-                    }       
-
-                }
-            }
-        } 
-        };
-
+};
 #endif
