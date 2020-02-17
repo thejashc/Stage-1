@@ -120,7 +120,7 @@ class DPD {
                 std::ofstream pTensStats    ( "./data/pTens.dat"    , std::ios_base::app);  // Pressure tensor data
                 std::ofstream momStats      ( "./data/mom_data.dat" , std::ios_base::app);  // pressure and temperature data
                 #if HARD_SPHERES
-                    std::ofstream colloidStats   ("./data/colloid_box_crossing.dat", std::ios_base::app );
+                    std::ofstream colloidStats   ("./data/colloid_com.dat", std::ios_base::app );
                 #endif
 			#endif // RESTART
 
@@ -152,15 +152,8 @@ class DPD {
 				tot_en = kin_en + pot_en;
 
 				counter += 1;						// filewriting
-				fileWrite(enStats, eosStats, momStats, pTensStats);
+				fileWrite(enStats, eosStats, momStats, pTensStats, colloidStats);
                
-                /*
-                #if HARD_SPHERES
-					if ( step % saveCount == 0 )
-                        // colloidStats << step << "\t\t" << colloid_com_pos << "\t\t" <<  colloid_boxCrossing << std::endl;
-                        colloidStats << step << "\t\t" << colloid_com_pos << std::endl; 
-                #endif
-                */
 
 				resetVar();						// reset variables to zero
 				
@@ -222,10 +215,10 @@ class DPD {
 
                 #if HARD_SPHERES
                     ngbrIdxStart = particles.size();
-                    #include "readColloids.h"
+                    #include "fluidInCylinder.h"
                     ngbrIdxEnd=particles.size()-1;
-                    //#include "sphericalColloids.h"
                 #endif
+                
 				#if RESTART 
 					#include "restartConfig.h"
 				#endif
@@ -309,6 +302,10 @@ class DPD {
 					solid_index.push_back(i);
 					solidCount++;
 				}
+
+                #if HARD_SPHERES
+                    particles[i].rUnfolded = particles[i].r;
+                #endif
 			}
 
             simProg << fluidCount << " fluid particles indexed \n" << std::endl;
@@ -354,6 +351,10 @@ class DPD {
                     #endif
                     simProg << "\n" << "Particles not belonging to piston assigned the spring constant " << kWallNgbr1;
                     simProg << "\n" << ngbrIdxParticles << " solid particles from " << ngbrIdxStart << " and " << ngbrIdxEnd  << " have their bond indices set to 0 \n"<< std::endl;
+
+                    #if HARD_SPHERES
+                        nPartColloid=ngbrIdxParticles;
+                    #endif
 
                 #endif
 
@@ -822,15 +823,6 @@ class DPD {
 		//--------------------------------------- Integrate Equations of motion --------------------------------------//
 		void integrateEOM(){
 
-            double ff1=0.;
-            double ff2=0.;
-            double dWall1=0.;
-            double dWall2=0.;
-            double r7i=0.;
-			// #include "fluidParticles.h"
-
-			// #include "solidParticles.h"
-
             #if SPRING_CONNECTED_SLD && BCKGRND_CONNECTED_SLD
                 #include "springNetworkForceNew.h"  
             #elif SPRING_CONNECTED_SLD && !(BCKGRND_CONNECTED_SLD)
@@ -858,8 +850,8 @@ class DPD {
                 particles[i].r += particles[i].w*dt;                                // evaluating position at t+dt: r(t+dt)	
 
                 // implement periodic boundary condition 
-                //#include "pbcNew.h"
-                #include "pbcNewReflecting.h"
+                #include "pbcNew.h"
+                //#include "pbcNewReflecting.h"
                 //#include "pbcXOnly.h"
 
                 // calculate velocity (integral time step)
@@ -874,20 +866,15 @@ class DPD {
                     /* WARNING : The condition used to recognize the colloid is extremely simplified.
                      *           Best method is to identify the co-ordinates of the colloid and add up the
                      *           trajectories */
-                    if ( particles[i].type == 0 || particles[i].type == 3  ){
+                    if ( particles[i].type == 4  ){
                         particles[i].rUnfolded += particles[i].w * dt;
-                        colloid_com_pos += particles[i].rUnfolded;
+                        colloid_com_pos += (particles[i].rUnfolded/nPartColloid);
                     }
                 #endif
 
                 // update count for fluid particles
                 i++;
           }
-
-            #if HARD_SPHERES
-                // #include "colloidBoxCrossing.h"
-                colloid_com_pos /= solidCount;
-            #endif
 
 		} // run over all fluid particles
 		//--------------------------------------- Resetting variables--------------------------------------//
@@ -1252,11 +1239,17 @@ class DPD {
 		}
 
 		//--------------------------------------- Velocity, Momentum and Pressure file writing--------------------------------------//
-		void fileWrite( std::ofstream& enStats, std::ofstream& eosStats, std::ofstream& momStats, std::ofstream& pTensStats ){
+		void fileWrite( std::ofstream& enStats, std::ofstream& eosStats, std::ofstream& momStats, std::ofstream& pTensStats, std::ofstream& colloidStats ){
 
 			if ( step % saveCount == 0){
 				simProg << step << " steps out of " << stepMax << " completed " << "\n";
+
 			}
+
+            #if HARD_SPHERES
+            if( step % (saveCount/50) == 0 )
+                    colloidStats << step << "\t\t" << colloid_com_pos << std::endl; 
+            #endif
 
 			//write output file in the .data format
 			if (counter>=saveCount) {				
