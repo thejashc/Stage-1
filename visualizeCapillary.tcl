@@ -14,11 +14,11 @@ set cz [expr {$maxz/2.0}]
 
 set delta [exec grep "\(saveCount\)" param.out | awk {{print $NF}}]
 #set startFile $delta 
-set startFile 500
+set startFile 10
 #set endFile [exec tail -1 "simProg.txt" | awk {{print $1}}]
 set endFile 20000000
 #set incrFile [expr {$delta - 1}]
-set incrFile 499
+set incrFile 9
 
 # drawing the simulation box
 draw color white
@@ -32,7 +32,7 @@ for {set x $startFile} {$x < $endFile} {incr x} {
 
 #mol new /storage/thejas/stage1/code/data/XYZ1.xyz
 
-pbc set {20 20 600} -all
+pbc set {20 20 40} -all
 draw pbcbox -width 5
 
 puts "the molecule for this problem is 0"

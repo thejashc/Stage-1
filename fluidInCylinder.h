@@ -3,7 +3,6 @@ double colloidRadSqr = pow(colloidRad, 2.);
 
 unsigned int flag;
 
-/*
 // read centers of the colloid from file
 simProg << "***************************************************" << std::endl;
 simProg << "Started initialization of the spherical colloids" << std::endl;
@@ -39,13 +38,14 @@ for (i=0; i<NColloids; ++i){
 }
 
 readColloidPos.close();
-*/
 
+// read file
 readConfig.open(readFluidFrom, std::ios::binary | std::ios::in ); 
+
 if ( ! readConfig ) { simProg << "*** The file could not be opened/ does not exist *** \n Aborting !! " << std::endl; abort(); }
 
 readConfig.read ( ( char * ) &npart, sizeof (unsigned int) );
-simProg << " reservoir containing " << npart << " particles the glassy capillary cylinder  being read \n" << std::endl;
+simProg << " reservoir containing " << npart << " particles the glassy capillary cylinder  being read for fluid\n" << std::endl;
 
 for ( j = 0 ; j < npart ; ++ j ){	
 
@@ -64,45 +64,38 @@ for ( j = 0 ; j < npart ; ++ j ){
 
     innerRadius     = ( pow( scaledX, 2.0 ) + pow( scaledY, 2.0 ) <= ri2 );
 
-    flag = 1;
-    /*
-    i = 0;
-    while ( flag == 1 && i < NColloids ){
+    // cylinder
+    if ( innerRadius && (zind < capLen) ){
 
-        Rij.X = xind - colloidPos[i][0];
-        Rij.Y = yind - colloidPos[i][1];
-        Rij.Z = zind - colloidPos[i][2];
+        flag = 1;
+        i = 0;
+        while ( (flag == 1) && i < NColloids ){
 
-        // nearest image distance -- periodic boundaries only in the x and y directions
-        Rij.X = Rij.X - boxEdge[x] * round( Rij.X / boxEdge[x] );
-        Rij.Y = Rij.Y - boxEdge[y] * round( Rij.Y / boxEdge[y] );
-        Rij.Z = Rij.Z - boxEdge[z] * round( Rij.Z / boxEdge[z] );
+            Rij.X = xind - origCx;
+            Rij.Y = yind - origCy;
+            Rij.Z = zind - boxEdge[z]*0.5;
 
-        r2 = Rij.getLengthSquared();
+            // nearest image distance -- periodic boundaries only in the x and y directions
+            //Rij.X = Rij.X - boxEdge[x] * round( Rij.X / boxEdge[x] );
+            //Rij.Y = Rij.Y - boxEdge[y] * round( Rij.Y / boxEdge[y] );
+            //Rij.Z = Rij.Z - boxEdge[z] * round( Rij.Z / boxEdge[z] );
 
-        if ( ( r2 < colloidRadSqr ) && innerRadius && (zind < capLen)   ){
-            particles.push_back({1.0,1.0,{xind, yind, zind},{0., 0., resCOMVel}, 4});
-            flag = 0;
+            r2 = Rij.getLengthSquared();
+
+            //std::cout << r2 << ", " << colloidRadSqr << std::endl;
+
+            if ( r2 < colloidRadSqr ){
+                particles.push_back({1.0,1.0,{Rij.X + cylCenterX, Rij.Y + cylCenterY, zind},{0., 0., 0.}, 4});
+                flag = 0;
+            }
+
+            i++;
         }
 
-        i++;
-    }
-    */
+        if( flag == 1 )
+            particles.push_back({1.0,1.0,{scaledX+cylCenterX, scaledY+cylCenterY, zind},{0., 0., 0.},1});
 
-    // only if particle is attached to colloid then it is a solid, else it is a fluid particle
-    if ( (flag == 1) && innerRadius && (zind < capLen) ){
-        particles.push_back({1.0,1.0,{xind, yind, zind},{0., 0., 0.}, 1});
     }
-
-    /*
-       std::cout << type << "\t"   << xind << "\t" << std::setprecision(15)  
-       << yind << "\t"  << std::setprecision(15)     
-       << zind << "\t" << std::setprecision(15)   
-       << rand_gen_velx << "\t" << std::setprecision(15)  
-       << rand_gen_vely << "\t" << std::setprecision(15)  
-       << rand_gen_velz << "\n";
-       exit(0);
-       */
 }
 
 readConfig.close();
