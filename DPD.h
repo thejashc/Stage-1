@@ -217,6 +217,9 @@ class DPD {
                     ngbrIdxStart = particles.size();
                     #include "fluidInCylinder.h"
                     ngbrIdxEnd=particles.size()-1;
+
+                    grColloid.resize(int(capRad/radBinWidth));
+
                 #endif
                 
 				#if RESTART 
@@ -840,6 +843,9 @@ class DPD {
                 // store velocity (mid-step)
                 particles[i].r_old = particles[i].r;        // position at t: r(t)
                 particles[i].w_old = particles[i].w;        // velocity at t-dt/2 : v(t - dt/2)
+
+                if( ( particles[i].type == 1 ) || ( particles[i].type == 4 ) )      // external force on the fluid and colloid - close to pressure driven flow
+                    particles[i].fext.Z = extForce;
             
                 particles[i].w += ( particles[i].fC       + 
                                     particles[i].fD       + 
@@ -875,6 +881,14 @@ class DPD {
                 // update count for fluid particles
                 i++;
           }
+
+          #if HARD_SPHERES
+            //std::cout << colloid_com_pos << std::endl;
+
+            colloidRadPos=sqrt(pow(colloid_com_pos.X - boxHalve[x], 2.) + pow(colloid_com_pos.Y - boxHalve[y], 2.));
+            colIdx=floor(colloidRadPos/radBinWidth);
+            grColloid[colIdx] += 1;
+          #endif
 
 		} // run over all fluid particles
 		//--------------------------------------- Resetting variables--------------------------------------//
@@ -1247,8 +1261,15 @@ class DPD {
 			}
 
             #if HARD_SPHERES
-            if( step % (saveCount/50) == 0 )
-                    colloidStats << step << "\t\t" << colloid_com_pos << std::endl; 
+            if( step % psaveCount == 0 ){
+                    //colloidStats << step << "\t\t" << colloid_com_pos << std::endl; 
+                    for( int i=0; i<grColloid.size();++i){
+                        colloidStats << grColloid[i] << "\n";
+                        grColloid[i]=0;
+                    }
+
+                    colloidStats << "\n" << std::endl;
+            }
             #endif
 
 			//write output file in the .data format
