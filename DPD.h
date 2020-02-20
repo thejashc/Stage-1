@@ -19,7 +19,7 @@
 #define RESTART				    0
 
 // WALL flags
-#define WALL_ON				    1
+#define WALL_ON				    0
 #define SPRING_CONNECTED_SLD    1
 #define BCKGRND_CONNECTED_SLD   1
 
