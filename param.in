@@ -120,9 +120,9 @@ rd_cutoff           0.75
 #        Simulation time parameters 
 #-------------------------------------#
 dt                  0.01        # time parameters	
-stepMax             500
-rstrtFWrtFreq       1000
-saveCount           1
+stepMax             50000
+rstrtFWrtFreq       5000
+saveCount           5000
 psaveCount          50000
 pCorrTime           1
 #-------------------------------------#
@@ -170,3 +170,4 @@ pistonW             100.0
 #        GEOMETRY : SPHERICAL COLLOIDS
 #-------------------------------------#
 NColloids           1          # No. of Colloids
+extForce            0.0
