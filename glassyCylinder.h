@@ -29,8 +29,6 @@ double wallHeight =2.;
 double cylVol = 3.14159 * (ro2 - ri2) * capLen;
 double wallVol = (boxEdge[x]*boxEdge[y] - 3.14159 * ri2)*wallHeight;
 
-bool wallOption=false;
-
 std::ifstream readConfig(readSolidFrom, std::ios::binary | std::ios::in ); 
 
 if ( ! readConfig ) { simProg << "*** The file could not be opened/ does not exist *** \n Aborting !! " << std::endl; abort(); }
@@ -70,29 +68,27 @@ for ( j = 0 ; j < npart ; ++ j ){
         pCountCyl++;
     }
     //wall
-    /*
-       else if ( innerRadius &&
-       (scaledX > -0.5*boxEdge[x]) && (scaledX < 0.5*boxEdge[x]) &&
-       (scaledY > -0.5*boxEdge[y]) && (scaledY < 0.5*boxEdge[y]) &&            
-       (zind>capLen+0.5) && (zind<capLen+wallHeight) ){
-       particles.push_back({1.0,1.0,{scaledX+cylCenterY, scaledY+cylCenterY, zind+bufferLen},{0., 0., 0.},0});
-       pCount++;
-       pCountWall++;
-       }
-       else if ( innerRadius && middleInRadius && (zind>capLen) && (zind<capLen+0.5) ){
-       particles.push_back({1.0,1.0,{scaledX+cylCenterY, scaledY+cylCenterY, zind+bufferLen},{0., 0., 0.},0});
-       pCount++;
-       pCountWall++;
-       }
-       else if ( middleOutRadius && 
-       (scaledX > -0.5*boxEdge[x]) && (scaledX < 0.5*boxEdge[x]) &&
-       (scaledY > -0.5*boxEdge[y]) && (scaledY < 0.5*boxEdge[y]) &&  
-       (zind>capLen) && (zind<capLen+0.5) ){
-       particles.push_back({1.0,1.0,{scaledX+cylCenterY, scaledY+cylCenterY, zind+bufferLen},{0., 0., 0.},3});
-       pCount++;
-       pCountWall++;
-       }
-       */
+    else if ( innerRadius &&
+            (scaledX > -0.5*boxEdge[x]) && (scaledX < 0.5*boxEdge[x]) &&
+            (scaledY > -0.5*boxEdge[y]) && (scaledY < 0.5*boxEdge[y]) &&            
+            (zind>capLen+0.5) && (zind<capLen+wallHeight) ){
+        particles.push_back({1.0,1.0,{scaledX+cylCenterY, scaledY+cylCenterY, zind+bufferLen},{0., 0., 0.},0});
+        pCount++;
+        pCountWall++;
+    }
+    else if ( innerRadius && middleInRadius && (zind>capLen) && (zind<capLen+0.5) ){
+        particles.push_back({1.0,1.0,{scaledX+cylCenterY, scaledY+cylCenterY, zind+bufferLen},{0., 0., 0.},0});
+        pCount++;
+        pCountWall++;
+    }
+    else if ( middleOutRadius && 
+            (scaledX > -0.5*boxEdge[x]) && (scaledX < 0.5*boxEdge[x]) &&
+            (scaledY > -0.5*boxEdge[y]) && (scaledY < 0.5*boxEdge[y]) &&  
+            (zind>capLen) && (zind<capLen+0.5) ){
+        particles.push_back({1.0,1.0,{scaledX+cylCenterY, scaledY+cylCenterY, zind+bufferLen},{0., 0., 0.},3});
+        pCount++;
+        pCountWall++;
+    }
 
     /*
        std::cout << type << "\t"   << xind << "\t" << std::setprecision(15)  

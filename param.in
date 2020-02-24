@@ -3,7 +3,7 @@
 #-------------------------------------#
 boxEdgeX            20.0	
 boxEdgeY            20.0
-boxEdgeZ            40.0
+boxEdgeZ            100.0
 initRho             6.00
 #-------------------------------------#
 #        Original Reservoir Size
@@ -120,9 +120,9 @@ rd_cutoff           0.75
 #        Simulation time parameters 
 #-------------------------------------#
 dt                  0.01        # time parameters	
-stepMax             50000
+stepMax             200000
 rstrtFWrtFreq       5000
-saveCount           5000
+saveCount           500
 psaveCount          50000
 pCorrTime           1
 #-------------------------------------#
@@ -151,21 +151,23 @@ cylRad              4.0
 #-------------------------------------#
 #        Geometry: CAPILLARY CYLINDER
 #-------------------------------------#
-bufferLength        0.0		
-capLen              40.0
+bufferLength        10.0		
+capLen              50.0
 capRad              5.0
 capWallWdth         1.5
-resWdth             25.0
-resComZ             40.0       #distance from capillary entrance
+resWdth             10.0
+resComZ             10.0       #distance from capillary entrance
 resComVel           -0.00
 #-------------------------------------#
 #        Geometry: PISTON
 #-------------------------------------#
-pistonZStart        350.0 
-pistonThickness     0.25
-appPressure         0.5
-pistonT0	        2000.0
-pistonW             100.0
+pistZStart        83.0
+pistZEnd          63.5
+appPressure       0.5
+pistT0	          10000
+pistSigma         0.8
+pistEpsilon       5.0
+pistSpeed         0.0005
 #-------------------------------------#
 #        GEOMETRY : SPHERICAL COLLOIDS
 #-------------------------------------#

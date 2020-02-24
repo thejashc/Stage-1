@@ -414,18 +414,19 @@ readParam >> buffer >> pCorrTime;	    readParam.ignore(256,'\n');
     readParam >> buffer;                readParam.ignore(256,'\n');		
     readParam >> buffer;                readParam.ignore(256,'\n');		
 
-    readParam >> buffer >> pistonZStart; readParam.ignore(256,'\n');		// L71
-    readParam >> buffer >> pistonThickness; readParam.ignore(256,'\n');		// L71
-    readParam >> buffer >> appPressure;	 readParam.ignore(256,'\n');		// L71
-    readParam >> buffer >> pistonT0;	 readParam.ignore(256,'\n');		// L72
-    readParam >> buffer >> pistonW;		 readParam.ignore(256,'\n');		// L73
+    readParam >> buffer >> pistZStart;      readParam.ignore(256,'\n');		
+    readParam >> buffer >> pistZEnd;        readParam.ignore(256,'\n');		
+    readParam >> buffer >> appPressure;	    readParam.ignore(256,'\n');		
+    readParam >> buffer >> pistT0;          readParam.ignore(256,'\n');		
+    readParam >> buffer >> pistSigma;       readParam.ignore(256,'\n');		
+    readParam >> buffer >> pistEpsilon;     readParam.ignore(256,'\n');		
+    readParam >> buffer >> pistSpeed;       readParam.ignore(256,'\n');		
 #else 
     readParam.ignore(256, '\n');    // 3 Heading Lines
     readParam.ignore(256, '\n');
     readParam.ignore(256, '\n');
 
-    readParam.ignore(256, '\n');    // 5 parameter lines
-    readParam.ignore(256, '\n');
+    readParam.ignore(256, '\n');    // 3 parameter lines
     readParam.ignore(256, '\n');
     readParam.ignore(256, '\n');
     readParam.ignore(256, '\n');
@@ -559,6 +560,7 @@ ecutWCA = -1.0;
         avgWindow = 10. * pistonW;
         */
 
+        pistZ = pistZStart;
         pistonArea 	= boxEdge[x] * boxEdge[y];	// Area over which the piston acts
         //vz0Pist		= 0.;
     #endif

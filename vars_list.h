@@ -333,53 +333,18 @@ double resCOMVel;
 double resCOMZ;
 
 #if PISTON
-    double pistonForce;
-    double finalHeight;
-    unsigned int pistonParticles;
-    unsigned int avgWindow;
-
-    double pistonStart;
-    double pistonEnd;
-    double forceOnPistonInst;
-    double forceOnPistonCumulative;
-    double forceOnPistonPerParticle;
-    double distInPiston;
-
+    double pistZ;
+    double pistZStart;
+    double pistZEnd;
+    unsigned int pistT0;
+    double appPressure;
     double pistonArea;
 
-    double pistonT0;
-    double pistonW; 
+    double pistSigma;
+    double pistEpsilon;
+    double pistSpeed;
 
-    double pistonZStart;
-    double pistonThickness;
-    double appForce;
-    double appPressure;
-    double vzPist;
-    double vz0Pist;
-    double drPist;
-
-    double fOld;
-    double fNew;
-    double expFactor;
-    double delOverTau;
-
-    double delForce;
-
-    unsigned int pistonStartIndex;
-    unsigned int pistonEndIndex;
-
-    unsigned int upperPistonIdxStart;
-    unsigned int lowerPistonIdxStart;
-
-    unsigned int upperPistonIdxEnd;  
-    unsigned int lowerPistonIdxEnd;  
-
-    double pistonVelZUpper;
-    double pistonVelZLower;
-
-    double upperPistonCOMZ;
-    double lowerPistonCOMZ;
-
+    bool pistAct;
 #endif
 
 bool wcaInteraction;
