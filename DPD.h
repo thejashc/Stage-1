@@ -19,13 +19,14 @@
 #define RESTART				    0
 
 // WALL flags
-#define WALL_ON				    0
-#define SPRING_CONNECTED_SLD    1
+#define WALL_ON				    1
+#define SPRING_CONNECTED_SLD    0
 #define BCKGRND_CONNECTED_SLD   1
 
 #define CAPILLARY_CYLINDER		1
 #define CAPILLARY_SQUARE		0
-#define HARD_SPHERES            1
+#define HARD_SPHERES            0
+#define PISTON                  1
 
 // DENSITY CALCULATION
 #define DENS_EXACT			    0    
@@ -152,7 +153,11 @@ class DPD {
 				tot_en = kin_en + pot_en;
 
 				counter += 1;						// filewriting
-				fileWrite(enStats, eosStats, momStats, pTensStats, colloidStats);
+                #if HARD_SPHERES
+                    fileWrite(enStats, eosStats, momStats, pTensStats, colloidStats);
+                #else
+                    fileWrite(enStats, eosStats, momStats, pTensStats);
+                #endif    
                
 
 				resetVar();						// reset variables to zero
@@ -219,7 +224,8 @@ class DPD {
                     ngbrIdxEnd=particles.size()-1;
 
                     grColloid.resize(int(capRad/radBinWidth));
-
+                #else 
+                    #include "fluidInCylinder.h"
                 #endif
                 
 				#if RESTART 
@@ -331,17 +337,7 @@ class DPD {
                         if ( i >= ngbrIdxStart && i <= ngbrIdxEnd ){
                             particles[i].bondIndex[0] = 0;
                
-                            // assign spring constants to particles
-                            #if PISTON
-
-                            if( i >= pistonStartIndex && i <= pistonEndIndex )
-                               particles[i].springConstant = kWallNgbr2;
-                            else
-                               particles[i].springConstant = kWallNgbr1;
-
-                            #else
-                               particles[i].springConstant=kWallNgbr1; 
-                            #endif
+                            particles[i].springConstant=kWallNgbr1; 
 
                             ngbrIdxParticles++;
                         }
@@ -349,10 +345,7 @@ class DPD {
                         idx++;
                         i = solid_index[idx];
                     }
-                    #if PISTON
-                    simProg << "\n" << "Particles within indices " << pistonStartIndex << " and " << pistonEndIndex << " assigned spring constant " << kWallNgbr2;
-                    #endif
-                    simProg << "\n" << "Particles not belonging to piston assigned the spring constant " << kWallNgbr1;
+                    simProg << "\n" << "Particles assigned spring constant " << kWallNgbr1;
                     simProg << "\n" << ngbrIdxParticles << " solid particles from " << ngbrIdxStart << " and " << ngbrIdxEnd  << " have their bond indices set to 0 \n"<< std::endl;
 
                     #if HARD_SPHERES
@@ -834,6 +827,16 @@ class DPD {
                 #include "backgroundForceOnly.h"  
             #endif
 
+          #if PISTON 
+          pistAct=( ( step >= pistT0 ) && ( pistZ >= pistZEnd ) );      // determine if piston should act
+
+            if( pistAct ){
+                pistZ -= pistSpeed * rcutoff;        // Start Moving piston down
+
+                simProg << pistZ << std::endl;
+            }
+          #endif 
+
           i = 0;
           while ( i < npart ){
 
@@ -844,8 +847,26 @@ class DPD {
                 particles[i].r_old = particles[i].r;        // position at t: r(t)
                 particles[i].w_old = particles[i].w;        // velocity at t-dt/2 : v(t - dt/2)
 
+                #if PISTON
+                if ( ( particles[i].type == 1 ) && pistAct )
+                {
+
+                        particles[i].fext.X=0.;  
+                        particles[i].fext.Y=0.;  
+                        particles[i].fext.Z=pistonExtPotential(particles[i].r.Z, pistZ, pistEpsilon, pistSigma);  // store force on particle as external force
+
+                }
+                else{
+                        particles[i].fext.X=0.;  
+                        particles[i].fext.Y=0.;  
+                        particles[i].fext.Z=0.;  // store force on particle as external force
+                }
+                #endif   
+
+                #if HARD_SPHERES
                 if( ( particles[i].type == 1 ) || ( particles[i].type == 4 ) )      // external force on the fluid and colloid - close to pressure driven flow
                     particles[i].fext.Z = extForce;
+                #endif
             
                 particles[i].w += ( particles[i].fC       + 
                                     particles[i].fD       + 
@@ -1155,14 +1176,6 @@ class DPD {
 				paraInfo << "Wall width adj. to capillary (capWallWdth) :            " << capWallWdth << "\n";
 				paraInfo << "Initial width of reservoir (resWdth)       :            " << resWdth << "\n";
 
-				#if PISTON
-					paraInfo << "-------------------------------" << "\n";
-					paraInfo << "PISTON                         " << "\n";
-					paraInfo << "-------------------------------" << "\n";
-					paraInfo << "Applied pressure (appPressure)             :            " << appPressure << "\n";	
-					paraInfo << "Piston force applied from time (pistonT0)  :            " << pistonT0 << "\n";
-					paraInfo << "Time constant of piston force ( pistonW )  :            " << pistonW << "\n";
-				#endif
 			#endif
 			paraInfo << "---------------------------" << "\n";
 			paraInfo << "---------------------------" << "\n";
@@ -1253,7 +1266,11 @@ class DPD {
 		}
 
 		//--------------------------------------- Velocity, Momentum and Pressure file writing--------------------------------------//
-		void fileWrite( std::ofstream& enStats, std::ofstream& eosStats, std::ofstream& momStats, std::ofstream& pTensStats, std::ofstream& colloidStats ){
+        #if HARD_SPHERES
+            void fileWrite( std::ofstream& enStats, std::ofstream& eosStats, std::ofstream& momStats, std::ofstream& pTensStats, std::ofstream& colloidStats ){
+        #else
+            void fileWrite( std::ofstream& enStats, std::ofstream& eosStats, std::ofstream& momStats, std::ofstream& pTensStats){
+        #endif
 
 			if ( step % saveCount == 0){
 				simProg << step << " steps out of " << stepMax << " completed " << "\n";
@@ -1576,5 +1593,52 @@ class DPD {
 
             return( result );
         }
+        //------------------------------ ext Force Piston------------------------------//
+        #if PISTON
+        double pistonExtPotential(double rz, double pistZ, double pistEpsilon, double pistSigma){
+
+
+            //The z-component of the force only depends on the z-distance from the top and
+            //bottom walls. The force scheme is borrowed from the paper titled 
+            // Title : Interfacial Excess Free Energies of Solid-Liquid Interfaces by Molecular
+            // Dynamics Simulation and Thermodynamic Integration. 
+            // Authors : Frederic Leroy, Daniel J.V.A. dos Santos, Florian Muller Plathe
+            // Journal : Macromolecular Rapid Communications
+            // Year : 2009
+            //
+            double dist=0.;
+            //double ri;
+            //double r6i;
+            //double r7i;
+            double fz=0.;
+                         
+            // force on particle from Wall1
+            dist=pistZ-rz;  // distance of particle from piston - piston is above the particle
+            //ri=1./dist;     // inverse distance
+            //r6i=pow(ri,6.); // 6th inverse power
+            //r7i=ri*r6i;     // 7th inverse power
+
+            if ( (dist >=0) && (dist <= pistSigma) ){    // only particles within sigmaWCA feel the quadratic potential
+                //fz = 48. * epsilonWCA * sig6 * r7i * (sig6*r6i - 0.5); // Eqn(9) in the article
+                fz = -2.* pistEpsilon * (pistSigma - dist); 
+
+            /*
+            std::cout << rz << "\t" 
+                      << pistZ << "\t" 
+                      << epsilonWCA << "\t" 
+                      << sigmaWCA << "\t" 
+                      << sig6 << "\t" 
+                      << fz << std::endl;
+                      */
+            }
+            else
+                fz = 0.;
+
+            // return force
+            return fz;
+                
+        }
+        #endif
+              
 };
 #endif
