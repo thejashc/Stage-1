@@ -426,8 +426,11 @@ readParam >> buffer >> pCorrTime;	    readParam.ignore(256,'\n');
     readParam.ignore(256, '\n');
     readParam.ignore(256, '\n');
 
-    readParam.ignore(256, '\n');    // 3 parameter lines
+    readParam.ignore(256, '\n');    // 7 parameter lines
     readParam.ignore(256, '\n');
+    readParam.ignore(256, '\n');
+    readParam.ignore(256, '\n');
+    readParam.ignore(256, '\n');    
     readParam.ignore(256, '\n');
     readParam.ignore(256, '\n');
 #endif // PISTON
@@ -442,7 +445,6 @@ readParam >> buffer >> pCorrTime;	    readParam.ignore(256,'\n');
     readParam >> buffer;                readParam.ignore(256,'\n');		
 
     readParam >> buffer >> NColloids;	    readParam.ignore(256,'\n');	
-    readParam >> buffer >> extForce;        readParam.ignore(256,'\n');
 #else
     readParam.ignore(256,'\n');		
     readParam.ignore(256,'\n');		
