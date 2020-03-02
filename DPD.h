@@ -20,13 +20,13 @@
 
 // WALL flags
 #define WALL_ON				    1
-#define SPRING_CONNECTED_SLD    0
+#define SPRING_CONNECTED_SLD    1
 #define BCKGRND_CONNECTED_SLD   1
 
 #define CAPILLARY_CYLINDER		1
 #define CAPILLARY_SQUARE		0
-#define HARD_SPHERES            0
-#define PISTON                  1
+#define HARD_SPHERES            1
+#define PISTON                  0
 
 // DENSITY CALCULATION
 #define DENS_EXACT			    0    
@@ -120,9 +120,6 @@ class DPD {
                 std::ofstream eosStats      ( "./data/eos_data.dat" , std::ios_base::app);  // Mean Pressure and temperature data
                 std::ofstream pTensStats    ( "./data/pTens.dat"    , std::ios_base::app);  // Pressure tensor data
                 std::ofstream momStats      ( "./data/mom_data.dat" , std::ios_base::app);  // pressure and temperature data
-                #if HARD_SPHERES
-                    std::ofstream colloidStats   ("./data/colloid_com.dat", std::ios_base::app );
-                #endif
 			#endif // RESTART
 
 			// write parameters and initial configuration
@@ -153,11 +150,8 @@ class DPD {
 				tot_en = kin_en + pot_en;
 
 				counter += 1;						// filewriting
-                #if HARD_SPHERES
-                    fileWrite(enStats, eosStats, momStats, pTensStats, colloidStats);
-                #else
-                    fileWrite(enStats, eosStats, momStats, pTensStats);
-                #endif    
+
+                fileWrite(enStats, eosStats, momStats, pTensStats);
                
 
 				resetVar();						// reset variables to zero
@@ -220,10 +214,8 @@ class DPD {
 
                 #if HARD_SPHERES
                     ngbrIdxStart = particles.size();
-                    #include "fluidInCylinder.h"
+                    #include "readColloids.h"
                     ngbrIdxEnd=particles.size()-1;
-
-                    grColloid.resize(int(capRad/radBinWidth));
                 #else 
                     #include "fluidInCylinder.h"
                 #endif
@@ -312,9 +304,6 @@ class DPD {
 					solidCount++;
 				}
 
-                #if HARD_SPHERES
-                    particles[i].rUnfolded = particles[i].r;
-                #endif
 			}
 
             simProg << fluidCount << " fluid particles indexed \n" << std::endl;
@@ -347,10 +336,6 @@ class DPD {
                     }
                     simProg << "\n" << "Particles assigned spring constant " << kWallNgbr1;
                     simProg << "\n" << ngbrIdxParticles << " solid particles from " << ngbrIdxStart << " and " << ngbrIdxEnd  << " have their bond indices set to 0 \n"<< std::endl;
-
-                    #if HARD_SPHERES
-                        nPartColloid=ngbrIdxParticles;
-                    #endif
 
                 #endif
 
@@ -863,11 +848,6 @@ class DPD {
                 }
                 #endif   
 
-                #if HARD_SPHERES
-                if( ( particles[i].type == 1 ) || ( particles[i].type == 4 ) )      // external force on the fluid and colloid - close to pressure driven flow
-                    particles[i].fext.Z = extForce;
-                #endif
-            
                 particles[i].w += ( particles[i].fC       + 
                                     particles[i].fD       + 
                                     particles[i].fR       + 
@@ -888,28 +868,9 @@ class DPD {
                 momY += particles[i].w.Y;
                 momZ += particles[i].w.Z;
 
-                #if HARD_SPHERES 
-                    /* WARNING : THIS WORKS ( MAKES SENSE ) ONLY FOR A SINGLE COLLOIDAL PARTICLE IN  A BATH OF FLUID ONLY*/
-                    /* WARNING : The condition used to recognize the colloid is extremely simplified.
-                     *           Best method is to identify the co-ordinates of the colloid and add up the
-                     *           trajectories */
-                    if ( particles[i].type == 4  ){
-                        particles[i].rUnfolded += particles[i].w * dt;
-                        colloid_com_pos += (particles[i].rUnfolded/nPartColloid);
-                    }
-                #endif
-
                 // update count for fluid particles
                 i++;
           }
-
-          #if HARD_SPHERES
-            //std::cout << colloid_com_pos << std::endl;
-
-            colloidRadPos=sqrt(pow(colloid_com_pos.X - boxHalve[x], 2.) + pow(colloid_com_pos.Y - boxHalve[y], 2.));
-            colIdx=floor(colloidRadPos/radBinWidth);
-            grColloid[colIdx] += 1;
-          #endif
 
 		} // run over all fluid particles
 		//--------------------------------------- Resetting variables--------------------------------------//
@@ -931,12 +892,6 @@ class DPD {
             totCOM.X      = 0.;
             totCOM.Y      = 0.;
             totCOM.Z      = 0.;
-
-            #if HARD_SPHERES
-                colloid_com_pos.X = 0.;
-                colloid_com_pos.Y = 0.;
-                colloid_com_pos.Z = 0.;
-            #endif
 
             fWCA.setZero();
 
@@ -1266,28 +1221,12 @@ class DPD {
 		}
 
 		//--------------------------------------- Velocity, Momentum and Pressure file writing--------------------------------------//
-        #if HARD_SPHERES
-            void fileWrite( std::ofstream& enStats, std::ofstream& eosStats, std::ofstream& momStats, std::ofstream& pTensStats, std::ofstream& colloidStats ){
-        #else
-            void fileWrite( std::ofstream& enStats, std::ofstream& eosStats, std::ofstream& momStats, std::ofstream& pTensStats){
-        #endif
+        void fileWrite( std::ofstream& enStats, std::ofstream& eosStats, std::ofstream& momStats, std::ofstream& pTensStats){
 
 			if ( step % saveCount == 0){
 				simProg << step << " steps out of " << stepMax << " completed " << "\n";
 
 			}
-
-            #if HARD_SPHERES
-            if( step % psaveCount == 0 ){
-                    //colloidStats << step << "\t\t" << colloid_com_pos << std::endl; 
-                    for( int i=0; i<grColloid.size();++i){
-                        colloidStats << grColloid[i] << "\n";
-                        grColloid[i]=0;
-                    }
-
-                    colloidStats << "\n" << std::endl;
-            }
-            #endif
 
 			//write output file in the .data format
 			if (counter>=saveCount) {				
