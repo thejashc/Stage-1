@@ -359,15 +359,11 @@ double imagWallPos2;
 #endif
 
 #if HARD_SPHERES 
-double radBinWidth=0.1;
-unsigned int colIdx;
-double colloidRadPos;
-std::vector<unsigned int> grColloid;
+double colloidRad;
 unsigned int nPartColloid;
 unsigned int NColloids;
 double pBondInteractions_temp[3][3];		// Interactions due to springs
 double pBondInteractions[3][3];		        // Interactions due to springs
-double extForce;
 #endif
 
 double r2i;
