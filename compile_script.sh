@@ -19,6 +19,7 @@ rm -f param.out
 # cpp compilation 
 #g++ -O1 -O2 -o DPD.exe -static -std=c++11 -ggdb3 Vec3D.cc DPD_main.cpp 
 #g++ -O2 -o DPD.exe -std=c++11 Vec3D.cc DPD_main.cpp 
+#g++ -o DPD.exe -std=c++11 Vec3D.cc DPD_main.cpp 
 #g++ -Wl,--stack, 4194304 -o DPD.exe  -std=c++11 Vec3D.cc DPD_main.cpp -- doesnt work
 #g++ -O2 -pg -o DPD.exe -std=c++11 Vec3D.cc DPD_main.cpp
 g++ -o convert.exe -std=c++11 convertBinToAscii.cpp 
