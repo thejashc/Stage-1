@@ -14,11 +14,13 @@ set cz [expr {$maxz/2.0}]
 
 set delta [exec grep "\(saveCount\)" param.out | awk {{print $NF}}]
 #set startFile $delta 
-set startFile 10
+set startFile 1
 #set endFile [exec tail -1 "simProg.txt" | awk {{print $1}}]
-set endFile 20000000
+set endFile 1000
 #set incrFile [expr {$delta - 1}]
-set incrFile 9
+set incrFile 0
+
+set maxMovieFrame 248
 
 # drawing the simulation box
 draw color white
@@ -32,7 +34,7 @@ for {set x $startFile} {$x < $endFile} {incr x} {
 
 #mol new /storage/thejas/stage1/code/data/XYZ1.xyz
 
-pbc set {20 20 40} -all
+pbc set {20 20 30} -all
 draw pbcbox -width 5
 
 puts "the molecule for this problem is 0"
@@ -95,3 +97,11 @@ rotate x by -90
 # CPK : Sphere Scale , Sphere Resolution, Bond Radius, Bond Resolution
 # mol modstyle  0 0 CPK 0.6 1.0 0.0 1.0
 # mol modstyle  1 0 CPK 0.6 1.0 0.0 1.0
+
+#for {set x 0} {$x < $maxMovieFrame} {incr x} {                                                                                                                                
+#        animate goto $x
+#        render TachyonInternal ./movie/movie.$x.ppm
+#        set x [expr {$x+ 0}]
+#}
+
+#convert -delay  4.17 -loop 4 ./movie/movie.*.ppm movie.gif
