@@ -1,10 +1,10 @@
 #-------------------------------------#
 #        Simulation Box Size        
 #-------------------------------------#
-boxEdgeX            20.0	
-boxEdgeY            20.0
-boxEdgeZ            40.0
-initRho             6.00
+boxEdgeX            10.0	
+boxEdgeY            10.0
+boxEdgeZ            100.0
+initRho             3.96
 #-------------------------------------#
 #        Original Reservoir Size
 #-------------------------------------#
@@ -21,7 +21,7 @@ Bs1_s2              25.0
 Bs1_s3              25.0        
 Bs1_l3              25.0        
 #
-Bl1_l1              25.0    # liquid 1
+Bl1_l1              40.0    # liquid 1
 Bl1_l2              25.0
 Bl1_s2              25.0
 Bl1_s3              25.0
@@ -115,12 +115,12 @@ epsilonWCA          10.0
 #        Interaction cutoffs      
 #-------------------------------------#
 rcutoff             1.0		    
-rd_cutoff           0.75
+rd_cutoff           0.8
 #-------------------------------------#
 #        Simulation time parameters 
 #-------------------------------------#
 dt                  0.01        # time parameters	
-stepMax             50000
+stepMax             10000000
 rstrtFWrtFreq       5000
 saveCount           5000
 psaveCount          50000
