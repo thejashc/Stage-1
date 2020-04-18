@@ -138,6 +138,16 @@ double tempSum;				// temperature sum
 double tempAv;				// temperature average
 int tempCount;				// counting number of samples
 
+double vx2Sum, vy2Sum, vz2Sum, vxSum, vySum, vzSum;
+double tempX, tempY, tempZ;
+double evapBound1;
+double evapBound2;
+Vec3D momDeficit, momDeficitPerParticle;
+unsigned int particlesLeft;
+
+std::vector<std::vector<unsigned int>> evapPartList;
+std::vector<unsigned int> evapPartCount;
+
 double volume;				// system volume
 int    npart;				// number of particles
 double rho;				// density of system 
