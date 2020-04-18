@@ -37,3 +37,4 @@ icpc -fast -o DPD.exe -std=c++11 Vec3D.cc DPD_main.cpp
 
 # valgrind for checking memory leaks and seg-faults
 #valgrind --leak-check=full --track-origins=yes -v ./DPD.exe
+#vmd -dispdev text -e visualizeCapillary.tcl 
