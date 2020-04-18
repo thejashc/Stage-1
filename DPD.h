@@ -19,16 +19,16 @@
 #define RESTART				    0
 
 // WALL flags
-#define WALL_ON				    1
-#define SPRING_CONNECTED_SLD    1
-#define BCKGRND_CONNECTED_SLD   1
+#define WALL_ON				    0
+#define SPRING_CONNECTED_SLD    0
+#define BCKGRND_CONNECTED_SLD   0
 
-#define CAPILLARY_CYLINDER		1
+#define CAPILLARY_CYLINDER		0
 #define CAPILLARY_SQUARE		0
-#define HARD_SPHERES            1
+#define HARD_SPHERES            0
 
 // DENSITY CALCULATION
-#define DENS_EXACT			    0    
+#define DENS_EXACT			    1
 
 //declare DPD solver
 class DPD {
@@ -119,6 +119,7 @@ class DPD {
                 std::ofstream eosStats      ( "./data/eos_data.dat" , std::ios_base::app);  // Mean Pressure and temperature data
                 std::ofstream pTensStats    ( "./data/pTens.dat"    , std::ios_base::app);  // Pressure tensor data
                 std::ofstream momStats      ( "./data/mom_data.dat" , std::ios_base::app);  // pressure and temperature data
+                std::ofstream evapStats      ( "./data/N_vs_step.dat" , std::ios_base::app);  // number of particles as a function of time
                 #if HARD_SPHERES
                     std::ofstream colloidStats   ("./data/colloid_com.dat", std::ios_base::app );
                 #endif
@@ -152,8 +153,8 @@ class DPD {
 				tot_en = kin_en + pot_en;
 
 				counter += 1;						// filewriting
-				fileWrite(enStats, eosStats, momStats, pTensStats, colloidStats);
-               
+
+                fileWrite(enStats, eosStats, momStats, pTensStats, evapStats);
 
 				resetVar();						// reset variables to zero
 				
@@ -202,6 +203,16 @@ class DPD {
             
 			#include "paramIn.h"
             #include "geometryIn.h"
+
+            initFluidCrystal(readFluidFrom);    
+            //initFluidSlab(readFluidFrom);    
+            initEvapList();
+
+            momDeficit.setZero();
+            momDeficitPerParticle.setZero();
+            evapBound1 = 2.0 * rcutoff;
+            evapBound2 = boxEdge[z] - 2.0*rcutoff;
+            particlesLeft = particles.size();
 
 			#if WALL_ON
 
@@ -837,58 +848,112 @@ class DPD {
           i = 0;
           while ( i < npart ){
 
-                // calculate total center of mass momentum
-                totCOM += particles[i].w; 
+                if( (evapPartList[i][1]) && (particlesLeft > 1) ){
 
-                // store velocity (mid-step)
-                particles[i].r_old = particles[i].r;        // position at t: r(t)
-                particles[i].w_old = particles[i].w;        // velocity at t-dt/2 : v(t - dt/2)
+                    // store velocity (mid-step)
+                    particles[i].r_old = particles[i].r;        // position at t: r(t)
+                    particles[i].w_old = particles[i].w;        // velocity at t-dt/2 : v(t - dt/2)
 
-                if( ( particles[i].type == 1 ) || ( particles[i].type == 4 ) )      // external force on the fluid and colloid - close to pressure driven flow
-                    particles[i].fext.Z = extForce;
-            
-                particles[i].w += ( particles[i].fC       + 
-                                    particles[i].fD       + 
-                                    particles[i].fR       + 
-                                    particles[i].fHarmonic  + 
-                                    particles[i].fext )*( dt/particles[i].m );      // evaluating velocity at t+dt/2 : v(t+dt/2)
+                    particles[i].w += ( particles[i].fC       + 
+                                        particles[i].fD       + 
+                                        particles[i].fR       + 
+                                        particles[i].fHarmonic  + 
+                                        particles[i].fext )*( dt/particles[i].m );      // evaluating velocity at t+dt/2 : v(t+dt/2)
 
-                particles[i].r += particles[i].w*dt;                                // evaluating position at t+dt: r(t+dt)	
+                    particles[i].r += particles[i].w*dt;                                // evaluating position at t+dt: r(t+dt)	
 
-                // implement periodic boundary condition 
-                #include "pbcNew.h"
-                //#include "pbcNewReflecting.h"
-                //#include "pbcXOnly.h"
+                    // calculate velocity (integral time step)
+                    particles[i].v = 0.5*( particles[i].w_old + particles[i].w );       // calculate v(t) = v(t-dt/2) + v(t+dt/2)
 
-                // calculate velocity (integral time step)
-                particles[i].v = 0.5*( particles[i].w_old + particles[i].w );       // calculate v(t) = v(t-dt/2) + v(t+dt/2)
+                    // check if particle is in  the buffer region
+                    /*
+                    if( ( ( particles[i].r.Z < evapBound1 ) ||
+                         ( particles[i].r.Z > evapBound2 ) ) && 
+                        ( step > 10000 ) ){
 
-                momX += particles[i].w.X;
-                momY += particles[i].w.Y;
-                momZ += particles[i].w.Z;
+                            simProg << "particle " << i << " whose Z position = " << particles[i].r.Z  << " will be removed " << std::endl;
+                            particles.erase(particles.begin()+i);
 
-                #if HARD_SPHERES 
-                    /* WARNING : THIS WORKS ( MAKES SENSE ) ONLY FOR A SINGLE COLLOIDAL PARTICLE IN  A BATH OF FLUID ONLY*/
-                    /* WARNING : The condition used to recognize the colloid is extremely simplified.
-                     *           Best method is to identify the co-ordinates of the colloid and add up the
-                     *           trajectories */
-                    if ( particles[i].type == 4  ){
-                        particles[i].rUnfolded += particles[i].w * dt;
-                        colloid_com_pos += (particles[i].rUnfolded/nPartColloid);
+                            npart=particles.size();
+                            simProg << "number of particles now = " << npart << std::endl;
+                        }
+                        else if( ( particles[i].r.Z > evapBound1 ) && ( particles[i].r.Z < evapBound2 ) && ( npart > 1) ){
+                            totCOM += particles[i].r;
+                        }
+                        else if( npart ==1 ){
+                            simProg << "all particles have evaporated, ending program" << std::endl;
+                            exit(0);
+                        }
+                        */
+
+                    if( ( particles[i].r.Z < evapBound1 ) && ( step > 100000 ) ){
+
+                        simProg << "particle " << i 
+                                <<" detected at " << particles[i].r.Z << "\t";
+                        particles[i].r.Z = 0.00001;
+                        particles[i].r_old = particles[i].r;        // position at t: r(t)
+                        momDeficit += particles[i].w;
+
+                        simProg << ", is now fixed at " << particles[i].r.Z << std::endl;
+                        evapPartList[i][1]=0;
+                        evapPartCount[0] += 1;       // increment particle in the bottom half
+
+                        particlesLeft -= 1;
+                        simProg << "particles Left " << particlesLeft << std::endl;
                     }
-                #endif
+                    else if ( ( particles[i].r.Z > evapBound2 ) && ( step > 100000 ) ){
 
-                // update count for fluid particles
+                        simProg << "particle " << i 
+                                <<" detected at " << particles[i].r.Z << "\t";
+                        particles[i].r.Z = boxEdge[z]-0.00001;
+                        particles[i].r_old = particles[i].r;        // position at t: r(t)
+                        momDeficit += particles[i].w;
+
+                        simProg << ", is now fixed at " << particles[i].r.Z << std::endl;
+                        evapPartList[i][1]=0;
+                        evapPartCount[1] += 1;       // increment particle in the top half
+
+                        particlesLeft -= 1;
+                        simProg << ", with now " << particlesLeft << " particles left" << std::endl;
+                    }
+
+              }
+                #include "pbcNew.h"
+            
+                i++;
+
+          }
+
+          //totCOM /= particles.size();
+
+          //totCOM += momDeficit;
+          momDeficitPerParticle = momDeficit / particlesLeft;
+
+          i = 0;
+          while ( i < npart ){
+
+                if(evapPartList[i][1]){
+
+                    particles[i].w += momDeficitPerParticle;
+
+                    totCOM += particles[i].w;
+                    
+                    vx2Sum += pow( particles[i].v.X, 2.);
+                    vy2Sum += pow( particles[i].v.Y, 2.);
+                    vz2Sum += pow( particles[i].v.Z, 2.);
+
+                    vxSum += particles[i].v.X;
+                    vySum += particles[i].v.Y;
+                    vzSum += particles[i].v.Z;
+                }
+
                 i++;
           }
 
-          #if HARD_SPHERES
-            //std::cout << colloid_com_pos << std::endl;
-
-            colloidRadPos=sqrt(pow(colloid_com_pos.X - boxHalve[x], 2.) + pow(colloid_com_pos.Y - boxHalve[y], 2.));
-            colIdx=floor(colloidRadPos/radBinWidth);
-            grColloid[colIdx] += 1;
-          #endif
+          tempX = (vx2Sum/particlesLeft) - pow( vxSum/particlesLeft, 2.); 
+          tempY = (vy2Sum/particlesLeft) - pow( vySum/particlesLeft, 2.); 
+          tempZ = (vz2Sum/particlesLeft) - pow( vzSum/particlesLeft, 2.); 
+          temp = (tempX + tempY + tempZ) / 3.;
 
 		} // run over all fluid particles
 		//--------------------------------------- Resetting variables--------------------------------------//
@@ -906,6 +971,17 @@ class DPD {
 			momX		= 0.;
 			momY		= 0.;
 			momZ		= 0.;
+
+            momDeficit.setZero();
+            momDeficitPerParticle.setZero();
+
+            vx2Sum = 0.;
+            vy2Sum = 0.;
+            vz2Sum = 0.;
+
+            vxSum = 0.;
+            vySum = 0.;
+            vzSum = 0.;
 
             totCOM.X      = 0.;
             totCOM.Y      = 0.;
@@ -1253,12 +1329,19 @@ class DPD {
 		}
 
 		//--------------------------------------- Velocity, Momentum and Pressure file writing--------------------------------------//
-		void fileWrite( std::ofstream& enStats, std::ofstream& eosStats, std::ofstream& momStats, std::ofstream& pTensStats, std::ofstream& colloidStats ){
+        void fileWrite( std::ofstream& enStats, std::ofstream& eosStats, std::ofstream& momStats, std::ofstream& pTensStats, std::ofstream& evapStats)
+            {
 
 			if ( step % saveCount == 0){
 				simProg << step << " steps out of " << stepMax << " completed " << "\n";
 
 			}
+
+            if ( step % saveCount == 0){
+                evapStats << step << "\t" << evapPartCount[0] 
+                                  << "\t" << evapPartCount[1] 
+                                  << "\t" << evapPartCount[0] + evapPartCount[1] << std::endl;
+            }
 
             #if HARD_SPHERES
             if( step % psaveCount == 0 ){
@@ -1310,17 +1393,9 @@ class DPD {
 						#endif
 
 				// Density, Temperature, Average Pressure
-				eosStats 	<< std::setw(20) << std::setprecision(15) << rho 	<< "\t" 
-					        << std::setw(20) << std::setprecision(15) << temp	<< "\t" 
-					        #if WALL_ON
-					        << std::setw(20) << std::setprecision(15) << wallTemp	<< "\t" 
-					        #endif
-				        	<< std::setw(20) << std::setprecision(15) << pressure 	<< "\n";
-
-				// Momentum
-				momStats 	<< std::setw(20) << std::setprecision(15) << momX << "\t" 
-				        	<< std::setw(20) << std::setprecision(15) << momY << "\t" 
-				        	<< std::setw(20) << std::setprecision(15) << momZ << "\n";
+				eosStats    << std::setw(20) << std::setprecision(15) << step	<< "\t" 
+                            << std::setw(20) << std::setprecision(15) << totCOM	<< "\t" 
+				        	<< std::setw(20) << std::setprecision(15) << temp 	<< std::endl;
 
 					//reset the counter, write time to terminal
 					counter = 0;
@@ -1576,5 +1651,122 @@ class DPD {
 
             return( result );
         }
+        //------------------------------ Fluid Slab ------------------------------//
+        void initFluidCrystal(const std::string& readFluidFrom){
+
+            // read file
+            int particleType;
+            char fname[200];
+            unsigned int npart;
+
+            double slabWidth =10.;
+
+            double zStart=0.5*( boxEdge[z] - slabWidth);
+            double zEnd=0.5*( boxEdge[z] + slabWidth);
+
+            double latticeSpacing=pow(1./initRho,1./3.);
+
+            double xind=0.001;
+            double yind=0.001;
+            double zind=0.001;
+
+            while( xind < boxEdge[x] ){
+                yind=0.001;
+                while( yind < boxEdge[y] ){
+                    zind=0.001;
+                    while( zind < boxEdge[z] ) {
+                        if( ( zind > zStart ) && ( zind < zEnd ) )
+                            particles.push_back({1.0,1.0,{xind, yind, zind},{0., 0., 0.},1});
+                        
+                        zind += latticeSpacing;
+                    }
+                    yind += latticeSpacing;
+                }
+                xind += latticeSpacing;
+            }
+            
+            simProg << "Number of particles in slab" << particles.size() << "\n\n"; 
+
+            return;
+        }
+        //------------------------------ Fluid Slab ------------------------------//
+        void initFluidSlab(const std::string& readFluidFrom){
+
+            // read file
+            int particleType;
+            char fname[200];
+            unsigned int npart;
+
+            double slabWidth =10.;
+
+            double cylCenterX = 0.5*boxEdge[x];
+            double cylCenterY = 0.5*boxEdge[y];
+
+            double origCx=0.5*origLx;
+            double origCy=0.5*origLy;
+
+            double xStart=origCx-boxEdge[x]*0.5;
+            double xEnd=origCx+boxEdge[x]*0.5;
+
+            double yStart=origCy-boxEdge[y]*0.5;
+            double yEnd=origCy+boxEdge[y]*0.5;
+
+            double zStart=0.;
+            double zEnd=slabWidth;
+
+            double zOffset=0.5*boxEdge[z] - 0.5*slabWidth;
+
+            std::ifstream readConfig(readFluidFrom, std::ios::binary | std::ios::in ); 
+
+            if ( ! readConfig ) { simProg << "*** The file could not be opened/ does not exist *** \n Aborting !! " << std::endl; abort(); }
+
+            readConfig.read ( ( char * ) &npart, sizeof (unsigned int) );
+            simProg << " reservoir containing " << npart << " particles the glassy capillary cylinder  being read \n" << std::endl;
+
+            for ( j = 0 ; j < npart ; ++ j ){	
+
+                readConfig.read ( ( char * ) &particleType,		sizeof (unsigned int ) );
+
+                readConfig.read ( ( char * ) &xind,		        sizeof ( double ) );
+                readConfig.read ( ( char * ) &yind,		        sizeof ( double )  );
+                readConfig.read ( ( char * ) &zind,		        sizeof ( double )  );
+
+                readConfig.read ( ( char * ) &rand_gen_velx,	sizeof ( double ) );
+                readConfig.read ( ( char * ) &rand_gen_vely,	sizeof ( double ) );
+                readConfig.read ( ( char * ) &rand_gen_velz,	sizeof ( double ) );
+
+                // cylinder
+                if ( (xind > xStart) && (xind < xEnd ) &&
+                     (yind > yStart) && (yind < yEnd ) &&
+                     (zind > zStart) && (zind < zEnd ) ) {
+
+                    particles.push_back({1.0,1.0,{xind-xStart,yind-yStart, zind+zOffset},{0., 0., 0.},1});
+                }
+
+            }
+
+            simProg << "Number of particles in slab" << particles.size() << "\n\n"; 
+
+            readConfig.close();
+        }
+        //------------------------------ Evaporation ------------------------------//
+        void initEvapList(){
+
+            unsigned int npart=particles.size();
+
+            evapPartList.resize(npart);
+            evapPartCount.resize(2, 0);
+
+            for(int i=0; i<npart; ++i){
+                evapPartList[i].resize(2);
+            }
+                             
+            for(int i=0; i<evapPartList.size(); ++i){
+                evapPartList[i][0]=i;
+                evapPartList[i][1]=1;
+            }
+            simProg << "Initialized evaporation particle list for all " << npart << " particles" << std::endl;
+        }
+
 };
 #endif
