@@ -210,6 +210,7 @@ class DPD {
 
             momDeficit.setZero();
             momDeficitPerParticle.setZero();
+
             evapBound1 = 2.0 * rcutoff;
             evapBound2 = boxEdge[z] - 2.0*rcutoff;
             particlesLeft = particles.size();
@@ -865,57 +866,7 @@ class DPD {
                     // calculate velocity (integral time step)
                     particles[i].v = 0.5*( particles[i].w_old + particles[i].w );       // calculate v(t) = v(t-dt/2) + v(t+dt/2)
 
-                    // check if particle is in  the buffer region
-                    /*
-                    if( ( ( particles[i].r.Z < evapBound1 ) ||
-                         ( particles[i].r.Z > evapBound2 ) ) && 
-                        ( step > 10000 ) ){
-
-                            simProg << "particle " << i << " whose Z position = " << particles[i].r.Z  << " will be removed " << std::endl;
-                            particles.erase(particles.begin()+i);
-
-                            npart=particles.size();
-                            simProg << "number of particles now = " << npart << std::endl;
-                        }
-                        else if( ( particles[i].r.Z > evapBound1 ) && ( particles[i].r.Z < evapBound2 ) && ( npart > 1) ){
-                            totCOM += particles[i].r;
-                        }
-                        else if( npart ==1 ){
-                            simProg << "all particles have evaporated, ending program" << std::endl;
-                            exit(0);
-                        }
-                        */
-
-                    if( ( particles[i].r.Z < evapBound1 ) && ( step > 100000 ) ){
-
-                        simProg << "particle " << i 
-                                <<" detected at " << particles[i].r.Z << "\t";
-                        particles[i].r.Z = 0.00001;
-                        particles[i].r_old = particles[i].r;        // position at t: r(t)
-                        momDeficit += particles[i].w;
-
-                        simProg << ", is now fixed at " << particles[i].r.Z << std::endl;
-                        evapPartList[i][1]=0;
-                        evapPartCount[0] += 1;       // increment particle in the bottom half
-
-                        particlesLeft -= 1;
-                        simProg << "particles Left " << particlesLeft << std::endl;
-                    }
-                    else if ( ( particles[i].r.Z > evapBound2 ) && ( step > 100000 ) ){
-
-                        simProg << "particle " << i 
-                                <<" detected at " << particles[i].r.Z << "\t";
-                        particles[i].r.Z = boxEdge[z]-0.00001;
-                        particles[i].r_old = particles[i].r;        // position at t: r(t)
-                        momDeficit += particles[i].w;
-
-                        simProg << ", is now fixed at " << particles[i].r.Z << std::endl;
-                        evapPartList[i][1]=0;
-                        evapPartCount[1] += 1;       // increment particle in the top half
-
-                        particlesLeft -= 1;
-                        simProg << ", with now " << particlesLeft << " particles left" << std::endl;
-                    }
+                    checkEvapBounds();
 
               }
                 #include "pbcNew.h"
@@ -924,40 +875,13 @@ class DPD {
 
           }
 
-          //totCOM /= particles.size();
+          calculateTemp();
 
-          //totCOM += momDeficit;
-          momDeficitPerParticle = momDeficit / particlesLeft;
-
-          i = 0;
-          while ( i < npart ){
-
-                if(evapPartList[i][1]){
-
-                    particles[i].w += momDeficitPerParticle;
-
-                    totCOM += particles[i].w;
-                    
-                    vx2Sum += pow( particles[i].v.X, 2.);
-                    vy2Sum += pow( particles[i].v.Y, 2.);
-                    vz2Sum += pow( particles[i].v.Z, 2.);
-
-                    vxSum += particles[i].v.X;
-                    vySum += particles[i].v.Y;
-                    vzSum += particles[i].v.Z;
-                }
-
-                i++;
-          }
-
-          tempX = (vx2Sum/particlesLeft) - pow( vxSum/particlesLeft, 2.); 
-          tempY = (vy2Sum/particlesLeft) - pow( vySum/particlesLeft, 2.); 
-          tempZ = (vz2Sum/particlesLeft) - pow( vzSum/particlesLeft, 2.); 
-          temp = (tempX + tempY + tempZ) / 3.;
 
 		} // run over all fluid particles
 		//--------------------------------------- Resetting variables--------------------------------------//
 		void resetVar(){
+
 			// energy reset to zero
 			pot_en		= 0.;
 			kin_en		= 0.;
@@ -1766,6 +1690,99 @@ class DPD {
                 evapPartList[i][1]=1;
             }
             simProg << "Initialized evaporation particle list for all " << npart << " particles" << std::endl;
+        }
+        //------------------------------ Check evaporation ------------------------------//
+        void checkEvapBounds(){
+
+            if( ( particles[i].r.Z < evapBound1 ) && ( step > 50000 ) ){
+
+                simProg << "particle " << i 
+                        <<" detected at " << particles[i].r.Z << "\t";
+                particles[i].r.Z = 0.00001;
+                particles[i].r_old = particles[i].r;        // position at t: r(t)
+                momDeficit += particles[i].w;
+
+                simProg << ", is now fixed at " << particles[i].r.Z << std::endl;
+                evapPartList[i][1]=0;
+                evapPartCount[0] += 1;       // increment particle in the bottom half
+
+                particlesLeft -= 1;
+                simProg << "particles Left " << particlesLeft << std::endl;
+            }
+            else if ( ( particles[i].r.Z > evapBound2 ) && ( step > 50000 ) ){
+
+                simProg << "particle " << i 
+                        <<" detected at " << particles[i].r.Z << "\t";
+
+                particles[i].r.Z = boxEdge[z]-0.00001;
+                particles[i].r_old = particles[i].r;        // position at t: r(t)
+
+                momDeficit += particles[i].w;
+
+                simProg << ", is now fixed at " << particles[i].r.Z << std::endl;
+
+                evapPartList[i][1]=0;
+                evapPartCount[1] += 1;       // increment particle in the top half
+
+                particlesLeft -= 1;
+                simProg << "particles Left " << particlesLeft << std::endl;
+            }
+            
+            return;
+
+            // check if particle is in  the buffer region
+            /*
+            if( ( ( particles[i].r.Z < evapBound1 ) ||
+                 ( particles[i].r.Z > evapBound2 ) ) && 
+                ( step > 10000 ) ){
+
+                    simProg << "particle " << i << " whose Z position = " << particles[i].r.Z  << " will be removed " << std::endl;
+                    particles.erase(particles.begin()+i);
+
+                    npart=particles.size();
+                    simProg << "number of particles now = " << npart << std::endl;
+                }
+                else if( ( particles[i].r.Z > evapBound1 ) && ( particles[i].r.Z < evapBound2 ) && ( npart > 1) ){
+                    totCOM += particles[i].r;
+                }
+                else if( npart ==1 ){
+                    simProg << "all particles have evaporated, ending program" << std::endl;
+                    exit(0);
+                }
+                */
+        }
+        //------------------------------ calculate temperature------------------------------//
+        void calculateTemp(){
+
+          momDeficitPerParticle = momDeficit / particlesLeft;
+
+          i = 0;
+          while ( i < npart ){
+
+                if(evapPartList[i][1]){
+
+                    particles[i].w += momDeficitPerParticle;    // adds momentum deficit to remaining particles in slab
+
+                    totCOM += particles[i].w;                   // calculate total momentum after incorporating the correction
+                    
+                    vx2Sum += pow( particles[i].v.X, 2.);
+                    vy2Sum += pow( particles[i].v.Y, 2.);
+                    vz2Sum += pow( particles[i].v.Z, 2.);
+
+                    vxSum += particles[i].v.X;
+                    vySum += particles[i].v.Y;
+                    vzSum += particles[i].v.Z;
+                }
+
+                i++;
+          }
+
+          tempX = (vx2Sum/particlesLeft) - pow( vxSum/particlesLeft, 2.); 
+          tempY = (vy2Sum/particlesLeft) - pow( vySum/particlesLeft, 2.); 
+          tempZ = (vz2Sum/particlesLeft) - pow( vzSum/particlesLeft, 2.); 
+
+          temp = (tempX + tempY + tempZ) / 3.;
+
         }
 
 };
