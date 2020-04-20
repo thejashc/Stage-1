@@ -1,3 +1,3 @@
-SOLID  ./inputGeometry/glassyWall/combinedSlab/Lx_45_Ly_40_Lz_15/posVel10000.bin        # Glassy Cylinder
-LIQUID  ./inputGeometry/glassyWall/combinedSlab/Lx_45_Ly_40_Lz_15/posVel10000.bin       # Rectangular Liquid Reservoir
+SOLID  ./inputGeometry/glassyWall/A_40_B_40_rd_0_8/data/posVel100000.bin        # Glassy Cylinder
+LIQUID  ./inputGeometry/glassyWall/A_40_B_40_rd_0_8/data/posVel100000.bin       # Rectangular Liquid Reservoir
 COLLOIDS  ./readConfig/solids/HARD_SPHERES/singleColloid.dat                            # Centers of colloids

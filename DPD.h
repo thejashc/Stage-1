@@ -19,11 +19,11 @@
 #define RESTART				    0
 
 // WALL flags
-#define WALL_ON				    0
+#define WALL_ON				    1
 #define SPRING_CONNECTED_SLD    0
-#define BCKGRND_CONNECTED_SLD   0
+#define BCKGRND_CONNECTED_SLD   1
 
-#define CAPILLARY_CYLINDER		0
+#define CAPILLARY_CYLINDER		1
 #define CAPILLARY_SQUARE		0
 #define HARD_SPHERES            0
 
@@ -204,47 +204,25 @@ class DPD {
 			#include "paramIn.h"
             #include "geometryIn.h"
 
-            initFluidCrystal(readFluidFrom);    
-            //initFluidSlab(readFluidFrom);    
+            /******* SOLID Initialize *******/
+            bckgIdxStart=particles.size();
+            initGlassyCylinder(readSolidFrom);
+            bckgIdxEnd=particles.size()-1;
+
+            /******* FLUID Initialize *******/
+            //initFluidCrystal(readFluidFrom);    
+            //initFluidCrystal();    
+            initFluidSlab(readFluidFrom);    
             initEvapList();
 
             momDeficit.setZero();
             momDeficitPerParticle.setZero();
 
+            /*
             evapBound1 = 2.0 * rcutoff;
             evapBound2 = boxEdge[z] - 2.0*rcutoff;
             particlesLeft = particles.size();
-
-			#if WALL_ON
-
-				#if CAPILLARY_CYLINDER
-                    // GLASSY WALL
-                    pCount=0;
-                    bckgIdxStart = pCount;
-                    #include "glassyCylinder.h"
-                    bckgIdxEnd = pCount - 1;
-                #endif
-
-                #if HARD_SPHERES
-                    ngbrIdxStart = particles.size();
-                    #include "fluidInCylinder.h"
-                    ngbrIdxEnd=particles.size()-1;
-
-                    grColloid.resize(int(capRad/radBinWidth));
-
-                #endif
-                
-				#if RESTART 
-					#include "restartConfig.h"
-				#endif
-
-			#else
-
-				#if RESTART 
-					#include "restartConfig.h"
-				#endif
-
-			#endif // WALL_ON
+            */
 
             #include "cellGridInit.h"
 
@@ -849,7 +827,7 @@ class DPD {
           i = 0;
           while ( i < npart ){
 
-                if( (evapPartList[i][1]) && (particlesLeft > 1) ){
+                //if( (evapPartList[i][1]) && (particlesLeft > 1) ){
 
                     // store velocity (mid-step)
                     particles[i].r_old = particles[i].r;        // position at t: r(t)
@@ -866,16 +844,17 @@ class DPD {
                     // calculate velocity (integral time step)
                     particles[i].v = 0.5*( particles[i].w_old + particles[i].w );       // calculate v(t) = v(t-dt/2) + v(t+dt/2)
 
-                    checkEvapBounds();
+                    //checkEvapBounds();
 
-              }
-                #include "pbcNew.h"
+              //}
+                //#include "pbcNew.h"
+                #include "pbcNewReflecting.h"
             
                 i++;
 
           }
 
-          calculateTemp();
+          //calculateTemp();
 
 
 		} // run over all fluid particles
@@ -1576,17 +1555,18 @@ class DPD {
             return( result );
         }
         //------------------------------ Fluid Slab ------------------------------//
-        void initFluidCrystal(const std::string& readFluidFrom){
+        //void initFluidCrystal(const std::string& readFluidFrom){
+        void initFluidCrystal(){
 
             // read file
             int particleType;
             char fname[200];
             unsigned int npart;
 
-            double slabWidth =10.;
+            double slabWidth =25.;
 
-            double zStart=0.5*( boxEdge[z] - slabWidth);
-            double zEnd=0.5*( boxEdge[z] + slabWidth);
+            double xStart=0.5*( boxEdge[x] - slabWidth);
+            double xEnd=0.5*( boxEdge[x] + slabWidth);
 
             double latticeSpacing=pow(1./initRho,1./3.);
 
@@ -1599,7 +1579,11 @@ class DPD {
                 while( yind < boxEdge[y] ){
                     zind=0.001;
                     while( zind < boxEdge[z] ) {
+                        /*
                         if( ( zind > zStart ) && ( zind < zEnd ) )
+                            particles.push_back({1.0,1.0,{xind, yind, zind},{0., 0., 0.},1});
+                            */
+                        if( ( xind > xStart ) && ( xind < xEnd ) )
                             particles.push_back({1.0,1.0,{xind, yind, zind},{0., 0., 0.},1});
                         
                         zind += latticeSpacing;
@@ -1621,7 +1605,7 @@ class DPD {
             char fname[200];
             unsigned int npart;
 
-            double slabWidth =10.;
+            double slabWidth =resWdth;
 
             double cylCenterX = 0.5*boxEdge[x];
             double cylCenterY = 0.5*boxEdge[y];
@@ -1638,7 +1622,8 @@ class DPD {
             double zStart=0.;
             double zEnd=slabWidth;
 
-            double zOffset=0.5*boxEdge[z] - 0.5*slabWidth;
+            //double zOffset=0.5*boxEdge[z] - 0.5*slabWidth;
+            double zOffset=bufferLen + capLen + wallHeight + resCOMZ;
 
             std::ifstream readConfig(readFluidFrom, std::ios::binary | std::ios::in ); 
 
@@ -1646,6 +1631,8 @@ class DPD {
 
             readConfig.read ( ( char * ) &npart, sizeof (unsigned int) );
             simProg << " reservoir containing " << npart << " particles the glassy capillary cylinder  being read \n" << std::endl;
+
+            unsigned pStart=particles.size();
 
             for ( j = 0 ; j < npart ; ++ j ){	
 
@@ -1664,14 +1651,136 @@ class DPD {
                      (yind > yStart) && (yind < yEnd ) &&
                      (zind > zStart) && (zind < zEnd ) ) {
 
-                    particles.push_back({1.0,1.0,{xind-xStart,yind-yStart, zind+zOffset},{0., 0., 0.},1});
+                    particles.push_back({1.0,1.0,{xind-xStart,yind-yStart, zind+zOffset},{0., 0., resCOMVel},1});
                 }
+            }
 
+            unsigned pEnd=particles.size();
+
+            simProg << "Number of particles in slab " << pEnd-pStart << "\n"; 
+            simProg << "Within Area of " << boxEdge[x]*boxEdge[y] << " and slab thickness of " << resWdth << "\n"; 
+
+            readConfig.close();
+
+            return;
+        }
+        //------------------------------ Fluid Slab ------------------------------//
+        void initGlassyCylinder(const std::string& readSolidFrom){
+
+            // read file
+            int particleType;
+            char fname[200];
+            unsigned int npart;
+
+            unsigned int pCount=0;
+            unsigned int pCountCyl=0;
+            unsigned int pCountWall=0;
+
+            double cylCenterX = 0.5*boxEdge[x];
+            double cylCenterY = 0.5*boxEdge[y];
+
+            double origCx=0.5*origLx;
+            double origCy=0.5*origLy;
+
+            double thickness=2.;
+            double ri=capRad;
+            double ro=ri+thickness;
+
+            double rm=ro-0.5;
+
+            double ri2=pow(ri,2.);
+            double ro2=pow(ro,2.);
+            double rm2=pow(rm,2.);
+
+            double scaledX;
+            double scaledY;
+
+            double wallHeight =2.;
+            double cylVol = 3.14159 * (ro2 - ri2) * capLen;
+            double wallVol = (boxEdge[x]*boxEdge[y] - 3.14159 * ri2)*wallHeight;
+
+            bool wallOption=false;
+
+            std::ifstream readConfig(readSolidFrom, std::ios::binary | std::ios::in ); 
+
+            if ( ! readConfig ) { simProg << "*** The file could not be opened/ does not exist *** \n Aborting !! " << std::endl; abort(); }
+
+            readConfig.read ( ( char * ) &npart, sizeof (unsigned int) );
+            simProg << " reservoir containing " << npart << " particles the glassy capillary cylinder  being read \n" << std::endl;
+
+            for ( j = 0 ; j < npart ; ++ j ){	
+
+                readConfig.read ( ( char * ) &particleType,		sizeof (unsigned int ) );
+
+                readConfig.read ( ( char * ) &xind,		        sizeof ( double ) );
+                readConfig.read ( ( char * ) &yind,		        sizeof ( double )  );
+                readConfig.read ( ( char * ) &zind,		        sizeof ( double )  );
+
+                readConfig.read ( ( char * ) &rand_gen_velx,	sizeof ( double ) );
+                readConfig.read ( ( char * ) &rand_gen_vely,	sizeof ( double ) );
+                readConfig.read ( ( char * ) &rand_gen_velz,	sizeof ( double ) );
+
+                scaledX = xind - origCx;
+                scaledY = yind - origCy;
+
+                innerRadius     = ( pow( scaledX, 2.0 ) + pow( scaledY, 2.0 ) >= ri2 );
+                middleInRadius  = ( pow( scaledX, 2.0 ) + pow( scaledY, 2.0 ) <= rm2 );
+                middleOutRadius = ( pow( scaledX, 2.0 ) + pow( scaledY, 2.0 ) > rm2 );
+                outerRadius     = ( pow( scaledX, 2.0 ) + pow( scaledY, 2.0 ) <= ro2 );
+
+                // cylinder
+                if ( innerRadius && middleInRadius && (zind < capLen) ){
+                    particles.push_back({1.0,1.0,{scaledX+cylCenterX, scaledY+cylCenterY, zind+bufferLen},{0., 0., 0.},0});
+                    pCount++;
+                    pCountCyl++;
+                }
+                else if (middleOutRadius && outerRadius && (zind < capLen) ){
+                    particles.push_back({1.0,1.0,{scaledX+cylCenterY, scaledY+cylCenterY, zind+bufferLen},{0., 0., 0.},3});
+                    pCount++;
+                    pCountCyl++;
+                }
+                // wall
+                else if ( innerRadius && (scaledX > -cylCenterX) && 
+                                         (scaledX < cylCenterX) &&
+                                         (scaledY > -cylCenterY) && 
+                                         (scaledY < cylCenterY) &&            
+                                         (zind>capLen+0.5) && (zind<capLen+wallHeight) ){
+
+                    particles.push_back({1.0,1.0,{scaledX+cylCenterY, scaledY+cylCenterY, zind+bufferLen},{0., 0., 0.},0});
+                    pCount++;
+                    pCountWall++;
+
+                }
+                else if ( innerRadius && middleInRadius && (zind>capLen) && (zind<capLen+0.5) ){
+                    particles.push_back({1.0,1.0,{scaledX+cylCenterY, scaledY+cylCenterY, zind+bufferLen},{0., 0., 0.},0});
+                    pCount++;
+                    pCountWall++;
+                }
+                else if ( middleOutRadius && (scaledX > -cylCenterX) && 
+                                             (scaledX < cylCenterX) &&
+                                             (scaledY > -cylCenterY) && 
+                                             (scaledY < cylCenterY) &&  
+                                             (zind>capLen) && (zind<capLen+0.5) ){
+
+                    particles.push_back({1.0,1.0,{scaledX+cylCenterY, scaledY+cylCenterY, zind+bufferLen},{0., 0., 0.},3});
+                    pCount++;
+                    pCountWall++;
+                }
             }
 
             simProg << "Number of particles in slab" << particles.size() << "\n\n"; 
 
             readConfig.close();
+
+            simProg << "Number of particles in cylinder with inner radius = " << ri 
+                    << ", outer radius = " << ro 
+                    << " and length = " << capLen 
+                    << " is " << pCountCyl << "\n";
+            simProg << "Number density of particles in cylinder is =" << pCountCyl/cylVol << "\n\n"; 
+            simProg << "Number of particles in wall is " << pCountWall << "\n";
+            simProg << "Number density of particles in wall is =" << pCountWall/wallVol << "\n\n"; 
+
+            return;
         }
         //------------------------------ Evaporation ------------------------------//
         void initEvapList(){
@@ -1754,14 +1863,14 @@ class DPD {
         //------------------------------ calculate temperature------------------------------//
         void calculateTemp(){
 
-          momDeficitPerParticle = momDeficit / particlesLeft;
+          //momDeficitPerParticle = momDeficit / particlesLeft;
 
           i = 0;
           while ( i < npart ){
 
                 if(evapPartList[i][1]){
 
-                    particles[i].w += momDeficitPerParticle;    // adds momentum deficit to remaining particles in slab
+                    //particles[i].w += momDeficitPerParticle;    // adds momentum deficit to remaining particles in slab
 
                     totCOM += particles[i].w;                   // calculate total momentum after incorporating the correction
                     
