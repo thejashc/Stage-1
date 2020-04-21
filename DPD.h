@@ -19,11 +19,11 @@
 #define RESTART				    0
 
 // WALL flags
-#define WALL_ON				    1
+#define WALL_ON				    0
 #define SPRING_CONNECTED_SLD    0
-#define BCKGRND_CONNECTED_SLD   1
+#define BCKGRND_CONNECTED_SLD   0
 
-#define CAPILLARY_CYLINDER		1
+#define CAPILLARY_CYLINDER		0
 #define CAPILLARY_SQUARE		0
 #define HARD_SPHERES            0
 
@@ -205,14 +205,14 @@ class DPD {
             #include "geometryIn.h"
 
             /******* SOLID Initialize *******/
-            bckgIdxStart=particles.size();
-            initGlassyCylinder(readSolidFrom);
-            bckgIdxEnd=particles.size()-1;
+            //bckgIdxStart=particles.size();
+            //initGlassyCylinder(readSolidFrom);
+            //bckgIdxEnd=particles.size()-1;
 
             /******* FLUID Initialize *******/
             //initFluidCrystal(readFluidFrom);    
-            //initFluidCrystal();    
-            initFluidSlab(readFluidFrom);    
+            initFluidCrystal();    
+            //initFluidSlab(readFluidFrom);    
             initEvapList();
 
             momDeficit.setZero();
@@ -221,8 +221,8 @@ class DPD {
             /*
             evapBound1 = 2.0 * rcutoff;
             evapBound2 = boxEdge[z] - 2.0*rcutoff;
-            particlesLeft = particles.size();
             */
+            particlesLeft = particles.size();
 
             #include "cellGridInit.h"
 
@@ -847,14 +847,17 @@ class DPD {
                     //checkEvapBounds();
 
               //}
-                //#include "pbcNew.h"
-                #include "pbcNewReflecting.h"
+                #include "pbcNew.h"
+                //#include "pbcNewReflecting.h"
+
+                pNonIdealKinCalc();
             
                 i++;
-
           }
 
-          //calculateTemp();
+          calculateTemp();
+          //
+          pTensCalc();
 
 
 		} // run over all fluid particles
@@ -917,6 +920,74 @@ class DPD {
                 // springPotEn = 0;
 
 			} // set density equal to zero for solid type particles
+
+            // reset temporary ideal and non-ideal component of pressure tensor
+            // to 0 at every time step. 
+            pNonIdeal_temp[0][0] = 0.;
+            pNonIdeal_temp[0][1] = 0.;
+            pNonIdeal_temp[0][2] = 0.;
+            
+            pNonIdeal_temp[1][0] = 0.;
+            pNonIdeal_temp[1][1] = 0.;
+            pNonIdeal_temp[1][2] = 0.;
+            
+            pNonIdeal_temp[2][0] = 0.;
+            pNonIdeal_temp[2][1] = 0.;
+            pNonIdeal_temp[2][2] = 0.;
+            
+            pNonIdealKin_temp[0][0] = 0.;
+            pNonIdealKin_temp[0][1] = 0.;
+            pNonIdealKin_temp[0][2] = 0.;
+            
+            pNonIdealKin_temp[1][0] = 0.;
+            pNonIdealKin_temp[1][1] = 0.;
+            pNonIdealKin_temp[1][2] = 0.;
+            
+            pNonIdealKin_temp[2][0] = 0.;
+            pNonIdealKin_temp[2][1] = 0.;
+            pNonIdealKin_temp[2][2] = 0.;
+            
+            #if RANDOM_DISSIPATIVE
+            // Dissipative
+            pDissipative_temp[0][0] = 0.;
+            pDissipative_temp[0][1] = 0.;
+            pDissipative_temp[0][2] = 0.;
+            
+            pDissipative_temp[1][0] = 0.;
+            pDissipative_temp[1][1] = 0.;
+            pDissipative_temp[1][2] = 0.;
+            
+            pDissipative_temp[2][0] = 0.;
+            pDissipative_temp[2][1] = 0.;
+            pDissipative_temp[2][2] = 0.;
+            
+            // Random
+            pRandom_temp[0][0] = 0.;
+            pRandom_temp[0][1] = 0.;
+            pRandom_temp[0][2] = 0.;
+            
+            pRandom_temp[1][0] = 0.;
+            pRandom_temp[1][1] = 0.;
+            pRandom_temp[1][2] = 0.;
+            
+            pRandom_temp[2][0] = 0.;
+            pRandom_temp[2][1] = 0.;
+            pRandom_temp[2][2] = 0.;
+            #endif
+            
+            #if HARD_SPHERES
+            pBondInteractions_temp[0][0] = 0.;
+            pBondInteractions_temp[0][1] = 0.;
+            pBondInteractions_temp[0][2] = 0.;
+            
+            pBondInteractions_temp[1][0] = 0.;
+            pBondInteractions_temp[1][1] = 0.;
+            pBondInteractions_temp[1][2] = 0.;
+            
+            pBondInteractions_temp[2][0] = 0.;
+            pBondInteractions_temp[2][1] = 0.;
+            pBondInteractions_temp[2][2] = 0.;
+            #endif
 
 		}
 		//--------------------------------------- Parameter file writing--------------------------------------//
@@ -1238,13 +1309,92 @@ class DPD {
 			if ( step % saveCount == 0){
 				simProg << step << " steps out of " << stepMax << " completed " << "\n";
 
-			}
-
-            if ( step % saveCount == 0){
                 evapStats << step << "\t" << evapPartCount[0] 
                                   << "\t" << evapPartCount[1] 
                                   << "\t" << evapPartCount[0] + evapPartCount[1] << std::endl;
             }
+
+            // separate module for pressure -- requires better averaging
+            if ( pcounter >= psaveCount ) {
+            
+            // std::cout << "pCounter = " << pcounter << ", at step = " << step << "\n";
+            
+            // average and reset the pTensor
+            pTensAverage();
+            
+            // Pressure tensor   
+            pTensStats      <<  pIdeal[0][0]      << " " 
+                            <<  pIdeal[0][1]      << " " 
+                            <<  pIdeal[0][2]      << " "
+                            <<  pIdeal[1][0]      << " "
+                            <<  pIdeal[1][1]      << " "
+                            <<  pIdeal[1][2]      << " "
+                            <<  pIdeal[2][0]      << " "
+                            <<  pIdeal[2][1]      << " "
+                            <<  pIdeal[2][2]      << " "
+                            
+                            <<  pNonIdeal[0][0]   << " " 
+                            <<  pNonIdeal[0][1]   << " " 
+                            <<  pNonIdeal[0][2]   << " "
+                            <<  pNonIdeal[1][0]   << " "
+                            <<  pNonIdeal[1][1]   << " "
+                            <<  pNonIdeal[1][2]   << " "
+                            <<  pNonIdeal[2][0]   << " "
+                            <<  pNonIdeal[2][1]   << " "
+                            <<  pNonIdeal[2][2]   << " " 
+                            
+                            <<  pNonIdealKin[0][0] << " " 
+                            <<  pNonIdealKin[0][1] << " " 
+                            <<  pNonIdealKin[0][2] << " "
+                            <<  pNonIdealKin[1][0] << " "
+                            <<  pNonIdealKin[1][1] << " "
+                            <<  pNonIdealKin[1][2] << " "
+                            <<  pNonIdealKin[2][0] << " "
+                            <<  pNonIdealKin[2][1] << " "
+                            <<  pNonIdealKin[2][2] << " " 
+                            
+                            <<  pDissipative[0][0] << " " 
+                            <<  pDissipative[0][1] << " " 
+                            <<  pDissipative[0][2] << " "
+                            <<  pDissipative[1][0] << " "
+                            <<  pDissipative[1][1] << " "
+                            <<  pDissipative[1][2] << " "
+                            <<  pDissipative[2][0] << " "
+                            <<  pDissipative[2][1] << " "
+                            <<  pDissipative[2][2] << " " 
+                            
+                            <<  pRandom[0][0]      << " " 
+                            <<  pRandom[0][1]      << " " 
+                            <<  pRandom[0][2]      << " "
+                            <<  pRandom[1][0]      << " "
+                            <<  pRandom[1][1]      << " "
+                            <<  pRandom[1][2]      << " "
+                            <<  pRandom[2][0]      << " "
+                            <<  pRandom[2][1]      << " "
+                            #if HARD_SPHERES
+                                <<  pRandom[2][2]         << " "
+                                
+                                <<  pBondInteractions[0][0]  << " " 
+                                <<  pBondInteractions[0][1]  << " " 
+                                <<  pBondInteractions[0][2]  << " "
+                                
+                                <<  pBondInteractions[1][0]  << " "
+                                <<  pBondInteractions[1][1]  << " "
+                                <<  pBondInteractions[1][2]  << " "
+                                
+                                <<  pBondInteractions[2][0]  << " "
+                                <<  pBondInteractions[2][1]  << " "
+                                <<  pBondInteractions[2][2]  << "\n";
+                            #else 
+                            <<  pRandom[2][2]                << " " << std::endl;
+            #endif
+            
+            pTensReset();
+            
+            pcounter = 0;    
+            }
+
+            
 
             #if HARD_SPHERES
             if( step % psaveCount == 0 ){
@@ -1563,10 +1713,15 @@ class DPD {
             char fname[200];
             unsigned int npart;
 
-            double slabWidth =25.;
+            double slabWidth =10.;
 
+            /*
             double xStart=0.5*( boxEdge[x] - slabWidth);
             double xEnd=0.5*( boxEdge[x] + slabWidth);
+            */
+
+            double zStart=0.5*( boxEdge[z] - slabWidth);
+            double zEnd=0.5*( boxEdge[z] + slabWidth);
 
             double latticeSpacing=pow(1./initRho,1./3.);
 
@@ -1579,12 +1734,14 @@ class DPD {
                 while( yind < boxEdge[y] ){
                     zind=0.001;
                     while( zind < boxEdge[z] ) {
-                        /*
+
                         if( ( zind > zStart ) && ( zind < zEnd ) )
                             particles.push_back({1.0,1.0,{xind, yind, zind},{0., 0., 0.},1});
-                            */
+
+                        /*
                         if( ( xind > xStart ) && ( xind < xEnd ) )
                             particles.push_back({1.0,1.0,{xind, yind, zind},{0., 0., 0.},1});
+                            */
                         
                         zind += latticeSpacing;
                     }
@@ -1598,6 +1755,7 @@ class DPD {
             return;
         }
         //------------------------------ Fluid Slab ------------------------------//
+        /*
         void initFluidSlab(const std::string& readFluidFrom){
 
             // read file
@@ -1664,7 +1822,9 @@ class DPD {
 
             return;
         }
+        */
         //------------------------------ Fluid Slab ------------------------------//
+        /*
         void initGlassyCylinder(const std::string& readSolidFrom){
 
             // read file
@@ -1782,6 +1942,7 @@ class DPD {
 
             return;
         }
+        */
         //------------------------------ Evaporation ------------------------------//
         void initEvapList(){
 
@@ -1893,6 +2054,284 @@ class DPD {
           temp = (tempX + tempY + tempZ) / 3.;
 
         }
+        //------------------------------ pressure calculation------------------------------//
+        /******************************** pressure tensor calculation *********************/
+        void pTensCalc(){
 
+            if ( step % pCorrTime == 0 ){
+
+                pIdeal[0][0] += rho * ( vx2 / npart ) ;     // equipartition theorem
+                pIdeal[1][1] += rho * ( vy2 / npart ) ;
+                pIdeal[2][2] += rho * ( vz2 / npart ) ;
+
+                // add a pIdeal temp here as well
+                // Non-Ideal contribution to pressure -- Conservative forces 
+                pNonIdeal[0][0]      += pNonIdeal_temp[0][0];        // xx
+                pNonIdeal[0][1]      += pNonIdeal_temp[0][1];        // xy
+                pNonIdeal[0][2]      += pNonIdeal_temp[0][2];        // xz
+
+                pNonIdeal[1][0]      += pNonIdeal_temp[1][0];        // yx
+                pNonIdeal[1][1]      += pNonIdeal_temp[1][1];        // yy
+                pNonIdeal[1][2]      += pNonIdeal_temp[1][2];        // yz
+
+                pNonIdeal[2][0]      += pNonIdeal_temp[2][0];        // zx
+                pNonIdeal[2][1]      += pNonIdeal_temp[2][1];        // zy
+                pNonIdeal[2][2]      += pNonIdeal_temp[2][2];        // zz
+
+                // Non-Ideal contribution to pressure -- Conservative forces 
+                pNonIdealKin[0][0]       += pNonIdealKin_temp[0][0];     // xx
+                pNonIdealKin[0][1]       += pNonIdealKin_temp[0][1];     // xy
+                pNonIdealKin[0][2]       += pNonIdealKin_temp[0][2];     // xz
+
+                pNonIdealKin[1][0]       += pNonIdealKin_temp[1][0];     // yx
+                pNonIdealKin[1][1]       += pNonIdealKin_temp[1][1];     // yy
+                pNonIdealKin[1][2]       += pNonIdealKin_temp[1][2];     // yz
+
+                pNonIdealKin[2][0]       += pNonIdealKin_temp[2][0];     // zx
+                pNonIdealKin[2][1]       += pNonIdealKin_temp[2][1];     // zy
+                pNonIdealKin[2][2]       += pNonIdealKin_temp[2][2];     // zz
+
+                #if RANDOM_DISSIPATIVE
+                // Non-Ideal contribution to pressure -- Dissipative forces
+                pDissipative[0][0]       += pDissipative_temp[0][0];             // xx
+                pDissipative[0][1]       += pDissipative_temp[0][1];             // xy
+                pDissipative[0][2]       += pDissipative_temp[0][2];             // xz
+
+                pDissipative[1][0]       += pDissipative_temp[1][0];             // yx
+                pDissipative[1][1]       += pDissipative_temp[1][1];             // yy
+                pDissipative[1][2]       += pDissipative_temp[1][2];             // yz
+
+                pDissipative[2][0]       += pDissipative_temp[2][0];             // zx
+                pDissipative[2][1]       += pDissipative_temp[2][1];             // zy
+                pDissipative[2][2]       += pDissipative_temp[2][2];             // zz
+
+                // Non-Ideal contribution to pressure -- Random forces
+                pRandom[0][0]            += pRandom_temp[0][0];                  // xx
+                pRandom[0][1]            += pRandom_temp[0][1];                  // xy
+                pRandom[0][2]            += pRandom_temp[0][2];                  // xz
+
+                pRandom[1][0]            += pRandom_temp[1][0];                  // yx
+                pRandom[1][1]            += pRandom_temp[1][1];                  // yy
+                pRandom[1][2]            += pRandom_temp[1][2];                  // yz
+
+                pRandom[2][0]            += pRandom_temp[2][0];                  // zx
+                pRandom[2][1]            += pRandom_temp[2][1];                  // zy
+                pRandom[2][2]            += pRandom_temp[2][2];                  // zz
+                #endif   
+
+                #if HARD_SPHERES
+                pBondInteractions[0][0] += pBondInteractions_temp[0][0];
+                pBondInteractions[0][1] += pBondInteractions_temp[0][1];
+                pBondInteractions[0][2] += pBondInteractions_temp[0][2];
+
+                pBondInteractions[1][0] += pBondInteractions_temp[1][0];
+                pBondInteractions[1][1] += pBondInteractions_temp[1][1];
+                pBondInteractions[1][2] += pBondInteractions_temp[1][2];
+
+                pBondInteractions[2][0] += pBondInteractions_temp[2][0];
+                pBondInteractions[2][1] += pBondInteractions_temp[2][1];
+                pBondInteractions[2][2] += pBondInteractions_temp[2][2];
+                #endif
+
+                pcounter += 1;
+
+                }
+
+            return;
+
+            }
+        /******************************** pressure tensor averaging *********************/
+        void pTensAverage(){
+
+            // ideal component
+            pIdeal[0][0] /= pcounter;
+            pIdeal[0][1] /= pcounter;
+            pIdeal[0][2] /= pcounter;
+            
+            pIdeal[1][0] /= pcounter;
+            pIdeal[1][1] /= pcounter;
+            pIdeal[1][2] /= pcounter;
+            
+            pIdeal[2][0] /= pcounter;
+            pIdeal[2][1] /= pcounter;
+            pIdeal[2][2] /= pcounter;
+            
+            // Conservative - non-kinetic 
+            pNonIdeal[0][0] /= ( pcounter * volume );
+            pNonIdeal[0][1] /= ( pcounter * volume );
+            pNonIdeal[0][2] /= ( pcounter * volume );
+            
+            pNonIdeal[1][0] /= ( pcounter * volume );
+            pNonIdeal[1][1] /= ( pcounter * volume );
+            pNonIdeal[1][2] /= ( pcounter * volume );
+            
+            pNonIdeal[2][0] /= ( pcounter * volume );
+            pNonIdeal[2][1] /= ( pcounter * volume );
+            pNonIdeal[2][2] /= ( pcounter * volume );
+            
+            // Conservative - kinetic
+            pNonIdealKin[0][0] /= ( pcounter * volume );
+            pNonIdealKin[0][1] /= ( pcounter * volume );
+            pNonIdealKin[0][2] /= ( pcounter * volume );
+            
+            pNonIdealKin[1][0] /= ( pcounter * volume );
+            pNonIdealKin[1][1] /= ( pcounter * volume );
+            pNonIdealKin[1][2] /= ( pcounter * volume );
+            
+            pNonIdealKin[2][0] /= ( pcounter * volume );
+            pNonIdealKin[2][1] /= ( pcounter * volume );
+            pNonIdealKin[2][2] /= ( pcounter * volume );
+            
+            // Dissipative
+            pDissipative[0][0] /= ( pcounter * volume );
+            pDissipative[0][1] /= ( pcounter * volume );
+            pDissipative[0][2] /= ( pcounter * volume );
+            
+            pDissipative[1][0] /= ( pcounter * volume );
+            pDissipative[1][1] /= ( pcounter * volume );
+            pDissipative[1][2] /= ( pcounter * volume );
+            
+            pDissipative[2][0] /= ( pcounter * volume );
+            pDissipative[2][1] /= ( pcounter * volume );
+            pDissipative[2][2] /= ( pcounter * volume );
+            
+            // Random
+            pRandom[0][0] /= ( pcounter * volume );
+            pRandom[0][1] /= ( pcounter * volume );
+            pRandom[0][2] /= ( pcounter * volume );
+            
+            pRandom[1][0] /= ( pcounter * volume );
+            pRandom[1][1] /= ( pcounter * volume );
+            pRandom[1][2] /= ( pcounter * volume );
+            
+            pRandom[2][0] /= ( pcounter * volume );
+            pRandom[2][1] /= ( pcounter * volume );
+            pRandom[2][2] /= ( pcounter * volume );
+            
+            // pBondInteractions 
+            #if HARD_SPHERES
+            pBondInteractions[0][0] /= ( pcounter * volume );
+            pBondInteractions[0][1] /= ( pcounter * volume );
+            pBondInteractions[0][2] /= ( pcounter * volume );
+            
+            pBondInteractions[1][0] /= ( pcounter * volume );
+            pBondInteractions[1][1] /= ( pcounter * volume );
+            pBondInteractions[1][2] /= ( pcounter * volume );
+            
+            pBondInteractions[2][0] /= ( pcounter * volume );
+            pBondInteractions[2][1] /= ( pcounter * volume );
+            pBondInteractions[2][2] /= ( pcounter * volume );
+            #endif
+
+        }
+        /******************************** pressure tensor resetting *********************/
+        void pTensReset(){
+            
+            // ideal component
+            pIdeal[0][0] = 0.;
+            pIdeal[0][1] = 0.;
+            pIdeal[0][2] = 0.;
+            pIdeal[1][0] = 0.;
+            pIdeal[1][1] = 0.;
+            pIdeal[1][2] = 0.;
+            pIdeal[2][0] = 0.;
+            pIdeal[2][1] = 0.;
+            pIdeal[2][2] = 0.;
+            
+            // non-ideal
+            pNonIdeal[0][0] = 0.;
+            pNonIdeal[0][1] = 0.;
+            pNonIdeal[0][2] = 0.;
+            pNonIdeal[1][0] = 0.;
+            pNonIdeal[1][1] = 0.;
+            pNonIdeal[1][2] = 0.;
+            pNonIdeal[2][0] = 0.;
+            pNonIdeal[2][1] = 0.;
+            pNonIdeal[2][2] = 0.;
+            
+            // non-ideal
+            pNonIdealKin[0][0] = 0.;
+            pNonIdealKin[0][1] = 0.;
+            pNonIdealKin[0][2] = 0.;
+            pNonIdealKin[1][0] = 0.;
+            pNonIdealKin[1][1] = 0.;
+            pNonIdealKin[1][2] = 0.;
+            pNonIdealKin[2][0] = 0.;
+            pNonIdealKin[2][1] = 0.;
+            pNonIdealKin[2][2] = 0.;
+            
+            // Dissipative
+            pDissipative[0][0] = 0.;
+            pDissipative[0][1] = 0.;
+            pDissipative[0][2] = 0.;
+            pDissipative[1][0] = 0.;
+            pDissipative[1][1] = 0.;
+            pDissipative[1][2] = 0.;
+            pDissipative[2][0] = 0.;
+            pDissipative[2][1] = 0.;
+            pDissipative[2][2] = 0.;
+            
+            // Random
+            pRandom[0][0] = 0.;
+            pRandom[0][1] = 0.;
+            pRandom[0][2] = 0.;
+            pRandom[1][0] = 0.;
+            pRandom[1][1] = 0.;
+            pRandom[1][2] = 0.;
+            pRandom[2][0] = 0.;
+            pRandom[2][1] = 0.;
+            pRandom[2][2] = 0.;
+            
+            #if HARD_SPHERES
+            pBondInteractions[0][0] = 0.;
+            pBondInteractions[0][1] = 0.;
+            pBondInteractions[0][2] = 0.;
+            pBondInteractions[1][0] = 0.;
+            pBondInteractions[1][1] = 0.;
+            pBondInteractions[1][2] = 0.;
+            pBondInteractions[2][0] = 0.;
+            pBondInteractions[2][1] = 0.;
+            pBondInteractions[2][2] = 0.;
+            #endif
+
+        }
+        /******************************** pressure non-ideal component calculation *********************/
+        void pNonIdealKinCalc(){
+
+            /* calculating kinetic contribution to the pressure tensor: 
+              The total kinetic stress contribution due to particles is split between boundary and
+              bulk region. 
+              bulk region :[ 0.25*Ly, 0.75*Ly ]
+              boundary region : [ 0, 0.25*Ly ) and ( 0.75*Ly, Ly ] 
+              Only particles within this region contribute to the kinetic component of the stress
+              tensor. This
+              is implemented by multiplying the numerical value with a conditional. 
+              I have been lazy, hence, I have split up the contribution between bulk and boundaries
+              into the variables
+              pNonIdealKin_temp[0][1] and pNonIdealKin_temp[1][0], respectively. As soon as this
+              test is done, revert 
+              back to the actual definitions. 
+              This is what I am talking about:
+             // pNonIdealKin_temp[0][1]    += ( particles[fluid_index[i]].v.X *
+            particles[fluid_index[i]].v.Y ) * ( ( particles[fluid_index[i]].r.Y >= 0.25 * boxEdge[y] ) && ( particles[fluid_index[i]].r.Y <= 0.75 * boxEdge[y] )  );
+             pNonIdealKin_temp[1][0]  += ( particles[fluid_index[i]].v.X *
+             particles[fluid_index[i]].v.Y ) * ( ( particles[fluid_index[i]].r.Y < 0.25 *
+             boxEdge[y] ) || ( particles[fluid_index[i]].r.Y > 0.75 * boxEdge[y] )  );
+             */
+            
+            // Non-Ideal contribution to pressure -- Conservative forces 
+            pNonIdealKin_temp[0][0]  += particles[i].v.X * particles[i].v.X;
+            pNonIdealKin_temp[0][1]  += particles[i].v.X * particles[i].v.Y; 
+            pNonIdealKin_temp[0][2]  += particles[i].v.X * particles[i].v.Z;
+            
+            pNonIdealKin_temp[1][0]  += particles[i].v.Y * particles[i].v.X;
+            pNonIdealKin_temp[1][1]  += particles[i].v.Y * particles[i].v.Y;
+            pNonIdealKin_temp[1][2]  += particles[i].v.Y * particles[i].v.Z;
+            
+            pNonIdealKin_temp[2][0]  += particles[i].v.Z * particles[i].v.X;
+            pNonIdealKin_temp[2][1]  += particles[i].v.Z * particles[i].v.Y;
+            pNonIdealKin_temp[2][2]  += particles[i].v.Z * particles[i].v.Z;
+
+        }
 };
 #endif

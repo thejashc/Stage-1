@@ -1,9 +1,9 @@
 #-------------------------------------#
 #        Simulation Box Size        
 #-------------------------------------#
-boxEdgeX            20.0	
-boxEdgeY            20.0
-boxEdgeZ            125.0
+boxEdgeX            15.0	
+boxEdgeY            15.0
+boxEdgeZ            150.0
 initRho             3.96
 #-------------------------------------#
 #        Original Reservoir Size
@@ -120,10 +120,10 @@ rd_cutoff           0.8
 #        Simulation time parameters 
 #-------------------------------------#
 dt                  0.01        # time parameters	
-stepMax             5000
+stepMax             1000000
 rstrtFWrtFreq       5000
-saveCount           100
-psaveCount          50000
+saveCount           1000
+psaveCount          25000
 pCorrTime           1
 #-------------------------------------#
 #        LEES-EDWARDS SHEAR BC     
