@@ -18,13 +18,6 @@
 #define RANDOM_DISSIPATIVE		1
 #define RESTART				    0
 
-// WALL flags
-#define WALL_ON				    0
-#define SPRING_CONNECTED_SLD    0
-#define BCKGRND_CONNECTED_SLD   0
-
-#define CAPILLARY_CYLINDER		0
-#define CAPILLARY_SQUARE		0
 #define HARD_SPHERES            0
 
 // LEES_EDWARDS_BC
@@ -59,9 +52,6 @@ class DPD {
 			init();
 			temp 			= 0.0;
 			tempSum 		= 0.0;
-		    #if WALL_ON
-				wallTemp 		= 0.;
-			#endif
 			tempAv 			= 0.0;
 			tempCount 		= 0;
 			volume 			= boxEdge[x] * boxEdge[y] * boxEdge[z];		// system volume
@@ -87,13 +77,6 @@ class DPD {
                 }
 				createGridList();
 
-                #if WALL_ON 
-                    #if SPRING_CONNECTED_SLD
-                        #include "psfWrite.h"
-                        springNetworkBox();
-                    #endif
-                #endif 
-    
 				dens_calculation();
 				forceCalc();
 				resetVar();
@@ -105,11 +88,6 @@ class DPD {
                 }
 				createGridList();       // density calculation is taken care of
 
-                #if WALL_ON
-                    #if SPRING_CONNECTED_SLD
-                        springNetworkBox();
-                    #endif
-                #endif 
 			#endif
 
 			#if RESTART	
@@ -122,10 +100,6 @@ class DPD {
                 std::ofstream eosStats      ( "./data/eos_data.dat" , std::ios_base::app);  // Mean Pressure and temperature data
                 std::ofstream pTensStats    ( "./data/pTens.dat"    , std::ios_base::app);  // Pressure tensor data
                 std::ofstream momStats      ( "./data/mom_data.dat" , std::ios_base::app);  // pressure and temperature data
-                std::ofstream evapStats      ( "./data/N_vs_step.dat" , std::ios_base::app);  // number of particles as a function of time
-                #if HARD_SPHERES
-                    std::ofstream colloidStats   ("./data/colloid_com.dat", std::ios_base::app );
-                #endif
 			#endif // RESTART
 
 			// write parameters and initial configuration
@@ -157,7 +131,7 @@ class DPD {
 
 				counter += 1;						// filewriting
 
-                fileWrite(enStats, eosStats, momStats, pTensStats, evapStats);
+                fileWrite(enStats, eosStats, momStats, pTensStats);
 
 				resetVar();						// reset variables to zero
 				
@@ -215,17 +189,6 @@ class DPD {
             /******* FLUID Initialize *******/
             //initFluidCrystal();    
             initFluidSlab(readFluidFrom);    
-            initEvapList();
-
-            momDeficit.setZero();
-            momDeficitPerParticle.setZero();
-
-            /*
-            evapBound1 = 2.0 * rcutoff;
-            evapBound2 = boxEdge[z] - 2.0*rcutoff;
-            */
-            particlesLeft = particles.size();
-
             #include "cellGridInit.h"
 
 			// Initialize Ideal, Non-Ideal and complete Pressure tensor
@@ -298,95 +261,12 @@ class DPD {
 					solidCount++;
 				}
 
-                #if HARD_SPHERES
-                    particles[i].rUnfolded = particles[i].r;
-                #endif
 			}
 
             simProg << fluidCount << " fluid particles indexed \n" << std::endl;
             simProg << solidCount << " solid particles indexed \n" << std::endl;
             simProg << fluidCount + solidCount << " total particles indexed \n";
 
-			#if WALL_ON
-
-                #if SPRING_CONNECTED_SLD
-                simProg << "*************************************************** \n" << std::endl;
-                simProg << "Spring Connected Solid Structures \n" << std::endl;
-				idx = 0;
-                ngbrIdxParticles=0;
-                i = solid_index[idx];
-
-                // simProg << " i = "  << i << ", ngbrIdxStart= " << ngbrIdxStart << " , ngbrIdxEnd " << ngbrIdxEnd << std::endl;
-
-                    while( idx < solidCount ){
-
-                        if ( i >= ngbrIdxStart && i <= ngbrIdxEnd ){
-                            particles[i].bondIndex[0] = 0;
-               
-                            // assign spring constants to particles
-                            #if PISTON
-
-                            if( i >= pistonStartIndex && i <= pistonEndIndex )
-                               particles[i].springConstant = kWallNgbr2;
-                            else
-                               particles[i].springConstant = kWallNgbr1;
-
-                            #else
-                               particles[i].springConstant=kWallNgbr1; 
-                            #endif
-
-                            ngbrIdxParticles++;
-                        }
-
-                        idx++;
-                        i = solid_index[idx];
-                    }
-                    #if PISTON
-                    simProg << "\n" << "Particles within indices " << pistonStartIndex << " and " << pistonEndIndex << " assigned spring constant " << kWallNgbr2;
-                    #endif
-                    simProg << "\n" << "Particles not belonging to piston assigned the spring constant " << kWallNgbr1;
-                    simProg << "\n" << ngbrIdxParticles << " solid particles from " << ngbrIdxStart << " and " << ngbrIdxEnd  << " have their bond indices set to 0 \n"<< std::endl;
-
-                    #if HARD_SPHERES
-                        nPartColloid=ngbrIdxParticles;
-                    #endif
-
-                #endif
-
-                #if BCKGRND_CONNECTED_SLD
-                simProg << "*************************************************** \n" << std::endl;
-                simProg << "Background Connected Solid Structures \n"<<std::endl;
-				idx = 0;
-                bckgIdxParticles=0;
-                i = solid_index[idx];
-
-                    #if RESTART
-                        while( idx < solidCount ){
-
-                            if ( i >= bckgIdxStart && i <= bckgIdxEnd ){
-                                bckgIdxParticles++;
-                            }
-                            idx++;
-                            i = solid_index[idx];
-                        }
-                    #else
-                        while( idx < solidCount ){
-
-                            if ( i >= bckgIdxStart && i <= bckgIdxEnd ){
-
-                                particles[i].r0 = particles[i].r;
-                                bckgIdxParticles++;
-                            }
-
-                            idx++;
-                            i = solid_index[idx];
-                        }
-                    #endif
-                    simProg << "\n" << bckgIdxParticles << " solid particles from " << bckgIdxStart << " and " << bckgIdxEnd  << " have their positions attached to their initial position \n"<< std::endl;
-                #endif
-
-			#endif // WALL_ON
-			
             // defining the matrix for Brep and Aatt
             simProg << " ********************************************************************* \n";
             simProg << " Defining the matrix of repulsion parameters and attraction parameters \n";
@@ -829,8 +709,6 @@ class DPD {
           i = 0;
           while ( i < npart ){
 
-                //if( (evapPartList[i][1]) && (particlesLeft > 1) ){
-
                     // store velocity (mid-step)
                     particles[i].r_old = particles[i].r;        // position at t: r(t)
                     particles[i].w_old = particles[i].w;        // velocity at t-dt/2 : v(t - dt/2)
@@ -846,11 +724,8 @@ class DPD {
                     // calculate velocity (integral time step)
                     particles[i].v = 0.5*( particles[i].w_old + particles[i].w );       // calculate v(t) = v(t-dt/2) + v(t+dt/2)
 
-                    //checkEvapBounds();
 
-              //}
                 #include "pbcNew.h"
-                //#include "pbcNewReflecting.h"
 
                 pNonIdealKinCalc();
             
@@ -858,7 +733,7 @@ class DPD {
           }
 
           calculateTemp();
-          //
+
           pTensCalc();
 
 
@@ -894,12 +769,6 @@ class DPD {
             totCOM.X      = 0.;
             totCOM.Y      = 0.;
             totCOM.Z      = 0.;
-
-            #if HARD_SPHERES
-                colloid_com_pos.X = 0.;
-                colloid_com_pos.Y = 0.;
-                colloid_com_pos.Z = 0.;
-            #endif
 
             fWCA.setZero();
 
@@ -1032,9 +901,6 @@ class DPD {
 				paraInfo << "---------------------------" << "\n";
 				paraInfo << "Planar Slab Parameters" << "\n";
 				paraInfo << "---------------------------" << "\n";
-			#if !(WALL_ON)
-				paraInfo << "Width of planar slab (slabWidth)           :           " << slabWidth << "\n";
-			#endif
 			#endif
 			
 			#if RANDOM_DISSIPATIVE
@@ -1161,16 +1027,6 @@ class DPD {
 
             paraInfo << "Brep_L3_L3                    :           " << Brep[5][5] << "\n\n";
 
-            paraInfo << "---------------------------------------------------" << "\n";
-			paraInfo << "                        Wall parameters" << "\n";
-			paraInfo << "---------------------------------------------------" << "\n";
-            paraInfo << "Number of solid particles (solidCount)                     :           " << solidCount << "\n";
-            paraInfo << "Wall density (initWallRho)                                 :           " << initWallRho << "\n";
-            paraInfo << "Penetration tolerance (wallPenetration)                    :           " << wallPenetration << "\n";
-            paraInfo << "Background Spring constant for wall ( kWallBckg )          :           " << kWallBckg << "\n";
-            paraInfo << "Neighbour Spring constant for wall ( kWallNgbr1 )           :           " << kWallNgbr1 << "\n";
-            paraInfo << "Neighbour Spring constant for wall ( kWallNgbr2 )           :           " << kWallNgbr2 << "\n";
-
 			#if LEES_EDWARDS_BC
 				paraInfo << "---------------------------" << "\n";
 				paraInfo << "Lees-Edwards BC            " << "\n";
@@ -1179,43 +1035,6 @@ class DPD {
 				paraInfo << "Strain-rate (strainRate)                   :            " << strainRate << "\n";
 			#endif
 
-			#if SACF
-				paraInfo << "-------------------------------" << "\n";
-				paraInfo << "Stress-Autocorrelation function" << "\n";
-				paraInfo << "-------------------------------" << "\n";
-				paraInfo << "Number of variables (nvars )               :            " << n_vars << "\n";
-				paraInfo << "Levels of correlation (corLevels)          :            " << corLevels << "\n";
-				paraInfo << "Blocks in a level (pCorr)                  :            " << pCorr << "\n";
-				paraInfo << "Average length in a level (mCorr)          :            " << mCorr << "\n";
-			#endif
-			#if CAPILLARY_CYLINDER
-				paraInfo << "-------------------------------" << "\n";
-				paraInfo << "Capillary cylinder             " << "\n";
-				paraInfo << "-------------------------------" << "\n";
-				paraInfo << "Buffer length left of capillary (bufferLen):            " << bufferLen << "\n";	
-				paraInfo << "Capillary tube length ( capLen )           :            " << capLen << "\n";
-				paraInfo << "Capillary radius ( capRad )                :            " << capRad << "\n";
-				paraInfo << "Wall width adj. to capillary (capWallWdth) :            " << capWallWdth << "\n";
-				paraInfo << "Initial width of reservoir (resWdth)       :            " << resWdth << "\n";
-			#elif CAPILLARY_SQUARE
-				paraInfo << "-------------------------------" << "\n";
-				paraInfo << "Capillary Square               " << "\n";
-				paraInfo << "-------------------------------" << "\n";
-				paraInfo << "Buffer length left of capillary (bufferLen):            " << bufferLen << "\n";	
-				paraInfo << "Capillary tube length ( capLen )           :            " << capLen << "\n";
-				paraInfo << "Inner-edge-length of capillary ( sqEdge )  :            " << sqEdge << "\n";
-				paraInfo << "Wall width adj. to capillary (capWallWdth) :            " << capWallWdth << "\n";
-				paraInfo << "Initial width of reservoir (resWdth)       :            " << resWdth << "\n";
-
-				#if PISTON
-					paraInfo << "-------------------------------" << "\n";
-					paraInfo << "PISTON                         " << "\n";
-					paraInfo << "-------------------------------" << "\n";
-					paraInfo << "Applied pressure (appPressure)             :            " << appPressure << "\n";	
-					paraInfo << "Piston force applied from time (pistonT0)  :            " << pistonT0 << "\n";
-					paraInfo << "Time constant of piston force ( pistonW )  :            " << pistonW << "\n";
-				#endif
-			#endif
 			paraInfo << "---------------------------" << "\n";
 			paraInfo << "---------------------------" << "\n";
 			paraInfo << "---------------------------" << "\n";
@@ -1245,23 +1064,6 @@ class DPD {
 			flagList << "RESTART FLAG                           :            " << "ON" << "\n";  
 			#endif
 
-			// WALL flags
-			#if WALL_ON                          
-			flagList << "WALL_ON FLAG                           :            " << "ON" << "\n";  
-			#if LOWER_WALL_ON                    
-			flagList << "LOWER_WALL_ON FLAG                     :            " << "ON" << "\n";  
-			#endif
-			#if UPPER_WALL_ON                    
-			flagList << "UPPER_WALL_ON FLAG                     :            " << "ON" << "\n";  
-			#endif
-			#if FCC_WALL                         
-                flagList << "FCC_WALL FLAG                          :            " << "ON" << "\n";  
-			#endif
-			#if ROUGH_WALL                       
-                flagList << "ROUGH_WALL FLAG                        :            " << "ON" << "\n";  
-			#endif
-			#endif
-
 			// POISEUILLE flow
 			#if BODY_FORCE                       
                 flagList << "BODY_FORCE FLAG                        :            " << "ON" << "\n";  
@@ -1288,32 +1090,14 @@ class DPD {
                 flagList << "DENS_EXACT FLAG                        :            " << "ON" << "\n";  
 			#endif
 			
-			// CAPILLARY IMBIBITION
-			#if CAPILLARY_CYLINDER		 
-                flagList << "CAPILLARY CYLINDER FLAG                :            " << "ON" << "\n";  
-                #if PISTON
-                    flagList << "PISTON FLAG                            :            " << "ON" << "\n";  
-                #endif
-			#endif
-			#if CAPILLARY_SQUARE		 
-                flagList << "CAPILLARY SQUARE FLAG                  :            " << "ON" << "\n";  
-                #if PISTON
-                    flagList << "PISTON FLAG                            :            " << "ON" << "\n";  
-                #endif
-			#endif
-
 		}
 
 		//--------------------------------------- Velocity, Momentum and Pressure file writing--------------------------------------//
-        void fileWrite( std::ofstream& enStats, std::ofstream& eosStats, std::ofstream& momStats, std::ofstream& pTensStats, std::ofstream& evapStats)
+        void fileWrite( std::ofstream& enStats, std::ofstream& eosStats, std::ofstream& momStats, std::ofstream& pTensStats)
             {
 
 			if ( step % saveCount == 0){
 				simProg << step << " steps out of " << stepMax << " completed " << "\n";
-
-                evapStats << step << "\t" << evapPartCount[0] 
-                                  << "\t" << evapPartCount[1] 
-                                  << "\t" << evapPartCount[0] + evapPartCount[1] << std::endl;
             }
 
             // separate module for pressure -- requires better averaging
@@ -1425,26 +1209,6 @@ class DPD {
 				        	<< std::setw(20) << std::setprecision(15) << conservativePower << "\t"
 				        	<< std::setw(20) << std::setprecision(15) << dissipativePower << "\t"
 				        	<< std::setw(20) << std::setprecision(15) << randomPower << "\n";
-						#else
-							#if WALL_ON
-								#if CAPILLARY_CYLINDER || CAPILLARY_SQUARE || HARD_SPHERES
-									#if PISTON
-                                    enStats     << std::setw(20) << std::setprecision(15) << pot_en << "\t" 
-                                                << std::setw(20) << std::setprecision(15) << kin_en << "\t" 
-                                                << std::setw(20) << std::setprecision(15) << tot_en << "\t" << "\n";
-                                                // << std::setw(20) << std::setprecision(15) << forceOnPiston << "\n";
-                                    #else 
-                                       enStats     << std::setw(20) << std::setprecision(15) << pot_en << "\t" 
-                                                    << std::setw(20) << std::setprecision(15) << kin_en << "\t" 
-                                                    << std::setw(20) << std::setprecision(15) << tot_en << "\t" << "\n";
-									#endif
-								#endif
-							#else
-								enStats 	<< std::setw(20) << std::setprecision(15) << pot_en << "\t" 
-										<< std::setw(20) << std::setprecision(15) << kin_en << "\t" 
-										<< std::setw(20) << std::setprecision(15) << tot_en << "\n";
-							#endif
-
 						#endif
 
 				// Density, Temperature, Average Pressure
@@ -1544,15 +1308,6 @@ class DPD {
 		void finalposvelWrite( std::ofstream& writeConfig ){
 
 			writeConfig.write( reinterpret_cast< const char * >( &npart ), sizeof( npart ) );
-            #if WALL_ON
-                writeConfig.write( reinterpret_cast< const char * >( &bckgIdxStart ), sizeof( bckgIdxStart ) );
-                writeConfig.write( reinterpret_cast< const char * >( &bckgIdxEnd ),   sizeof( bckgIdxEnd ) );
-                
-                #if SPRING_CONNECTED_SLD
-                    writeConfig.write( reinterpret_cast< const char * >( &ngbrIdxStart ), sizeof( ngbrIdxStart ) );
-                    writeConfig.write( reinterpret_cast< const char * >( &ngbrIdxEnd ),   sizeof( ngbrIdxEnd ) );
-                #endif
-            #endif
 			writeConfig.write( reinterpret_cast< const char * >( &step ),  sizeof( step ) );
 			writeConfig.write( reinterpret_cast< const char * >( &gen ),  sizeof( std::mt19937 ) );
 			writeConfig.write( reinterpret_cast< const char * >( &normalDistribution ),  sizeof( std::normal_distribution<double> ) );
@@ -1574,129 +1329,8 @@ class DPD {
                 // many body densities of the particles
 				writeConfig.write( reinterpret_cast< const char * >( &p.dens ), sizeof( p.dens ) );
 
-                // solid particles attached to the background by a spring
-                #if WALL_ON 
-                    writeConfig.write( reinterpret_cast< const char * >( &p.r0.X ), sizeof( p.r0.X ) );
-                    writeConfig.write( reinterpret_cast< const char * >( &p.r0.Y ), sizeof( p.r0.Y ) );
-                    writeConfig.write( reinterpret_cast< const char * >( &p.r0.Z ), sizeof( p.r0.Z ) );
-                #endif
 			}
 		}
-
-        //------------------------------ Create spring network : ENTIRE box ------------------------------//
-        // creates springs between particles based on nearest neighbour considerations for the entire box //
-        void springNetworkBox(){
-
-           #if !(RESTART)
-               totalBonds = 0;
-
-                for ( mi[x] = 0 ; mi[x] < NrCells[x] ; ++mi[x] )
-                    for ( mi[y] = 0 ; mi[y] < NrCells[y] ; ++mi[y] )
-                        for ( mi[z] = 0 ; mi[z] < NrCells[z] ; ++mi[z] )
-                            for ( ii = 1 ; ii <= grid[mi[x]][mi[y]][mi[z]][0] ; ++ii ){
-                                i = grid[mi[x]][mi[y]][mi[z]][ii];
-                                // printf("i  %i %i %i %i %i \n",mix,miy,miz,ii,i);
-
-                                // particle j in same cell as i
-                                dR.setZero();
-
-                                for ( jj = ii + 1 ; jj <= grid[mi[x]][mi[y]][mi[z]][0] ; ++jj )
-                                {
-                                    j = grid[mi[x]][mi[y]][mi[z]][jj];
-                                    // simProg << "j1 "<<  mi[x] << " " << mi[y] << " " << mi[z] << " " << jj << " " << j << "\n";
-
-                                    #include "createBondIndex.h"
-
-                                } // jj
-
-                                // particle j in neighbour cell to i
-                                for ( m = 0 ; m < 13 ; m++ ){
-                                    mj[x]	     = periodN[ mi[x] + dm[m][x] + 1 ][x];
-                                    mj[y]	     = periodN[ mi[y] + dm[m][y] + 1 ][y];
-                                    mj[z]	     = periodN[ mi[z] + dm[m][z] + 1 ][z];
-
-                                    dR.X	     = periodR[ mi[x] + dm[m][x] + 1 ][x];
-                                    dR.Y	     = periodR[ mi[y] + dm[m][y] + 1 ][y];
-                                    dR.Z	     = periodR[ mi[z] + dm[m][z] + 1 ][z];
-
-                                    for ( jj = 1 ; jj <= grid[mj[x]][mj[y]][mj[z]][0] ; ++jj ){
-                                        j = grid[mj[x]][mj[y]][mj[z]][jj];
-                                        // simProg << "j2 " << m << " " << mj[x] << " " << mj[y] << " " << mj[z] << " " << jj << " " << j << "\n";
-
-                                            #include "createBondIndex.h"
-
-                                    } // jj
-
-                                } // m
-
-                            } // ii
-
-                #include "psfWrite.h"
-
-                char fName[100];
-                char fNameBin[100];
-
-                sprintf(fName , "./restart/Neighbours.dat");
-                sprintf(fNameBin , "./restart/Neighbours.bin");
-
-                std::ofstream writeConfig ( fName, std::ios_base::out );
-                std::ofstream writeConfigBin ( fNameBin, std::ios::binary |std::ios_base::out );
-
-                //FORMAT : Col1: "Reference particle" Col2:"Bonded particle" Col3:"Eq bond Length" 
-                writeConfig << totalBonds << "\n";
-                writeConfigBin.write(reinterpret_cast< const char * >( &totalBonds ), sizeof(totalBonds));
-
-                j = 0;
-                i = solid_index[j];
-                while (j < solidCount)
-                {
-
-                    for ( k=1; k<= particles[i].bondIndex[0]; ++k ){
-                        // writing to ascii file
-                        writeConfig << i << "\t" <<  particles[i].bondIndex[k] << "\t" << particles[i].eqBondLength[k] << "\n"; 
-
-                        // writing to a binary file
-                        writeConfigBin.write( reinterpret_cast< const char * >(&i), sizeof(i) );
-                        writeConfigBin.write( reinterpret_cast< const char * >(&particles[i].bondIndex[k]), sizeof(particles[i].bondIndex[k]));
-                        writeConfigBin.write( reinterpret_cast< const char * >(&particles[i].eqBondLength[k]), sizeof(particles[i].eqBondLength[k]));
-                    }
-
-                    j++;
-                    i = solid_index[j];
-                }
-
-                writeConfig.close();
-                writeConfigBin.close();
-
-            #else 
-                #include "readBondIndex.h"
-
-                // write data of the bonds between particles and neighbours -- this is basically for
-                // debugging
-                char fName[100];
-                sprintf(fName , "./data/Neighbours.dat");
-
-                std::ofstream writeConfig ( fName, std::ios_base::out );
-                writeConfig << totalBonds << "\n";
-                writeConfig << "Reference particle" << "\t" << "Bonded particle" << "\t" << "Eq bond Length" << "\n";
-
-                j = 0;
-                i = solid_index[j];
-                while ( j < solidCount )
-                {
-
-                    for ( k=1; k<= particles[i].bondIndex[0]; ++k ){
-                        //writeConfig << " Particle " << particles[i].bondIndex[k] << " , eq bond length = " << particles[i].eqBondLength[k] << "\n"; 
-                        writeConfig << i << "\t" <<  particles[i].bondIndex[k] << "\t" << particles[i].eqBondLength[k] << "\n"; 
-                    }
-
-                    j++;
-                    i = solid_index[j];
-                }
-
-                writeConfig.close();
-            #endif
-        }
         //------------------------------ Mod function ------------------------------//
         int moduloAB( int A, int B){ 
 
@@ -1706,54 +1340,6 @@ class DPD {
 
             return( result );
         }
-        //------------------------------ Fluid Slab ------------------------------//
-        /*
-        //void initFluidCrystal(const std::string& readFluidFrom){
-        //void initFluidCrystal(){
-
-            // read file
-            int particleType;
-            char fname[200];
-            unsigned int npart;
-
-
-            //double xStart=0.5*( boxEdge[x] - slabWidth);
-            //double xEnd=0.5*( boxEdge[x] + slabWidth);
-
-            double zStart=0.5*( boxEdge[z] - slabWidth);
-            double zEnd=0.5*( boxEdge[z] + slabWidth);
-
-            double latticeSpacing=pow(1./initRho,1./3.);
-
-            double xind=0.001;
-            double yind=0.001;
-            double zind=0.001;
-
-            while( xind < boxEdge[x] ){
-                yind=0.001;
-                while( yind < boxEdge[y] ){
-                    zind=0.001;
-                    while( zind < boxEdge[z] ) {
-
-                        //if( ( zind > zStart ) && ( zind < zEnd ) )
-                        particles.push_back({1.0,1.0,{xind, yind, zind},{0., 0., 0.},1});
-
-                        //if( ( xind > xStart ) && ( xind < xEnd ) )
-                        //    particles.push_back({1.0,1.0,{xind, yind, zind},{0., 0., 0.},1});
-                        
-                        zind += latticeSpacing;
-                    }
-                    yind += latticeSpacing;
-                }
-                xind += latticeSpacing;
-            }
-            
-            simProg << "Number of particles in slab" << particles.size() << "\n\n"; 
-
-            return;
-
-        }
-        */
         //------------------------------ Fluid Slab ------------------------------//
         void initFluidSlab(const std::string& readFluidFrom){
 
@@ -1816,204 +1402,6 @@ class DPD {
 
             return;
         }
-        //------------------------------ Fluid Slab ------------------------------//
-        /*
-        void initGlassyCylinder(const std::string& readSolidFrom){
-
-            // read file
-            int particleType;
-            char fname[200];
-            unsigned int npart;
-
-            unsigned int pCount=0;
-            unsigned int pCountCyl=0;
-            unsigned int pCountWall=0;
-
-            double cylCenterX = 0.5*boxEdge[x];
-            double cylCenterY = 0.5*boxEdge[y];
-
-            double origCx=0.5*origLx;
-            double origCy=0.5*origLy;
-
-            double thickness=2.;
-            double ri=capRad;
-            double ro=ri+thickness;
-
-            double rm=ro-0.5;
-
-            double ri2=pow(ri,2.);
-            double ro2=pow(ro,2.);
-            double rm2=pow(rm,2.);
-
-            double scaledX;
-            double scaledY;
-
-            double wallHeight =2.;
-            double cylVol = 3.14159 * (ro2 - ri2) * capLen;
-            double wallVol = (boxEdge[x]*boxEdge[y] - 3.14159 * ri2)*wallHeight;
-
-            bool wallOption=false;
-
-            std::ifstream readConfig(readSolidFrom, std::ios::binary | std::ios::in ); 
-
-            if ( ! readConfig ) { simProg << "*** The file could not be opened/ does not exist *** \n Aborting !! " << std::endl; abort(); }
-
-            readConfig.read ( ( char * ) &npart, sizeof (unsigned int) );
-            simProg << " reservoir containing " << npart << " particles the glassy capillary cylinder  being read \n" << std::endl;
-
-            for ( j = 0 ; j < npart ; ++ j ){	
-
-                readConfig.read ( ( char * ) &particleType,		sizeof (unsigned int ) );
-
-                readConfig.read ( ( char * ) &xind,		        sizeof ( double ) );
-                readConfig.read ( ( char * ) &yind,		        sizeof ( double )  );
-                readConfig.read ( ( char * ) &zind,		        sizeof ( double )  );
-
-                readConfig.read ( ( char * ) &rand_gen_velx,	sizeof ( double ) );
-                readConfig.read ( ( char * ) &rand_gen_vely,	sizeof ( double ) );
-                readConfig.read ( ( char * ) &rand_gen_velz,	sizeof ( double ) );
-
-                scaledX = xind - origCx;
-                scaledY = yind - origCy;
-
-                innerRadius     = ( pow( scaledX, 2.0 ) + pow( scaledY, 2.0 ) >= ri2 );
-                middleInRadius  = ( pow( scaledX, 2.0 ) + pow( scaledY, 2.0 ) <= rm2 );
-                middleOutRadius = ( pow( scaledX, 2.0 ) + pow( scaledY, 2.0 ) > rm2 );
-                outerRadius     = ( pow( scaledX, 2.0 ) + pow( scaledY, 2.0 ) <= ro2 );
-
-                // cylinder
-                if ( innerRadius && middleInRadius && (zind < capLen) ){
-                    particles.push_back({1.0,1.0,{scaledX+cylCenterX, scaledY+cylCenterY, zind+bufferLen},{0., 0., 0.},0});
-                    pCount++;
-                    pCountCyl++;
-                }
-                else if (middleOutRadius && outerRadius && (zind < capLen) ){
-                    particles.push_back({1.0,1.0,{scaledX+cylCenterY, scaledY+cylCenterY, zind+bufferLen},{0., 0., 0.},3});
-                    pCount++;
-                    pCountCyl++;
-                }
-                // wall
-                else if ( innerRadius && (scaledX > -cylCenterX) && 
-                                         (scaledX < cylCenterX) &&
-                                         (scaledY > -cylCenterY) && 
-                                         (scaledY < cylCenterY) &&            
-                                         (zind>capLen+0.5) && (zind<capLen+wallHeight) ){
-
-                    particles.push_back({1.0,1.0,{scaledX+cylCenterY, scaledY+cylCenterY, zind+bufferLen},{0., 0., 0.},0});
-                    pCount++;
-                    pCountWall++;
-
-                }
-                else if ( innerRadius && middleInRadius && (zind>capLen) && (zind<capLen+0.5) ){
-                    particles.push_back({1.0,1.0,{scaledX+cylCenterY, scaledY+cylCenterY, zind+bufferLen},{0., 0., 0.},0});
-                    pCount++;
-                    pCountWall++;
-                }
-                else if ( middleOutRadius && (scaledX > -cylCenterX) && 
-                                             (scaledX < cylCenterX) &&
-                                             (scaledY > -cylCenterY) && 
-                                             (scaledY < cylCenterY) &&  
-                                             (zind>capLen) && (zind<capLen+0.5) ){
-
-                    particles.push_back({1.0,1.0,{scaledX+cylCenterY, scaledY+cylCenterY, zind+bufferLen},{0., 0., 0.},3});
-                    pCount++;
-                    pCountWall++;
-                }
-            }
-
-            simProg << "Number of particles in slab" << particles.size() << "\n\n"; 
-
-            readConfig.close();
-
-            simProg << "Number of particles in cylinder with inner radius = " << ri 
-                    << ", outer radius = " << ro 
-                    << " and length = " << capLen 
-                    << " is " << pCountCyl << "\n";
-            simProg << "Number density of particles in cylinder is =" << pCountCyl/cylVol << "\n\n"; 
-            simProg << "Number of particles in wall is " << pCountWall << "\n";
-            simProg << "Number density of particles in wall is =" << pCountWall/wallVol << "\n\n"; 
-
-            return;
-        }
-        */
-        //------------------------------ Evaporation ------------------------------//
-        void initEvapList(){
-
-            unsigned int npart=particles.size();
-
-            evapPartList.resize(npart);
-            evapPartCount.resize(2, 0);
-
-            for(int i=0; i<npart; ++i){
-                evapPartList[i].resize(2);
-            }
-                             
-            for(int i=0; i<evapPartList.size(); ++i){
-                evapPartList[i][0]=i;
-                evapPartList[i][1]=1;
-            }
-            simProg << "Initialized evaporation particle list for all " << npart << " particles" << std::endl;
-        }
-        //------------------------------ Check evaporation ------------------------------//
-        void checkEvapBounds(){
-
-            if( ( particles[i].r.Z < evapBound1 ) && ( step > 50000 ) ){
-
-                simProg << "particle " << i 
-                        <<" detected at " << particles[i].r.Z << "\t";
-                particles[i].r.Z = 0.00001;
-                particles[i].r_old = particles[i].r;        // position at t: r(t)
-                momDeficit += particles[i].w;
-
-                simProg << ", is now fixed at " << particles[i].r.Z << std::endl;
-                evapPartList[i][1]=0;
-                evapPartCount[0] += 1;       // increment particle in the bottom half
-
-                particlesLeft -= 1;
-                simProg << "particles Left " << particlesLeft << std::endl;
-            }
-            else if ( ( particles[i].r.Z > evapBound2 ) && ( step > 50000 ) ){
-
-                simProg << "particle " << i 
-                        <<" detected at " << particles[i].r.Z << "\t";
-
-                particles[i].r.Z = boxEdge[z]-0.00001;
-                particles[i].r_old = particles[i].r;        // position at t: r(t)
-
-                momDeficit += particles[i].w;
-
-                simProg << ", is now fixed at " << particles[i].r.Z << std::endl;
-
-                evapPartList[i][1]=0;
-                evapPartCount[1] += 1;       // increment particle in the top half
-
-                particlesLeft -= 1;
-                simProg << "particles Left " << particlesLeft << std::endl;
-            }
-            
-            return;
-
-            // check if particle is in  the buffer region
-            /*
-            if( ( ( particles[i].r.Z < evapBound1 ) ||
-                 ( particles[i].r.Z > evapBound2 ) ) && 
-                ( step > 10000 ) ){
-
-                    simProg << "particle " << i << " whose Z position = " << particles[i].r.Z  << " will be removed " << std::endl;
-                    particles.erase(particles.begin()+i);
-
-                    npart=particles.size();
-                    simProg << "number of particles now = " << npart << std::endl;
-                }
-                else if( ( particles[i].r.Z > evapBound1 ) && ( particles[i].r.Z < evapBound2 ) && ( npart > 1) ){
-                    totCOM += particles[i].r;
-                }
-                else if( npart ==1 ){
-                    simProg << "all particles have evaporated, ending program" << std::endl;
-                    exit(0);
-                }
-                */
-        }
         //------------------------------ calculate temperature------------------------------//
         void calculateTemp(){
 
@@ -2022,20 +1410,15 @@ class DPD {
           i = 0;
           while ( i < npart ){
 
-                if(evapPartList[i][1]){
+                totCOM += particles[i].w;                   // calculate total momentum after incorporating the correction
+                
+                vx2Sum += pow( particles[i].v.X, 2.);
+                vy2Sum += pow( particles[i].v.Y, 2.);
+                vz2Sum += pow( particles[i].v.Z, 2.);
 
-                    //particles[i].w += momDeficitPerParticle;    // adds momentum deficit to remaining particles in slab
-
-                    totCOM += particles[i].w;                   // calculate total momentum after incorporating the correction
-                    
-                    vx2Sum += pow( particles[i].v.X, 2.);
-                    vy2Sum += pow( particles[i].v.Y, 2.);
-                    vz2Sum += pow( particles[i].v.Z, 2.);
-
-                    vxSum += particles[i].v.X;
-                    vySum += particles[i].v.Y;
-                    vzSum += particles[i].v.Z;
-                }
+                vxSum += particles[i].v.X;
+                vySum += particles[i].v.Y;
+                vzSum += particles[i].v.Z;
 
                 i++;
           }
