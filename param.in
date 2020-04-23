@@ -1,9 +1,9 @@
 #-------------------------------------#
 #        Simulation Box Size        
 #-------------------------------------#
-boxEdgeX            15.0	
-boxEdgeY            15.0
-boxEdgeZ            150.0
+boxEdgeX            9.0	
+boxEdgeY            9.0
+boxEdgeZ            9.0
 initRho             3.96
 #-------------------------------------#
 #        Original Reservoir Size

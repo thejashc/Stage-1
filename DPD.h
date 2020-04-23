@@ -27,6 +27,9 @@
 #define CAPILLARY_SQUARE		0
 #define HARD_SPHERES            0
 
+// LEES_EDWARDS_BC
+#define LEES_EDWARDS_BC         1
+
 // DENSITY CALCULATION
 #define DENS_EXACT			    1
 
@@ -210,9 +213,8 @@ class DPD {
             //bckgIdxEnd=particles.size()-1;
 
             /******* FLUID Initialize *******/
-            //initFluidCrystal(readFluidFrom);    
-            initFluidCrystal();    
-            //initFluidSlab(readFluidFrom);    
+            //initFluidCrystal();    
+            initFluidSlab(readFluidFrom);    
             initEvapList();
 
             momDeficit.setZero();
@@ -1705,20 +1707,18 @@ class DPD {
             return( result );
         }
         //------------------------------ Fluid Slab ------------------------------//
+        /*
         //void initFluidCrystal(const std::string& readFluidFrom){
-        void initFluidCrystal(){
+        //void initFluidCrystal(){
 
             // read file
             int particleType;
             char fname[200];
             unsigned int npart;
 
-            double slabWidth =10.;
 
-            /*
-            double xStart=0.5*( boxEdge[x] - slabWidth);
-            double xEnd=0.5*( boxEdge[x] + slabWidth);
-            */
+            //double xStart=0.5*( boxEdge[x] - slabWidth);
+            //double xEnd=0.5*( boxEdge[x] + slabWidth);
 
             double zStart=0.5*( boxEdge[z] - slabWidth);
             double zEnd=0.5*( boxEdge[z] + slabWidth);
@@ -1735,13 +1735,11 @@ class DPD {
                     zind=0.001;
                     while( zind < boxEdge[z] ) {
 
-                        if( ( zind > zStart ) && ( zind < zEnd ) )
-                            particles.push_back({1.0,1.0,{xind, yind, zind},{0., 0., 0.},1});
+                        //if( ( zind > zStart ) && ( zind < zEnd ) )
+                        particles.push_back({1.0,1.0,{xind, yind, zind},{0., 0., 0.},1});
 
-                        /*
-                        if( ( xind > xStart ) && ( xind < xEnd ) )
-                            particles.push_back({1.0,1.0,{xind, yind, zind},{0., 0., 0.},1});
-                            */
+                        //if( ( xind > xStart ) && ( xind < xEnd ) )
+                        //    particles.push_back({1.0,1.0,{xind, yind, zind},{0., 0., 0.},1});
                         
                         zind += latticeSpacing;
                     }
@@ -1753,9 +1751,10 @@ class DPD {
             simProg << "Number of particles in slab" << particles.size() << "\n\n"; 
 
             return;
+
         }
+        */
         //------------------------------ Fluid Slab ------------------------------//
-        /*
         void initFluidSlab(const std::string& readFluidFrom){
 
             // read file
@@ -1763,13 +1762,11 @@ class DPD {
             char fname[200];
             unsigned int npart;
 
-            double slabWidth =resWdth;
-
-            double cylCenterX = 0.5*boxEdge[x];
-            double cylCenterY = 0.5*boxEdge[y];
+            double slabWidth = boxEdge[z];
 
             double origCx=0.5*origLx;
             double origCy=0.5*origLy;
+            double origCz=0.5*origLz;
 
             double xStart=origCx-boxEdge[x]*0.5;
             double xEnd=origCx+boxEdge[x]*0.5;
@@ -1777,11 +1774,8 @@ class DPD {
             double yStart=origCy-boxEdge[y]*0.5;
             double yEnd=origCy+boxEdge[y]*0.5;
 
-            double zStart=0.;
-            double zEnd=slabWidth;
-
-            //double zOffset=0.5*boxEdge[z] - 0.5*slabWidth;
-            double zOffset=bufferLen + capLen + wallHeight + resCOMZ;
+            double zStart=origCz-boxEdge[z]*0.5;
+            double zEnd=origCz+boxEdge[z]*0.5;
 
             std::ifstream readConfig(readFluidFrom, std::ios::binary | std::ios::in ); 
 
@@ -1809,20 +1803,19 @@ class DPD {
                      (yind > yStart) && (yind < yEnd ) &&
                      (zind > zStart) && (zind < zEnd ) ) {
 
-                    particles.push_back({1.0,1.0,{xind-xStart,yind-yStart, zind+zOffset},{0., 0., resCOMVel},1});
+                    particles.push_back({1.0,1.0,{xind-xStart,yind-yStart, zind-zStart},{0., 0., 0.},1});
                 }
             }
 
             unsigned pEnd=particles.size();
 
             simProg << "Number of particles in slab " << pEnd-pStart << "\n"; 
-            simProg << "Within Area of " << boxEdge[x]*boxEdge[y] << " and slab thickness of " << resWdth << "\n"; 
+            simProg << "Within Area of " << boxEdge[x]*boxEdge[y] << " and slab thickness of " << slabWidth << "\n"; 
 
             readConfig.close();
 
             return;
         }
-        */
         //------------------------------ Fluid Slab ------------------------------//
         /*
         void initGlassyCylinder(const std::string& readSolidFrom){
