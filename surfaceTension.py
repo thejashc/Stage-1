@@ -28,9 +28,9 @@ volume = Lx * Ly * Lz
 startLine = 5
 
 data = data[startLine:,:]
-pxx = data[:,9]  + data[:,18]  + data[:,27] + data[:,36]
-pyy = data[:,13] + data[:,22]  + data[:,31] + data[:,40]
-pzz = data[:,17] + data[:,26]  + data[:,35] + data[:,44]
+pxx = data[:,9]  + data[:,18]  #+ data[:,27] + data[:,36]
+pyy = data[:,13] + data[:,22]  #+ data[:,31] + data[:,40]
+pzz = data[:,17] + data[:,26]  #+ data[:,35] + data[:,44]
 
 # In[9]:
 
@@ -49,8 +49,6 @@ print( surfTension )
 
 plt.savefig('./plots/pTens.pdf')
 
-exit()
-
 #plt.plot(pColxx,'k')
 #plt.plot(pColyy,'m')
 #plt.plot(pColzz,'c')
@@ -66,7 +64,7 @@ noOfElements = int( ( avgEndIdx - avgStartIdx ) / avgWindow ) + 1
 surfaceTension = np.zeros( (noOfElements,1) )
 
 Lperp = Lz
-N = 4096
+N = 9216
 
 for i in np.arange( 0, noOfElements, 1 ):
 
@@ -79,10 +77,11 @@ for i in np.arange( 0, noOfElements, 1 ):
     surfaceTension[i] = (Lperp/4.0) * ( 2*pzzAvgTemp - (pxxAvgTemp + pyyAvgTemp ))
     temperature = np.mean(data[:,18])*(volume/N)
 
+print(temperature)
 plt.figure(2)
 plt.plot( surfaceTension )
 
 plt.xlabel(r'$t$')
 plt.ylabel(r'$\gamma_{lv}$')
 
-plt.savefig('./plots/surfaceTension.eps',format='eps',dpi=500)
+plt.savefig('./plots/surfaceTension.pdf')
