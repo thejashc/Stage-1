@@ -218,11 +218,9 @@ class DPD {
             momDeficit.setZero();
             momDeficitPerParticle.setZero();
 
-            /*
             evapBound1 = 2.0 * rcutoff;
             evapBound2 = boxEdge[z] - 2.0*rcutoff;
             particlesLeft = particles.size();
-            */
 
             #include "cellGridInit.h"
 
@@ -827,7 +825,7 @@ class DPD {
           i = 0;
           while ( i < npart ){
 
-                //if( (evapPartList[i][1]) && (particlesLeft > 1) ){
+                if( (evapPartList[i][1]) && (particlesLeft > 1) ){
 
                     // store velocity (mid-step)
                     particles[i].r_old = particles[i].r;        // position at t: r(t)
@@ -844,11 +842,12 @@ class DPD {
                     // calculate velocity (integral time step)
                     particles[i].v = 0.5*( particles[i].w_old + particles[i].w );       // calculate v(t) = v(t-dt/2) + v(t+dt/2)
 
-                    //checkEvapBounds();
+                    checkEvapBounds();
 
-              //}
-                //#include "pbcNew.h"
-                #include "pbcNewReflecting.h"
+              }
+            
+            #include "pbcNew.h"
+            //#include "pbcNewReflecting.h"
             
                 i++;
 
@@ -1805,13 +1804,14 @@ class DPD {
 
             if( ( particles[i].r.Z < evapBound1 ) && ( step > 50000 ) ){
 
-                simProg << "particle " << i 
-                        <<" detected at " << particles[i].r.Z << "\t";
+                //simProg << "particle " << i 
+                //        <<" detected at " << particles[i].r.Z << "\t";
+
                 particles[i].r.Z = 0.00001;
                 particles[i].r_old = particles[i].r;        // position at t: r(t)
-                momDeficit += particles[i].w;
+                //momDeficit += particles[i].w;
 
-                simProg << ", is now fixed at " << particles[i].r.Z << std::endl;
+                //simProg << ", is now fixed at " << particles[i].r.Z << std::endl;
                 evapPartList[i][1]=0;
                 evapPartCount[0] += 1;       // increment particle in the bottom half
 
@@ -1820,15 +1820,15 @@ class DPD {
             }
             else if ( ( particles[i].r.Z > evapBound2 ) && ( step > 50000 ) ){
 
-                simProg << "particle " << i 
-                        <<" detected at " << particles[i].r.Z << "\t";
+                //simProg << "particle " << i 
+                //        <<" detected at " << particles[i].r.Z << "\t";
 
                 particles[i].r.Z = boxEdge[z]-0.00001;
                 particles[i].r_old = particles[i].r;        // position at t: r(t)
 
-                momDeficit += particles[i].w;
+                //momDeficit += particles[i].w;
 
-                simProg << ", is now fixed at " << particles[i].r.Z << std::endl;
+                //simProg << ", is now fixed at " << particles[i].r.Z << std::endl;
 
                 evapPartList[i][1]=0;
                 evapPartCount[1] += 1;       // increment particle in the top half
