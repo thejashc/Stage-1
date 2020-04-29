@@ -16,7 +16,7 @@
 
 // configuration of particles
 #define RANDOM_DISSIPATIVE		1
-#define RESTART				    0
+#define RESTART				    1
 
 // WALL flags
 #define WALL_ON				    1
@@ -114,6 +114,7 @@ class DPD {
 				std::ofstream eosStats		( "./data/eos_data.dat"	, std::ios_base::app);	// Mean Pressure and temperature data
 				std::ofstream pTensStats	( "./data/pTens.dat"	, std::ios_base::app);	// Pressure tensor data
 				std::ofstream momStats		( "./data/mom_data.dat"	, std::ios_base::app);	// pressure and temperature data
+                std::ofstream evapStats      ( "./data/N_vs_step.dat" , std::ios_base::app);  // number of particles as a function of time
 			#else
                 std::ofstream enStats       ( "./data/en_data.dat"  , std::ios_base::app);  // Kinetic, Potential and total energy
                 std::ofstream eosStats      ( "./data/eos_data.dat" , std::ios_base::app);  // Mean Pressure and temperature data
@@ -141,9 +142,11 @@ class DPD {
 				#endif
 
 				forceCalc();
+                //printPosVel();
                 // forceCalc_bruteForce();
 
 				integrateEOM();
+                //printPosVel();
                
                 /*
 				for ( i=0 ; i <npart ; ++i ) {
@@ -157,29 +160,29 @@ class DPD {
                 fileWrite(enStats, eosStats, momStats, pTensStats, evapStats);
 
 				resetVar();						// reset variables to zero
-				
+
 				if ( step % rstrtFwrtFreq == 0 ){
 					// write position velocity stats 
 					std::ofstream writeConfig;
                     char fName[100];
-                    sprintf(fName, "./restart/posvelrestartfile.dat");
+                    sprintf(fName, "./restart/posvelrestartfile_%d.dat", step);
 					writeConfig.open ( fName, std::ios::binary | std::ios::out );	// example binary file
 					finalposvelWrite( writeConfig );	
 					writeConfig.close();
 				}
 
+
 				step += 1;						// increment time step
 
                 if( step % 1000 == 0 ){
 
-                    double tMax = 672.;
                     auto stop = std::chrono::high_resolution_clock::now();
                     auto duration = std::chrono::duration_cast<std::chrono::hours>(stop-start);
                     //auto duration = stop-start; // even this command works
         
                     simProg << "The run time is = " << duration.count() << " hours \n";
 
-                    if ( duration.count() > tMax ){
+                    if ( duration.count() > max_CPU_Run_Time ){
                         simProg << "The simulation has exceeded the max. time of 504 hours and will now be stopped. \n";
                         simProg << " ********************* ENDING SIMULATION ************************* ";	
                         simProg.close();
@@ -204,23 +207,29 @@ class DPD {
 			#include "paramIn.h"
             #include "geometryIn.h"
 
-            /******* SOLID Initialize *******/
-            bckgIdxStart=particles.size();
-            initGlassyCylinder(readSolidFrom);
-            bckgIdxEnd=particles.size()-1;
+            #if RESTART
+                restartSimulation();
+                particlesLeft=restartEvapList();
+            #else
+                /******* SOLID Initialize *******/
+                bckgIdxStart=particles.size();
+                initGlassyCylinder(readSolidFrom);
+                bckgIdxEnd=particles.size()-1;
 
-            /******* FLUID Initialize *******/
-            //initFluidCrystal(readFluidFrom);    
-            //initFluidCrystal();    
-            initFluidSlab(readFluidFrom);    
-            initEvapList();
+                /******* FLUID Initialize *******/
+                //initFluidCrystal(readFluidFrom);    
+                //initFluidCrystal();    
+                initFluidSlab(readFluidFrom);    
 
-            momDeficit.setZero();
-            momDeficitPerParticle.setZero();
+                initEvapList();
+                particlesLeft = particles.size();
+            #endif
+
+            //momDeficit.setZero();             // These are for simple slab simulations
+            //momDeficitPerParticle.setZero();
 
             evapBound1 = 2.0 * rcutoff;
             evapBound2 = boxEdge[z] - 2.0*rcutoff;
-            particlesLeft = particles.size();
 
             #include "cellGridInit.h"
 
@@ -825,7 +834,7 @@ class DPD {
           i = 0;
           while ( i < npart ){
 
-                if( (evapPartList[i][1]) && (particlesLeft > 1) ){
+                if( particles[i].escapeStatus && (particlesLeft > 1) ){
 
                     // store velocity (mid-step)
                     particles[i].r_old = particles[i].r;        // position at t: r(t)
@@ -846,8 +855,8 @@ class DPD {
 
               }
             
-            #include "pbcNew.h"
-            //#include "pbcNewReflecting.h"
+            //#include "pbcNew.h"
+            #include "pbcNewReflecting.h"
             
                 i++;
 
@@ -1239,11 +1248,13 @@ class DPD {
 
 			}
 
+            /*
             if ( step % saveCount == 0){
                 evapStats << step << "\t" << evapPartCount[0] 
                                   << "\t" << evapPartCount[1] 
                                   << "\t" << evapPartCount[0] + evapPartCount[1] << std::endl;
             }
+            */
 
             #if HARD_SPHERES
             if( step % psaveCount == 0 ){
@@ -1419,7 +1430,7 @@ class DPD {
 				writeConfig.write( reinterpret_cast< const char * >( &p.w.Z ), sizeof( p.w.Z ) );
 
                 // many body densities of the particles
-				writeConfig.write( reinterpret_cast< const char * >( &p.dens ), sizeof( p.dens ) );
+                writeConfig.write( reinterpret_cast< const char * >( &p.dens ), sizeof( p.dens ) );
 
                 // solid particles attached to the background by a spring
                 #if WALL_ON 
@@ -1427,6 +1438,10 @@ class DPD {
                     writeConfig.write( reinterpret_cast< const char * >( &p.r0.Y ), sizeof( p.r0.Y ) );
                     writeConfig.write( reinterpret_cast< const char * >( &p.r0.Z ), sizeof( p.r0.Z ) );
                 #endif
+
+                // evaporation status of particles - 1 if the particle is alive, 0 if the particle
+                // has escaped to the vapor phase
+				writeConfig.write( reinterpret_cast< const char * >(&p.escapeStatus), sizeof(p.escapeStatus) );
 			}
 		}
 
@@ -1621,8 +1636,12 @@ class DPD {
             double zStart=0.;
             double zEnd=slabWidth;
 
+            bool even=true;
+            unsigned int count=0;
+            unsigned int ratio=int(100./prcntCompose);
+
             //double zOffset=0.5*boxEdge[z] - 0.5*slabWidth;
-            double zOffset=bufferLen + capLen + wallHeight + resCOMZ;
+            double zOffset=bufferLen + capLen + wallHeight + dzPoreEntrance;
 
             std::ifstream readConfig(readFluidFrom, std::ios::binary | std::ios::in ); 
 
@@ -1650,7 +1669,17 @@ class DPD {
                      (yind > yStart) && (yind < yEnd ) &&
                      (zind > zStart) && (zind < zEnd ) ) {
 
-                    particles.push_back({1.0,1.0,{xind-xStart,yind-yStart, zind+zOffset},{0., 0., resCOMVel},1});
+                    if( (count % ratio) == 0 ){
+                        particles.push_back({1.0,1.0,{xind-xStart, yind-yStart, zind+zOffset},{0., 0., resCOMVel},1});
+                        even=false;
+                    }
+                    else{
+                        particles.push_back({1.0,1.0,{xind-xStart, yind-yStart, zind+zOffset},{0., 0., resCOMVel},2});
+                        even=true;
+                    }
+
+                    count++;
+
                 }
             }
 
@@ -1781,28 +1810,141 @@ class DPD {
 
             return;
         }
+        //------------------------------ Restart Simulations ----------------------//
+        void restartSimulation(){
+
+            // read position and velocity data from the file posvelrestartfile.dat
+            /*
+            std::ifstream readConfig; 
+            if ( ! readConfig ) { simProg << "*** input file is empty" << std::endl; abort(); }
+            readConfig.open( "./restart/posvelrestartfile.dat", std::ios::binary | std::ios::in );
+            */
+
+            // uint32_t particleType;
+            int particleType;
+            double tempRho;
+
+            double r0X;
+            double r0Y;
+            double r0Z;
+
+            unsigned int escapeStatus;
+
+            std::ifstream readConfig( "./restart/posvelrestartfile.dat", std::ios::binary | std::ios::in ); 
+            if ( ! readConfig ) { simProg << "*** The restart file could not be opened/ does not exist *** \n Aborting !! " << std::endl; abort(); }
+
+            readConfig.read ( ( char * ) &npart,		            sizeof( unsigned int ) );
+            simProg << " Positions and velocities of a total of " << npart << " will be read " << std::endl;
+            #if WALL_ON
+                readConfig.read ( ( char * ) &bckgIdxStart,		sizeof( unsigned int ) );
+                readConfig.read ( ( char * ) &bckgIdxEnd,		sizeof( unsigned int ) );
+
+                simProg << " bckgIdxStart = " << bckgIdxStart << std::endl;
+                simProg << " bckgIdxEnd = " << bckgIdxEnd << std::endl;
+
+                #if SPRING_CONNECTED_SLD
+                    readConfig.read ( ( char * ) &ngbrIdxStart,		sizeof( unsigned int ) );
+                    readConfig.read ( ( char * ) &ngbrIdxEnd,		sizeof( unsigned int ) );
+
+                    simProg << " ngbrIdxStart = " << ngbrIdxStart << std::endl;
+                    simProg << " ngbrIdxEnd = " << ngbrIdxEnd << std::endl;
+                #endif
+            #endif
+            readConfig.read ( ( char * ) &step,		                sizeof( int ) );
+
+            simProg << " The simulation will start from step = " << step+1 << std::endl;
+            //readConfig.read ( ( char * ) &seedRstrt,	            sizeof( std::default_random_engine ) );
+            readConfig.read ( ( char * ) &gen,                      sizeof( std::mt19937 ) );
+            readConfig.read ( ( char * ) &normalDistribution,       sizeof( std::normal_distribution<double> ) );
+
+            //double dummyRand = randNumGen(seedRstrt);   // random number generator is for the previous time-step .. The sequence continues after this seed
+            //seed = seedRstrt;	
+
+            for ( j = 0 ; j < npart ; ++ j ){	
+
+                readConfig.read ( ( char * ) &particleType,		sizeof ( particleType ) );
+
+                readConfig.read ( ( char * ) &xind,		        sizeof ( double ) );
+                readConfig.read ( ( char * ) &yind,		        sizeof ( double )  );
+                readConfig.read ( ( char * ) &zind,		        sizeof ( double )  );
+
+                readConfig.read ( ( char * ) &rand_gen_velx,	sizeof ( double ) );
+                readConfig.read ( ( char * ) &rand_gen_vely,	sizeof ( double ) );
+                readConfig.read ( ( char * ) &rand_gen_velz,	sizeof ( double ) );
+
+                readConfig.read ( ( char * ) &tempRho,	        sizeof ( double ) );
+
+                #if WALL_ON
+                    readConfig.read ( ( char * ) &r0X,		        sizeof ( double ) );
+                    readConfig.read ( ( char * ) &r0Y,		        sizeof ( double )  );
+                    readConfig.read ( ( char * ) &r0Z,		        sizeof ( double )  );
+                #endif
+
+                readConfig.read ( ( char * ) &escapeStatus,		    sizeof ( unsigned int )  );
+
+                particles.push_back( {1.0 ,1.0 , {xind, yind, zind} ,{rand_gen_velx, rand_gen_vely, rand_gen_velz}, particleType, escapeStatus} );
+
+                particles[j].dens = tempRho;
+
+                #if WALL_ON
+                    if ( particles[j].type == 0 || particles[j].type == 3 ){
+
+                        particles[j].r0.X = r0X;
+                        particles[j].r0.Y = r0Y;
+                        particles[j].r0.Z = r0Z; }
+                #endif
+
+                particles[j].w_old = particles[j].w;
+                particles[j].r_old = particles[j].r;
+
+                /*
+               simProg  << particleType << " " << std::setprecision(15) 
+                        << xind << std::setprecision(15) << " "
+                        << yind << std::setprecision(15) << " " 
+                        << zind << std::setprecision(15) << " " 
+                        << rand_gen_velx << std::setprecision(15) << " " 
+                        << rand_gen_vely << std::setprecision(15) << " " 
+                        << rand_gen_velz << std::setprecision(15) << " "
+                        << tempRho << std::setprecision(15) << " "  
+                        << escapeStatus << std::endl;
+                        */
+            }
+
+            readConfig.close();
+
+            step++;
+
+            return;
+        }
         //------------------------------ Evaporation ------------------------------//
         void initEvapList(){
 
             unsigned int npart=particles.size();
 
-            evapPartList.resize(npart);
+            for(int i=0; i<npart; ++i)
+                particles[i].escapeStatus=1;
+
+            //evapPartList.resize(npart);
             evapPartCount.resize(2, 0);
 
+            /*
             for(int i=0; i<npart; ++i){
                 evapPartList[i].resize(2);
-            }
+            
                              
             for(int i=0; i<evapPartList.size(); ++i){
                 evapPartList[i][0]=i;
                 evapPartList[i][1]=1;
             }
+            */
             simProg << "Initialized evaporation particle list for all " << npart << " particles" << std::endl;
         }
         //------------------------------ Check evaporation ------------------------------//
         void checkEvapBounds(){
 
-            if( ( particles[i].r.Z < evapBound1 ) && ( step > 50000 ) ){
+            if( ( particles[i].r.Z < evapBound1 ) && 
+                ( particles[i].type == particleTypeEvap ) && 
+                ( step > tEvapStart ) ){
 
                 //simProg << "particle " << i 
                 //        <<" detected at " << particles[i].r.Z << "\t";
@@ -1811,14 +1953,17 @@ class DPD {
                 particles[i].r_old = particles[i].r;        // position at t: r(t)
                 //momDeficit += particles[i].w;
 
-                //simProg << ", is now fixed at " << particles[i].r.Z << std::endl;
-                evapPartList[i][1]=0;
+                //evapPartList[i][1]=0;
+                particles[i].escapeStatus=0;
                 evapPartCount[0] += 1;       // increment particle in the bottom half
 
                 particlesLeft -= 1;
-                simProg << "particles Left " << particlesLeft << std::endl;
+                simProg << "Particle " << i << " is frozen " << " and " << particlesLeft << " particles left" << std::endl;
+
             }
-            else if ( ( particles[i].r.Z > evapBound2 ) && ( step > 50000 ) ){
+            else if ( ( particles[i].r.Z > evapBound2 ) &&
+                      ( particles[i].type == particleTypeEvap ) && 
+                      ( step > tEvapStart ) ){
 
                 //simProg << "particle " << i 
                 //        <<" detected at " << particles[i].r.Z << "\t";
@@ -1830,11 +1975,12 @@ class DPD {
 
                 //simProg << ", is now fixed at " << particles[i].r.Z << std::endl;
 
-                evapPartList[i][1]=0;
+                //evapPartList[i][1]=0;
+                particles[i].escapeStatus=0;
                 evapPartCount[1] += 1;       // increment particle in the top half
 
                 particlesLeft -= 1;
-                simProg << "particles Left " << particlesLeft << std::endl;
+                simProg << "Particle " << i << " is Frozen " << " and " << particlesLeft << " particles left" << std::endl;
             }
             
             return;
@@ -1859,6 +2005,22 @@ class DPD {
                     exit(0);
                 }
                 */
+        }
+        //------------------------------ restart evap list ----------------------------------//
+        int restartEvapList(){
+
+            evapPartCount.resize(2, 0);
+
+            particlesLeft=0;
+
+            for (Particle& p : particles)
+                if ( p.escapeStatus )
+                    particlesLeft++;
+
+            //simProg << "Initialized evaporation particle list for all " << npart << " particles" << std::endl;
+            simProg << "The number of alive particles are" << particlesLeft << std::endl;
+
+            return particlesLeft;
         }
         //------------------------------ calculate temperature------------------------------//
         void calculateTemp(){
@@ -1892,6 +2054,25 @@ class DPD {
 
           temp = (tempX + tempY + tempZ) / 3.;
 
+        }
+        //------------------------------ print positions and velocities ------------------------------//
+        void printPosVel(){
+
+                for (Particle& p : particles)
+                    simProg << p.dens << std::endl;
+                    /*
+                    simProg << p.type << "\t" 
+                            << p.r.X << "\t" 
+                            << p.r.Y << "\t" 
+                            << p.r.Z << "\t" 
+                            << p.w.X << "\t" 
+                            << p.w.Y << "\t" 
+                            << p.w.Z << "\t" 
+                            << p.dens << "\t"
+                            << p.escapeStatus << std::endl;
+                            */
+
+            return;
         }
 
 };
