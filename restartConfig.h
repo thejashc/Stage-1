@@ -75,6 +75,8 @@ for ( j = 0 ; j < npart ; ++ j ){
             particles[j].r0.Z = r0Z; }
     #endif
 
+
+
 	// simProg << particleType << " " << std::setprecision(15) << xind << std::setprecision(15) << " " << yind << std::setprecision(15) << " " <<  zind << std::endl;
 	// simProg << particleType << " " << std::setprecision(15) << rand_gen_velx << std::setprecision(15) << " " << rand_gen_vely << std::setprecision(15) << " " <<  rand_gen_velz << std::endl;
     // simProg << type << " " << rand_gen_velx << " " << rand_gen_vely << " " << rand_gen_velz << std::endl;

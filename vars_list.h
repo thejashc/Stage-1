@@ -102,6 +102,7 @@ double noise_l3_l3;  double friction_l3_l3;
 
 double dt, inv_sqrt_dt, half_dt, half_dt_sqr, sqrtTwelve;				// time step, sqrt of inverse of time step, half of dt, square of half of dt
 int step, stepMax;				// counter for step, total number of steps
+int max_CPU_Run_Time;
 int rstrtFwrtFreq;			// The frequency of writing a restart file ( writes positions and mid-step velocities )
 unsigned int saveCount;		// number of timestep between saves
 unsigned int psaveCount;	// number of timestep between saves for pressure calculation
@@ -142,6 +143,8 @@ double vx2Sum, vy2Sum, vz2Sum, vxSum, vySum, vzSum;
 double tempX, tempY, tempZ;
 double evapBound1;
 double evapBound2;
+unsigned int tEvapStart;
+unsigned int particleTypeEvap;
 Vec3D momDeficit, momDeficitPerParticle;
 unsigned int particlesLeft;
 
@@ -340,7 +343,7 @@ double magDiss;
 unsigned int totalBonds;
 unsigned int repParam_Inst;
 double resCOMVel;
-double resCOMZ;
+double dzPoreEntrance;
 
 #if PISTON
     double pistonForce;
@@ -563,14 +566,11 @@ double residual;
     double tApp;
     double tSep;
 
-
     double rInner;
     double rOuter;
 
-    double BslMin;
-    double BslMax;
-    double BslW;
-    double BslT0;
+    double prcntCompose;
+
 #endif
 //***************** CAPILLARY_CYLINDER *****************//
 #if CAPILLARY_SQUARE
