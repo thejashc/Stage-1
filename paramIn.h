@@ -271,12 +271,13 @@ readParam >> buffer;                readParam.ignore(256,'\n');
 readParam >> buffer;                readParam.ignore(256,'\n');		
 readParam >> buffer;                readParam.ignore(256,'\n');		
 
-readParam >> buffer >> dt;		        readParam.ignore(256,'\n');		
-readParam >> buffer >> stepMax;		    readParam.ignore(256,'\n');		
-readParam >> buffer >> rstrtFwrtFreq;	readParam.ignore(256,'\n');		
-readParam >> buffer >> saveCount;	    readParam.ignore(256,'\n');		
-readParam >> buffer >> psaveCount;	    readParam.ignore(256,'\n');		
-readParam >> buffer >> pCorrTime;	    readParam.ignore(256,'\n');		
+readParam >> buffer >> dt;                  readParam.ignore(256,'\n');		
+readParam >> buffer >> stepMax;             readParam.ignore(256,'\n');		
+readParam >> buffer >> rstrtFwrtFreq;       readParam.ignore(256,'\n');		
+readParam >> buffer >> saveCount;           readParam.ignore(256,'\n');		
+readParam >> buffer >> psaveCount;	        readParam.ignore(256,'\n');		
+readParam >> buffer >> tEvapStart;          readParam.ignore(256,'\n');		
+readParam >> buffer >> max_CPU_Run_Time;    readParam.ignore(256,'\n');		
 
 #if LEES_EDWARDS_BC
     simProg << "----------------------------------" << std::endl;
@@ -383,19 +384,23 @@ readParam >> buffer >> pCorrTime;	    readParam.ignore(256,'\n');
     readParam >> buffer;                readParam.ignore(256,'\n');		
     readParam >> buffer;                readParam.ignore(256,'\n');		
 
-	readParam >> buffer >> bufferLen;	readParam.ignore(256,'\n');		// L63 
-	readParam >> buffer >> capLen;		readParam.ignore(256,'\n');		// L64 
-	readParam >> buffer >> capRad;		readParam.ignore(256,'\n');		// L65 
-	readParam >> buffer >> capWallWdth;	readParam.ignore(256,'\n');		// L66 
-	readParam >> buffer >> resWdth;		readParam.ignore(256,'\n');		// L67 
-	readParam >> buffer >> resCOMZ;		readParam.ignore(256,'\n');		// L68 
-	readParam >> buffer >> resCOMVel;	readParam.ignore(256,'\n');		// L69 
+	readParam >> buffer >> bufferLen;	        readParam.ignore(256,'\n');		// L63 
+	readParam >> buffer >> capLen;		        readParam.ignore(256,'\n');		// L64 
+	readParam >> buffer >> capRad;		        readParam.ignore(256,'\n');		// L65 
+	readParam >> buffer >> capWallWdth;	        readParam.ignore(256,'\n');		// L66 
+	readParam >> buffer >> resWdth;		        readParam.ignore(256,'\n');		// L67 
+	readParam >> buffer >> dzPoreEntrance;		readParam.ignore(256,'\n');		// L68 
+	readParam >> buffer >> resCOMVel;	        readParam.ignore(256,'\n');		// L69 
+    readParam >> buffer >> prcntCompose;        readParam.ignore(256,'\n');
+    readParam >> buffer >> particleTypeEvap;    readParam.ignore(256,'\n');
 
 #else
 	readParam.ignore(256, '\n');
 	readParam.ignore(256, '\n');
 	readParam.ignore(256, '\n');
 
+	readParam.ignore(256, '\n');
+	readParam.ignore(256, '\n');
 	readParam.ignore(256, '\n');
 	readParam.ignore(256, '\n');
 	readParam.ignore(256, '\n');
