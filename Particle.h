@@ -12,6 +12,7 @@ public:
 	Vec3D r;  // position
 	Vec3D w;  // mid-step velocity
 	int type;	// species of the particle
+    unsigned int escapeStatus;
 	
 	Vec3D v;  // integer-step velocity
 	Vec3D fC;  // force
@@ -38,8 +39,8 @@ public:
     // double equilibriumBondLength[1000][3];
     // std::vector<Vec3D> equiBondLength;
 
-    Vec3D rUnfolded;
     Vec3D dR;
+
 };
 
 #endif
