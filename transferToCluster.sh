@@ -8,4 +8,5 @@ destination='/storage3/usr/people/thejas/imbibition/multiwetting/highWethighVisc
 #scp -r restartDPD.exe thejas@msm2.ctw.utwente.nl:$destination #filenames should not contain commas in between
 #scp -r readConfig/ thejas@msm2.ctw.utwente.nl:$destination #filenames should not contain commas in between
 
-scp -r -i "~/.ssh/wouter" -P 46172 fluidInCylinder.h thejas@snowwhite.tnw.utwente.nl:/home3/thejas/src/
+#scp -r -i "~/.ssh/wouter" -P 46172 fluidInCylinder.h thejas@snowwhite.tnw.utwente.nl:/home3/thejas/src/
+scp -r -i "~/.ssh/wouter" -P 46172 thejas@snowwhite.tnw.utwente.nl:/home3/thejas/evaporation/wet/Asl_12/dataVisualize/* ./dataVisualize/
